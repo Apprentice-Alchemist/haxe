@@ -212,6 +212,7 @@ let convert_fields gctx pfm =
 
 module AnnotationHandler = struct
 	let convert_annotations meta =
+		let rec parse_expr e = 
 		let parse_path e =
 			let sl = try string_list_of_expr_path_raise e with Exit -> Error.typing_error "Field expression expected" (pos e) in
 			let path = match sl with
@@ -220,13 +221,21 @@ module AnnotationHandler = struct
 			in
 			path
 		in
-		let rec parse_value e = match fst e with
+		let rec parse_value e = 
+			match fst e with
 			| EConst (Int s) -> AInt (Int32.of_string s)
 			| EConst (Float s) -> ADouble (float_of_string s)
 			| EConst (String(s,_)) -> AString s
 			| EConst (Ident "true") -> ABool true
 			| EConst (Ident "false") -> ABool false
 			| EArrayDecl el -> AArray (List.map parse_value el)
+			| EMeta ((Meta.Meta,[],_),e) -> 
+				let path,annotation = parse_expr e in
+				let path = match path with
+					| [],name -> ["haxe";"root"],name
+					| _ -> path
+				in
+				AAnnotation(object_path_sig path, annotation)
 			| EField(e1,s) ->
 				let path = parse_path e1 in
 				AEnum(object_path_sig path,s)
@@ -238,7 +247,7 @@ module AnnotationHandler = struct
 			| _ ->
 				Error.typing_error "Assignment expression expected" (pos e)
 		in
-		let parse_expr e = match fst e with
+			match fst e with
 			| ECall(e1,el) ->
 				let path = parse_path e1 in
 				let _,name = ExtString.String.replace (snd path) "." "$" in

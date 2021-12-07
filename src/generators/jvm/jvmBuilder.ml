@@ -29,6 +29,7 @@ type annotation_kind =
 	| ABool of bool
 	| AEnum of jsignature * string
 	| AArray of annotation_kind list
+	| AAnnotation of jsignature * (string * annotation_kind) list
 
 and annotation = (string * annotation_kind) list
 
@@ -37,11 +38,12 @@ type export_config = {
 }
 
 let convert_annotations pool annotations =
-	let a = Array.map (fun (jsig,l) ->
+	let rec conv (jsig,l) = 
 		let offset = pool#add_string (generate_signature false jsig) in
 		let l = List.map (fun (name,ak) ->
 			let offset = pool#add_string name in
-			let rec loop ak = match ak with
+			let rec loop ak = 
+				match ak with
 				| AInt i32 ->
 					'I',ValConst(pool#add (ConstInt i32))
 				| ADouble f ->
@@ -55,6 +57,8 @@ let convert_annotations pool annotations =
 				| AArray l ->
 					let l = List.map (fun ak -> loop ak) l in
 					'[',ValArray(Array.of_list l)
+				| AAnnotation (path, annotations) ->
+					'@',ValAnnotation(conv (path, annotations))
 			in
 			offset,loop ak
 		) l in
@@ -62,7 +66,8 @@ let convert_annotations pool annotations =
 			ann_type = offset;
 			ann_elements = Array.of_list l;
 		}
-	) annotations in
+		in
+	let a = Array.map conv annotations in
 	a
 
 class base_builder = object(self)
