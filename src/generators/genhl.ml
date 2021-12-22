@@ -377,6 +377,9 @@ let rec to_type ?tref ctx t =
 		| None -> HDyn
 		| Some t -> to_type ?tref ctx t)
 	| TType (td,tl) ->
+		(match td.t_path, tl with
+		| (["hl";], "StackValue"), [param] -> HBool
+		| _, _ -> 
 		let t =
 			get_rec_cache ctx t
 				(fun() -> abort "Unsupported recursive type" td.t_pos)
@@ -384,7 +387,7 @@ let rec to_type ?tref ctx t =
 		in
 		(match td.t_path with
 		| ["haxe";"macro"], name -> Hashtbl.replace ctx.macro_typedefs name t; t
-		| _ -> t)
+		| _ -> t))
 	| TLazy f ->
 		to_type ?tref ctx (lazy_type f)
 	| TFun (args, ret) ->
@@ -3824,8 +3827,8 @@ let write_code ch code debug =
 			byte n;
 			List.iter write_type args;
 			write_type ret
-		| HObj p | HStruct p ->
-			byte (if is_struct t then 21 else 11);
+		| HObj p | HStruct p | HStack p->
+			byte (if is_stack t then 22 else if is_struct t then 21 else 11);
 			write_index p.pid;
 			(match p.psuper with
 			| None -> write_index (-1)

@@ -48,6 +48,7 @@ type ttype =
 	| HNull of ttype
 	| HMethod of ttype list * ttype
 	| HStruct of class_proto
+	| HStack of class_proto
 
 and class_proto = {
 	pname : string;
@@ -256,10 +257,14 @@ let list_mapi f l =
 let is_nullable t =
 	match t with
 	| HBytes | HDyn | HFun _ | HObj _ | HArray | HVirtual _ | HDynObj | HAbstract _ | HEnum _ | HNull _ | HRef _ | HType | HMethod _ | HStruct _ -> true
-	| HUI8 | HUI16 | HI32 | HI64 | HF32 | HF64 | HBool | HVoid -> false
+	| HUI8 | HUI16 | HI32 | HI64 | HF32 | HF64 | HBool | HVoid | HStack _-> false
 
 let is_struct = function
 	| HStruct _ -> true
+	| _ -> false
+
+let is_stack = function
+	| HStack _ -> true
 	| _ -> false
 
 let is_int = function
@@ -437,7 +442,7 @@ let rec tstr ?(stack=[]) ?(detailed=false) t =
 	| HMethod (args,ret) -> "method:(" ^ String.concat "," (List.map (tstr ~stack ~detailed) args) ^ "):" ^ tstr ~stack ~detailed ret
 	| HObj o when not detailed -> o.pname
 	| HStruct s when not detailed -> "@" ^ s.pname
-	| HObj o | HStruct o ->
+	| HObj o | HStruct o | HStack o->
 		let fields = "{" ^ String.concat "," (List.map (fun(s,_,t) -> s ^ " : " ^ tstr ~detailed:false t) (Array.to_list o.pfields)) ^ "}" in
 		let proto = "{"  ^ String.concat "," (List.map (fun p -> (match p.fvirtual with None -> "" | Some _ -> "virtual ") ^ p.fname ^ "@" ^  string_of_int p.fmethod) (Array.to_list o.pproto)) ^ "}" in
 		let str = o.pname ^ "[" ^ (match o.psuper with None -> "" | Some p -> ">" ^ p.pname ^ " ") ^ "fields=" ^ fields ^ " proto=" ^ proto ^ "]" in

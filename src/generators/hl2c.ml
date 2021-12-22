@@ -125,7 +125,7 @@ let tname str =
 	if Hashtbl.mem keywords ("_" ^ n) then "__" ^ n else n
 
 let is_gc_ptr = function
-	| HVoid | HUI8 | HUI16 | HI32 | HI64 | HF32 | HF64 | HBool | HType | HRef _ | HMethod _ -> false
+	| HVoid | HUI8 | HUI16 | HI32 | HI64 | HF32 | HF64 | HBool | HType | HRef _ | HMethod _ | HStack _-> false
 	| HBytes | HDyn | HFun _ | HObj _ | HArray | HVirtual _ | HDynObj | HAbstract _ | HEnum _ | HNull _ | HStruct _ -> true
 
 let is_ptr = function
@@ -144,7 +144,7 @@ let rec ctype_no_ptr = function
 	| HBytes -> "vbyte",1
 	| HDyn -> "vdynamic",1
 	| HFun _ -> "vclosure",1
-	| HObj p | HStruct p -> tname p.pname,0
+	| HObj p | HStruct p | HStack p -> tname p.pname,0
 	| HArray -> "varray",1
 	| HType -> "hl_type",1
 	| HRef t -> let s,i = ctype_no_ptr t in s,i + 1
@@ -200,6 +200,7 @@ let type_id t =
 	| HNull _ -> "HNULL"
 	| HMethod _ -> "HMETHOD"
 	| HStruct _  -> "HSTRUCT"
+	| HStack _ -> "HSTACK"
 
 let var_type n t =
 	ctype t ^ " " ^ ident n
@@ -240,13 +241,13 @@ let rec define_type ctx t =
 	| HFun (args,ret) | HMethod (args,ret) ->
 		List.iter (define_type ctx) args;
 		define_type ctx ret
-	| HEnum _ | HObj _ | HStruct _ when not (PMap.exists t ctx.defined_types) ->
+	| HEnum _ | HObj _ | HStruct _ | HStack _ when not (PMap.exists t ctx.defined_types) ->
 		ctx.defined_types <- PMap.add t () ctx.defined_types;
 		define ctx (sprintf "#include <%s.h>" (try PMap.find t ctx.type_module with Not_found -> Globals.die "" __LOC__).m_name)
 	| HVirtual vp when not (PMap.exists t ctx.defined_types) ->
 		ctx.defined_types <- PMap.add t () ctx.defined_types;
 		Array.iter (fun (_,_,t) -> define_type ctx t) vp.vfields
-	| HEnum _ | HObj _ | HStruct _ | HVirtual _ ->
+	| HEnum _ | HObj _ | HStruct _ | HVirtual _ | HStack _->
 		()
 
 let type_value ctx t =
@@ -1109,7 +1110,7 @@ let make_types_idents htypes =
 			DFun (List.map make_desc tl, make_desc t, true)
 		| HMethod (tl, t) ->
 			DFun (List.map make_desc tl, make_desc t, false)
-		| HObj p | HStruct p ->
+		| HObj p | HStruct p | HStack p->
 			DNamed p.pname
 		| HAbstract (n,_) ->
 			DNamed n
@@ -1363,6 +1364,10 @@ let generate_module_types ctx m =
 			let name = tname o.pname in
 			ctx.defined_types <- PMap.add t () ctx.defined_types;
 			define ctx (sprintf "typedef struct _%s *%s;" name name);
+		| HStack o -> 
+			let name = tname o.pname in
+			ctx.defined_types <- PMap.add t () ctx.defined_types;
+			define ctx (sprintf "typedef struct _%s %s;" name name);
 		| _ -> ()
 	) types;
 	line "";
@@ -1375,9 +1380,9 @@ let generate_module_types ctx m =
 			let rec loop o =
 				(match o.psuper with
 				| None ->
-					if not (is_struct t) then expr ("hl_type *$type");
+					if not (is_struct t || is_stack t) then expr ("hl_type *$type");
 				| Some c ->
-					define_type ctx (if is_struct t then HStruct c else HObj c);
+					define_type ctx (if is_stack t then HStack c else if is_struct t then HStruct c else HObj c);
 					loop c);
 				Array.iteri (fun i (n,_,t) ->
 					let rec abs_index p v =
@@ -1504,7 +1509,7 @@ let write_c com file (code:code) gnames =
 		let fields = match t with
 			| HObj o | HStruct o ->
 				let fields = List.map2 field_value (List.map (fun (_,_,t) -> t) (Array.to_list o.pfields)) (Array.to_list fields) in
-				if is_struct t then fields else type_value ctx t :: fields
+				if is_struct t ||  is_stack t then fields else type_value ctx t :: fields
 			| _ ->
 				Globals.die "" __LOC__
 		in
@@ -1579,7 +1584,7 @@ let write_c com file (code:code) gnames =
 			sprintf "{(const uchar*)%s, %s, %ld}" (string ctx name_id) (type_value ctx t) (hash ctx name_id)
 		in
 		match t with
-		| HObj o | HStruct o ->
+		| HObj o | HStruct o | HStack o->
 			let name = type_name ctx t in
 			let proto_value p =
 				sprintf "{(const uchar*)%s, %d, %d, %ld}" (string ctx p.fid) p.fmethod (match p.fvirtual with None -> -1 | Some i -> i) (hash ctx p.fid)
