@@ -189,6 +189,8 @@ type platform_config = {
 	pf_exceptions : exceptions_config;
 	(** the scoping of local variables *)
 	pf_scoping : var_scoping_config;
+	(** target supports atomic operations via haxe.Atomic **)
+	pf_supports_atomics : bool;
 }
 
 class compiler_callbacks = object(self)
@@ -478,7 +480,8 @@ let default_config =
 		pf_scoping = {
 			vs_scope = BlockScope;
 			vs_flags = [];
-		}
+		};
+		pf_supports_atomics = false;
 	}
 
 let get_config com =
@@ -508,7 +511,8 @@ let get_config com =
 				vs_flags =
 					(if defined Define.JsUnflatten then ReserveAllTopLevelSymbols else ReserveAllTypesFlat)
 					:: if es6 then [NoShadowing; SwitchCasesNoBlocks;] else [VarHoisting; NoCatchVarShadowing];
-			}
+			};
+			pf_supports_atomics = true;
 		}
 	| Lua ->
 		{
@@ -590,7 +594,8 @@ let get_config com =
 			pf_supports_unicode = (defined Define.Cppia) || not (defined Define.DisableUnicodeStrings);
 			pf_scoping = { default_config.pf_scoping with
 				vs_flags = [NoShadowing]
-			}
+			};
+			pf_supports_atomics = not (defined Define.Cppia);
 		}
 	| Cs ->
 		{
@@ -618,6 +623,7 @@ let get_config com =
 				vs_scope = FunctionScope;
 				vs_flags = [NoShadowing]
 			};
+			pf_supports_atomics = true;
 		}
 	| Java ->
 		{
@@ -647,7 +653,8 @@ let get_config com =
 					{
 						vs_scope = FunctionScope;
 						vs_flags = [NoShadowing; ReserveAllTopLevelSymbols; ReserveNames(["_"])];
-					}
+					};
+			pf_supports_atomics = true;
 		}
 	| Python ->
 		{
@@ -678,6 +685,7 @@ let get_config com =
 			pf_capture_policy = CPWrapRef;
 			pf_pad_nulls = true;
 			pf_supports_threads = true;
+			pf_supports_atomics = true;
 		}
 	| Eval ->
 		{
@@ -857,7 +865,10 @@ let init_platform com pf =
 		raw_define com "target.unicode";
 	end;
 	raw_define_value com.defines "target.name" name;
-	raw_define com name
+	raw_define com name;
+	if com.config.pf_supports_atomics then begin
+		raw_define com "target.atomics"
+	end
 
 let add_feature com f =
 	Hashtbl.replace com.features f true
