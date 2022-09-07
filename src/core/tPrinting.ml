@@ -21,12 +21,14 @@ let rec s_type_kind t =
 	| TAnon an -> "TAnon"
 	| TDynamic t2 -> "TDynamic"
 	| TLazy _ -> "TLazy"
+	| TTrait(t, tl) -> Printf.sprintf "TTrait(%s, [%s])" (s_type_path t.tt_path) (map tl)
 
 let s_module_type_kind = function
 	| TClassDecl c -> "TClassDecl(" ^ (s_type_path c.cl_path) ^ ")"
 	| TEnumDecl en -> "TEnumDecl(" ^ (s_type_path en.e_path) ^ ")"
 	| TAbstractDecl a -> "TAbstractDecl(" ^ (s_type_path a.a_path) ^ ")"
 	| TTypeDecl t -> "TTypeDecl(" ^ (s_type_path t.t_path) ^ ")"
+	| TTraitDecl t -> "TTraitDecl(" ^ (s_type_path t.tt_path) ^")"
 
 let rec s_type ctx t =
 	match t with
@@ -91,6 +93,8 @@ let rec s_type ctx t =
 		"Dynamic" ^ s_type_params ctx (if t == t2 then [] else [t2])
 	| TLazy f ->
 		s_type ctx (lazy_type f)
+	| TTrait(t,tl) ->
+		s_type_path t.tt_path ^ s_type_params ctx tl
 
 and s_fun ctx t void =
 	match t with

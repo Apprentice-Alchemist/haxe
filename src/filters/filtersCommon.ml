@@ -89,3 +89,4 @@ let run_expression_filters ?(ignore_processed_status=false) time_details ctx fil
 	| TEnumDecl _ -> ()
 	| TTypeDecl _ -> ()
 	| TAbstractDecl _ -> ()
+	| TTraitDecl _ -> () (* traits-TODO *)

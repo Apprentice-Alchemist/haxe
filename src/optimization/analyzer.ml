@@ -1129,6 +1129,7 @@ module Run = struct
 		| TEnumDecl _ -> ()
 		| TTypeDecl _ -> ()
 		| TAbstractDecl _ -> ()
+		| TTraitDecl _ -> () (*traits-TODO*)
 
 	let run_on_types com types =
 		let config = get_base_config com in

@@ -106,3 +106,5 @@ let build_instance ctx mtype p =
 		t.t_params , t.t_path , (fun tl -> TType(t,tl))
 	| TAbstractDecl a ->
 		a.a_params, a.a_path, (fun tl -> TAbstract(a,tl))
+	| TTraitDecl t ->
+		t.tt_params, t.tt_path, (fun tl -> TTrait(t, tl))

@@ -398,6 +398,8 @@ let type_field cfg ctx e i p mode (with_type : WithType.t) =
 			with Not_found ->
 				type_field_by_forward_member type_field_by_type e a tl
 			)
+		| TTrait (t, tl) ->
+			die "TODO" __LOC__
 		| _ -> raise Not_found
 	in
 	let type_field_by_extension f t e =

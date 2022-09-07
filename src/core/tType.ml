@@ -54,6 +54,7 @@ type t =
 	| TDynamic of t
 	| TLazy of tlazy ref
 	| TAbstract of tabstract * tparams
+	| TTrait of ttrait * tparams
 
 and tmono = {
 	mutable tm_type : t option;
@@ -343,11 +344,26 @@ and tabstract = {
 	a_enum : bool;
 }
 
+and ttrait = {
+	mutable tt_path : path;
+	tt_module : module_def;
+	tt_pos : pos;
+	tt_name_pos : pos;
+	tt_private : bool;
+	mutable tt_doc : Ast.documentation;
+	mutable tt_meta : metadata;
+	mutable tt_params : type_params;
+	mutable tt_using : (tclass * pos) list;
+	(* do not insert any fields above *)
+	mutable tt_fields: class_field list;
+}
+
 and module_type =
 	| TClassDecl of tclass
 	| TEnumDecl of tenum
 	| TTypeDecl of tdef
 	| TAbstractDecl of tabstract
+	| TTraitDecl of ttrait
 
 and module_def = {
 	m_id : int;

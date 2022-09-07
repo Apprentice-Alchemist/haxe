@@ -1692,6 +1692,7 @@ let run (com:Common.context) (types:module_type list) =
 			| TEnumDecl enm -> ()
 			| TTypeDecl typedef -> ()
 			| TAbstractDecl abstr -> ()
+			| TTraitDecl _ -> () (* traits-TODO: anything needed here? *)
 			| TClassDecl cls -> (new class_checker cls immediate_execution report)#check
 	in
 	List.iter traverse types;

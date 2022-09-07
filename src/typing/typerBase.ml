@@ -176,6 +176,8 @@ let rec type_module_type ctx t tparams p =
 		if not (Meta.has Meta.RuntimeValue a.a_meta) then typing_error (s_type_path a.a_path ^ " is not a value") p;
 		let t_tmp = abstract_module_type a [] in
 		mk (TTypeExpr (TAbstractDecl a)) (TType (t_tmp,[])) p
+	| TTraitDecl t ->
+		typing_error (s_type_path t.tt_path ^ " is not a value") p
 
 let type_type ctx tpath p =
 	type_module_type ctx (Typeload.load_type_def ctx p (mk_type_path tpath)) None p

@@ -186,6 +186,7 @@ let map_expr_type f ft fv e =
 	| TEnumIndex e1 ->
 		{ e with eexpr = TEnumIndex (f e1); etype = ft e.etype }
 	| TField (e1,v) ->
+		(* Printf.printf "TField thingy %s %s\n" (s_expr_debug e1) (s_field_access s_type_kind v); *)
 		let e1 = f e1 in
 		let v = try
 			let n = match v with
@@ -629,6 +630,8 @@ let build_metadata api t =
 			(t.t_pos, ["",t.t_meta],(match follow t.t_type with TAnon a -> PMap.fold (fun f acc -> (f.cf_name,f.cf_meta) :: acc) a.a_fields [] | _ -> []),[])
 		| TAbstractDecl a ->
 			(a.a_pos, ["",a.a_meta],[],[])
+		| TTraitDecl t ->
+			(t.tt_pos, ["", t.tt_meta],[],[])
 	) in
 	let filter l =
 		let l = List.map (fun (n,ml) -> n, ExtList.List.filter_map (fun (m,el,p) -> match m with Meta.Custom s when String.length s > 0 && s.[0] <> ':' -> Some (s,el,p) | _ -> None) ml) l in

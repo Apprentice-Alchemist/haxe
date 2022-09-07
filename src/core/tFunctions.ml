@@ -245,6 +245,7 @@ let t_infos t : tinfos =
 	| TEnumDecl e -> Obj.magic e
 	| TTypeDecl t -> Obj.magic t
 	| TAbstractDecl a -> Obj.magic a
+	| TTraitDecl t -> Obj.magic t
 
 let t_path t = (t_infos t).mt_path
 
@@ -825,7 +826,7 @@ let is_pos_outside_class c p =
 
 let resolve_typedef t =
 	match t with
-	| TClassDecl _ | TEnumDecl _ | TAbstractDecl _ -> t
+	| TClassDecl _ | TEnumDecl _ | TAbstractDecl _ | TTraitDecl _ -> t
 	| TTypeDecl td ->
 		match follow td.t_type with
 		| TEnum (e,_) -> TEnumDecl e
@@ -843,6 +844,7 @@ let type_has_meta t m =
 		| TEnum ({ e_meta = metadata }, _)
 		| TInst ({ cl_meta = metadata }, _)
 		| TType ({ t_meta = metadata }, _)
+		| TTrait ({ tt_meta = metadata }, _)
 		| TAbstract ({ a_meta = metadata }, _) -> has_meta m metadata
 
 (* tvar *)

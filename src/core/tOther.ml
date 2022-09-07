@@ -110,6 +110,7 @@ module TExprToExpr = struct
 			| TEnumDecl en -> en.e_module.m_path,en.e_path
 			| TAbstractDecl a -> a.a_module.m_path,a.a_path
 			| TTypeDecl t -> t.t_module.m_path,t.t_path
+			| TTraitDecl t -> t.tt_module.m_path,t.tt_path
 			in
 			if snd mp = snd p then p else (fst mp) @ [snd mp],snd p
 		in
@@ -173,7 +174,7 @@ module TExprToExpr = struct
 			let t = (match t with
 				| None -> None
 				| Some t ->
-					let t = (match t with TClassDecl c -> TInst (c,[]) | TEnumDecl e -> TEnum (e,[]) | TTypeDecl t -> TType (t,[]) | TAbstractDecl a -> TAbstract (a,[])) in
+					let t = (match t with TClassDecl c -> TInst (c,[]) | TEnumDecl e -> TEnum (e,[]) | TTypeDecl t -> TType (t,[]) | TAbstractDecl a -> TAbstract (a,[]) | TTraitDecl t -> TTrait (t,[])) in
 					Some (try convert_type t,null_pos with Exit -> die "" __LOC__)
 			) in
 			ECast (convert_expr e,t)

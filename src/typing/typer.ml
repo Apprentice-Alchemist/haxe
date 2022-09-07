@@ -418,7 +418,7 @@ let rec type_ident_raise ctx i p mode with_type =
 					with Not_found ->
 						loop l
 					end
-				| TClassDecl _ | TAbstractDecl _ ->
+				| TClassDecl _ | TAbstractDecl _ | TTraitDecl _ ->
 					loop l
 				| TTypeDecl t ->
 					(match follow t.t_type with
@@ -2122,7 +2122,7 @@ let rec create com =
 				in
 				ctx.t.tnull <- mk_null;
 			| _ -> ())
-		| TEnumDecl _ | TClassDecl _ | TTypeDecl _ ->
+		| TEnumDecl _ | TClassDecl _ | TTypeDecl _ | TTraitDecl _ ->
 			()
 	) ctx.g.std.m_types;
 	let m = TypeloadModule.load_module ctx ([],"String") null_pos in

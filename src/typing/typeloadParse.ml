@@ -123,6 +123,8 @@ let resolve_module_file com m remap p =
 			| (EAbstract d,_) :: _ -> d.d_meta
 			| (ETypedef d,_) :: _ -> d.d_meta
 			| (EStatic d,_) :: _ -> d.d_meta
+			| (ETrait d,_) :: _ -> d.d_meta
+			| (EImpl d,_) :: _ -> d.impl_meta
 			| [] -> []
 		in
 		let meta = match parse_result with
@@ -341,6 +343,8 @@ let parse_module ctx m p =
 			| EAbstract d -> build AbPrivate d
 			| EStatic d -> build (AStatic,null_pos) d
 			| EImport _ | EUsing _ -> acc
+			| ETrait d -> build TFPrivate d
+			| EImpl _ -> acc (* TODO: investigate what this function actually does and figure out wether impl's need special handling *)
 		) [(EImport (List.map (fun s -> s,null_pos) (!remap @ [snd m]),INormal),null_pos)] decls)
 	else
 		decls

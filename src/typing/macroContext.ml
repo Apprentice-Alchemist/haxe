@@ -243,6 +243,7 @@ let make_macro_api ctx p =
 					| TEnumDecl e -> TEnum (e,tl)
 					| TTypeDecl t -> TType (t,tl)
 					| TAbstractDecl a -> TAbstract(a,tl)
+					| TTraitDecl t -> TTrait(t,tl)
 				)
 			| _ ->
 				if ctx.curclass == null_class then

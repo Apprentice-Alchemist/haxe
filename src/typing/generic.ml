@@ -184,6 +184,7 @@ let set_type_parameter_dependencies mg tl =
 		| TEnum (e,tl) -> add_dep e.e_module tl
 		| TType (t,tl) -> add_dep t.t_module tl
 		| TAbstract (a,tl) -> add_dep a.a_module tl
+		| TTrait (t, tl) -> add_dep t.tt_module tl
 		| TMono r ->
 			(match r.tm_type with
 			| None -> ()

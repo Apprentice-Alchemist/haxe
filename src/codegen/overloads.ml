@@ -114,6 +114,7 @@ struct
 		| TDynamic _ -> t
 		| TLazy f -> simplify_t (lazy_type f)
 		| TFun _ -> t
+		| TTrait _ -> t
 
 	(* rate type parameters *)
 	let rate_tp tlfun tlarg =

@@ -169,6 +169,28 @@ module ModuleLevel = struct
 				);
 				decls := (TTypeDecl t, decl) :: !decls;
 				acc
+			| ETrait d ->
+				let name = fst d.d_name in
+				check_type_name name d.d_meta;
+				has_declaration := true;
+				let priv =  List.mem TFPrivate d.d_flags in
+				let path = make_path name priv d.d_meta p in
+				let t = {
+					tt_path = path;
+					tt_module = m;
+					tt_pos = p;
+					tt_name_pos = (pos d.d_name);
+					tt_doc = d.d_doc;
+					tt_meta = d.d_meta;
+					tt_params = [];
+					tt_using = [];
+					tt_private = priv;
+					tt_fields = [];
+				} in
+				decls := (TTraitDecl t, decl) :: !decls;
+				acc
+			| EImpl def ->
+				die "" __LOC__;
 			| EAbstract d ->
 				let name = fst d.d_name in
 				check_type_name name d.d_meta;
@@ -334,6 +356,8 @@ module ModuleLevel = struct
 				t.t_params <- type_type_params ctx TPHType t.t_path (fun() -> t.t_params) p d.d_params;
 			| (TAbstractDecl a, (EAbstract d, p)) ->
 				a.a_params <- type_type_params ctx TPHType a.a_path (fun() -> a.a_params) p d.d_params;
+			| (TTraitDecl a, (ETrait d, p)) ->
+				a.tt_params <- type_type_params ctx TPHType a.tt_path (fun() -> a.tt_params) p d.d_params;
 			| _ ->
 				die "" __LOC__
 		) decls
@@ -657,6 +681,12 @@ module TypeLevel = struct
 		if Meta.has Meta.InheritDoc a.a_meta then
 			delay ctx PConnectField (fun() -> InheritDoc.build_abstract_doc ctx a)
 
+	let init_trait ctx context_init t d p =
+		if ctx.is_display_file && DisplayPosition.display_position#enclosed_in (pos d.d_name) then
+			DisplayEmitter.display_module_type ctx (TTraitDecl t) (pos d.d_name);
+		TypeloadCheck.check_global_metadata ctx t.tt_meta (fun m -> t.tt_meta <- m :: t.tt_meta) t.tt_module.m_path t.tt_path None;
+		(* TODO: InheritDoc? *)
+		()
 	(*
 		In this pass, we can access load and access other modules types, but we cannot follow them or access their structure
 		since they have not been setup. We also build a context_init list that will be evaluated the first time we evaluate
@@ -693,6 +723,11 @@ module TypeLevel = struct
 		| EAbstract d ->
 			let a = (match get_type (fst d.d_name) with TAbstractDecl a -> a | _ -> die "" __LOC__) in
 			init_abstract ctx context_init a d p
+		| ETrait d ->
+			let t = (match get_type (fst d.d_name) with TTraitDecl t -> t | _ -> die "" __LOC__) in
+			init_trait ctx context_init t d p
+		| EImpl d ->
+			die "TODO" __LOC__
 		| EStatic _ ->
 			(* nothing to do here as module fields are collected into a special EClass *)
 			()

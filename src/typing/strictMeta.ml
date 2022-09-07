@@ -10,6 +10,7 @@ let get_native_repr md pos =
 		| TEnumDecl e -> e.e_path, e.e_meta
 		| TTypeDecl t -> t.t_path, t.t_meta
 		| TAbstractDecl a -> a.a_path, a.a_meta
+		| TTraitDecl t -> t.tt_path, t.tt_meta
 	in
 	let rec loop acc = function
 		| (Meta.JavaCanonical,[EConst(String(pack,_)),_; EConst(String(name,_)),_],_) :: _ ->

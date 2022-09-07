@@ -28,7 +28,7 @@ let get_main ctx types =
 			with Not_found -> try
 				let t = Typeload.find_type_in_module_raise ctx m name null_pos in
 				match t with
-				| TEnumDecl _ | TTypeDecl _ | TAbstractDecl _ ->
+				| TEnumDecl _ | TTypeDecl _ | TAbstractDecl _ | TTraitDecl _ ->
 					typing_error ("Invalid -main : " ^ s_type_path path ^ " is not a class") null_pos
 				| TClassDecl c ->
 					p := c.cl_pos;
@@ -120,7 +120,7 @@ let sort_types com (modules : (path,module_def) lookup) =
 			| TClassDecl c ->
 				walk_class p c;
 				t
-			| TEnumDecl _ | TTypeDecl _ | TAbstractDecl _ ->
+			| TEnumDecl _ | TTypeDecl _ | TAbstractDecl _ | TTraitDecl _ -> (* traits-TODO: check*)
 				t
 			) in
 			Hashtbl.replace states p Done;
@@ -134,6 +134,9 @@ let sort_types com (modules : (path,module_def) lookup) =
 
 	and loop_abstract p a =
 		if a.a_path <> p then loop (TAbstractDecl a)
+
+	and loop_trait p t = (* traits-TODO *)
+		if t.tt_path <> p then loop (TTraitDecl t)
 
 	and walk_static_field p c cf =
 		match cf.cf_expr with
@@ -153,6 +156,7 @@ let sort_types com (modules : (path,module_def) lookup) =
 			| TClassDecl c -> loop_class p c
 			| TEnumDecl e -> loop_enum p e
 			| TAbstractDecl a -> loop_abstract p a
+			| TTraitDecl t -> loop_trait p t
 			| TTypeDecl _ -> die "" __LOC__)
 		| TNew (c,_,_) ->
 			iter (walk_expr p) e;
