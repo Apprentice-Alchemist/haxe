@@ -196,6 +196,7 @@ and tfield_access =
 	| FDynamic of string
 	| FClosure of (tclass * tparams) option * tclass_field (* None class = TAnon *)
 	| FEnum of tenum * tenum_field
+	| FTrait of ttrait * tclass_field
 
 and texpr = {
 	eexpr : texpr_expr;
@@ -355,7 +356,7 @@ and ttrait = {
 	mutable tt_params : type_params;
 	mutable tt_using : (tclass * pos) list;
 	(* do not insert any fields above *)
-	mutable tt_fields: class_field list;
+	mutable tt_fields: tclass_field list;
 }
 
 and module_type =

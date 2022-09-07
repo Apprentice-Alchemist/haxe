@@ -294,7 +294,7 @@ let rec link e a b =
 		else match t with
 		| TMono t -> (match t.tm_type with None -> false | Some t -> loop t)
 		| TEnum (_,tl) -> List.exists loop tl
-		| TInst (_,tl) | TType (_,tl) | TAbstract (_,tl) -> List.exists loop tl
+		| TInst (_,tl) | TType (_,tl) | TAbstract (_,tl) | TTrait(_,tl) -> List.exists loop tl
 		| TFun (tl,t) -> List.exists (fun (_,_,t) -> loop t) tl || loop t
 		| TDynamic t2 ->
 			if t == t2 then

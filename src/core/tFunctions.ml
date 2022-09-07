@@ -274,7 +274,7 @@ let map loop t =
 		(match r.tm_type with
 		| None -> t
 		| Some t -> loop t) (* erase*)
-	| TEnum (_,[]) | TInst (_,[]) | TType (_,[]) | TAbstract (_,[]) ->
+	| TEnum (_,[]) | TInst (_,[]) | TType (_,[]) | TAbstract (_,[]) | TTrait(_, []) ->
 		t
 	| TEnum (e,tl) ->
 		TEnum (e, List.map loop tl)
@@ -284,6 +284,8 @@ let map loop t =
 		TType (t2,List.map loop tl)
 	| TAbstract (a,tl) ->
 		TAbstract (a,List.map loop tl)
+	| TTrait (t,tl) ->
+		TTrait (t,List.map loop tl)
 	| TFun (tl,r) ->
 		TFun (List.map (fun (s,o,t) -> s, o, loop t) tl,loop r)
 	| TAnon a ->
@@ -311,6 +313,8 @@ let iter loop t =
 	| TType (t2,tl) ->
 		List.iter loop tl
 	| TAbstract (a,tl) ->
+		List.iter loop tl
+	| TTrait(t,tl) ->
 		List.iter loop tl
 	| TFun (tl,r) ->
 		List.iter (fun (_,_,t) -> loop t) tl;
@@ -430,6 +434,10 @@ let apply_params ?stack cparams params t =
 			(match tl with
 			| [] -> t
 			| _ -> TAbstract (a,List.map loop tl))
+		| TTrait (tt,tl) ->
+			(match tl with
+			| [] -> t
+			| _ -> TTrait (tt,List.map loop tl))
 		| TInst (c,tl) ->
 			(match tl with
 			| [] ->
@@ -506,7 +514,7 @@ let follow_once t =
 		(match r.tm_type with
 		| None -> t
 		| Some t -> t)
-	| TAbstract _ | TEnum _ | TInst _ | TFun _ | TAnon _ | TDynamic _ ->
+	| TAbstract _ | TEnum _ | TInst _ | TFun _ | TAnon _ | TDynamic _ | TTrait _->
 		t
 	| TType (t,tl) ->
 		apply_typedef t tl
@@ -605,7 +613,7 @@ let rec is_explicit_null = function
 let rec has_mono t = match t with
 	| TMono r ->
 		(match r.tm_type with None -> true | Some t -> has_mono t)
-	| TInst(_,pl) | TEnum(_,pl) | TAbstract(_,pl) | TType(_,pl) ->
+	| TInst(_,pl) | TEnum(_,pl) | TAbstract(_,pl) | TType(_,pl) | TTrait(_, pl) ->
 		List.exists has_mono pl
 	| TDynamic _ ->
 		false
@@ -648,6 +656,7 @@ let type_of_module_type = function
 	| TEnumDecl e -> TEnum (e,extract_param_types e.e_params)
 	| TTypeDecl t -> TType (t,extract_param_types t.t_params)
 	| TAbstractDecl a -> TAbstract (a,extract_param_types a.a_params)
+	| TTraitDecl t -> TTrait(t, extract_param_types t.tt_params)
 
 let rec module_type_of_type = function
 	| TInst(c,_) -> TClassDecl c
@@ -684,7 +693,7 @@ let has_ctor_constraint c = match c.cl_kind with
 
 let field_name f =
 	match f with
-	| FAnon f | FInstance (_,_,f) | FStatic (_,f) | FClosure (_,f) -> f.cf_name
+	| FAnon f | FInstance (_,_,f) | FStatic (_,f) | FClosure (_,f) | FTrait (_,f)-> f.cf_name
 	| FEnum (_,f) -> f.ef_name
 	| FDynamic n -> n
 
@@ -791,7 +800,7 @@ let quick_field t n =
 			FAnon (PMap.find n a.a_fields))
 	| TDynamic _ ->
 		FDynamic n
-	| TEnum _  | TMono _ | TAbstract _ | TFun _ ->
+	| TEnum _  | TMono _ | TAbstract _ | TFun _ | TTrait _-> (* traits-TODO *)
 		raise Not_found
 	| TLazy _ | TType _ ->
 		die "" __LOC__

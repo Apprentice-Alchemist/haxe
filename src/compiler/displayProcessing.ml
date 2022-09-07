@@ -294,6 +294,7 @@ let promote_type_hints (tctx : Typecore.typer) =
 		| TInst(({cl_name_pos = pn;cl_path = (_,name)}),_)
 		| TEnum(({e_name_pos = pn;e_path = (_,name)}),_)
 		| TType(({t_name_pos = pn;t_path = (_,name)}),_)
+		| TTrait(({tt_name_pos = pn;tt_path = (_,name)}),_)
 		| TAbstract(({a_name_pos = pn;a_path = (_,name)}),_) ->
 			md.m_type_hints <- (p,pn) :: md.m_type_hints;
 		| TDynamic _ -> ()

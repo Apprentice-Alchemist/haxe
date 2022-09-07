@@ -34,6 +34,8 @@ module TExprToExpr = struct
 			if (snd t.t_path).[0] = '#' then convert_type (follow tf) else tpath t.t_path t.t_module.m_path (List.map tparam pl)
 		| TAbstract (a,pl) ->
 			tpath a.a_path a.a_module.m_path (List.map tparam pl)
+		| TTrait (t,pl) ->
+			tpath t.tt_path t.tt_module.m_path (List.map tparam pl)
 		| TFun (args,ret) ->
 			CTFunction (List.map (fun (n,o,t) ->
 				let ct = convert_type' t in

@@ -191,6 +191,7 @@ let s_field_access tabs fa =
 	let sfa = function
 		| FHStatic c -> Printf.sprintf "FHStatic(%s)" (s_type_path c.cl_path)
 		| FHInstance(c,tl) -> Printf.sprintf "FHInstance(%s, %s)" (s_type_path c.cl_path) (s_types tl)
+		| FHTrait(t,tl) -> Printf.sprintf "FHInstance(%s, %s)" (s_type_path t.tt_path) (s_types tl)
 		| FHAbstract(a,tl,c) -> Printf.sprintf "FHAbstract(%s, %s, %s)" (s_type_path a.a_path) (s_types tl) (s_type_path c.cl_path)
 		| FHAnon -> Printf.sprintf "FHAnon"
 	in

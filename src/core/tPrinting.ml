@@ -189,6 +189,7 @@ let s_field_access s_type fa = match fa with
 	| FAnon f -> "anon(" ^ f.cf_name ^ ")"
 	| FEnum (en,f) -> "enum(" ^ s_type_path en.e_path ^ "." ^ f.ef_name ^ ")"
 	| FDynamic f -> "dynamic(" ^ f ^ ")"
+	| FTrait(t,f) -> "trait(" ^ s_type_path t.tt_path ^ "." ^ f.cf_name ^ ")"
 
 let rec s_expr s_type e =
 	let sprintf = Printf.sprintf in
@@ -372,6 +373,7 @@ let rec s_expr_ast print_var_ids tabs s_type e =
 			| FAnon cf -> tag "FAnon" ~extra_tabs:"\t" [Printf.sprintf "%s:%s" cf.cf_name (s_type cf.cf_type)]
 			| FDynamic s -> tag "FDynamic" ~extra_tabs:"\t" [s]
 			| FEnum(en,ef) -> tag "FEnum" ~extra_tabs:"\t" [s_type_path en.e_path; ef.ef_name]
+			| FTrait(t, cf) -> tag "FTrait" ~extra_tabs:"\t" [s_type_path t.tt_path; cf.cf_name]
 		in
 		tag "Field" [loop e1; sfa]
 	| TTypeExpr mt -> module_type mt

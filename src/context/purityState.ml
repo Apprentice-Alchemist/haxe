@@ -49,7 +49,7 @@ let is_pure c cf = get_purity c cf = Pure
 
 let is_pure_field_access fa = match fa with
 	| FInstance(c,_,cf) | FClosure(Some(c,_),cf) | FStatic(c,cf) -> is_pure c cf
-	| FAnon cf | FClosure(None,cf) -> (get_purity_from_meta cf.cf_meta = Pure)
+	| FAnon cf | FClosure(None,cf) | FTrait(_, cf) -> (get_purity_from_meta cf.cf_meta = Pure)
 	| FEnum _ -> true
 	| FDynamic _ -> false
 

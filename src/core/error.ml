@@ -165,6 +165,8 @@ module BetterErrors = struct
 			s_type_path t.t_path ^ s_type_params ctx tl
 		| TAbstract (a,tl) ->
 			s_type_path a.a_path ^ s_type_params ctx tl
+		| TTrait (t,tl) ->
+			s_type_path t.tt_path ^ s_type_params ctx tl
 		| TFun ([],_) ->
 			"() -> ..."
 		| TFun (l,t) ->

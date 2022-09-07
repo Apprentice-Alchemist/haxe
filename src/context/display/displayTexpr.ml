@@ -158,6 +158,8 @@ let check_display_module ctx decls m =
 			check_display_typedef ctx decls td
 		| TAbstractDecl a ->
 			check_display_abstract ctx decls a
+		| TTraitDecl t ->
+			() (* traits-TODO *)
 		end;
 		DisplayEmitter.check_display_metadata ctx infos.mt_meta
 	) m.m_types;

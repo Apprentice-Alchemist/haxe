@@ -727,7 +727,7 @@ module TypeLevel = struct
 			let t = (match get_type (fst d.d_name) with TTraitDecl t -> t | _ -> die "" __LOC__) in
 			init_trait ctx context_init t d p
 		| EImpl d ->
-			die "TODO" __LOC__
+			die "traits-TODO" __LOC__
 		| EStatic _ ->
 			(* nothing to do here as module fields are collected into a special EClass *)
 			()

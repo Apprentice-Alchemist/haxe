@@ -783,6 +783,8 @@ let update_cache_dependencies com t =
 			List.iter (check_t m) tl;
 		| TAbstract(a,tl) ->
 			add_dependency m a.a_module;
+		| TTrait(t,tl) ->
+			add_dependency m t.tt_module;
 			List.iter (check_t m) tl;
 		| TFun(targs,tret) ->
 			List.iter (fun (_,_,t) -> check_t m t) targs;

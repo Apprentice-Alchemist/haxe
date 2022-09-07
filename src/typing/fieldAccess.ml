@@ -35,6 +35,7 @@ let apply_fa cf = function
 	| FHStatic c -> FStatic(c,cf)
 	| FHInstance(c,tl) -> FInstance(c,tl,cf)
 	| FHAbstract(a,tl,c) -> FStatic(c,cf)
+	| FHTrait(t,tl) -> FTrait(t,cf)
 	| FHAnon -> FAnon cf
 
 (* Returns the mapping function to apply type parameters. *)
@@ -42,6 +43,7 @@ let get_map_function fa = match fa.fa_host with
 	| FHStatic _ | FHAnon -> (fun t -> t)
 	| FHInstance(c,tl) -> TClass.get_map_function c tl
 	| FHAbstract(a,tl,_) -> apply_params a.a_params tl
+	| FHTrait(t,tl) -> apply_params t.tt_params tl
 
 (* Converts the field access to a `TField` node, using the provided `mode`. *)
 let get_field_expr fa mode =
@@ -70,6 +72,14 @@ let get_field_expr fa mode =
 				FClosure(None,cf)
 			| _ ->
 				FAnon cf
+			in
+			fa,t
+		| FHTrait (tt, tl) ->
+			let fa = match cf.cf_kind with
+			| Method _ when mode = FRead ->
+				FClosure(None,cf) (*traits-TODO*)
+			| _ ->
+				FTrait(tt,cf)
 			in
 			fa,t
 	in
@@ -116,6 +126,12 @@ let resolve_accessor fa mode = match fa.fa_field.cf_kind with
 					end
 				| FHAnon ->
 					AccessorAnon
+				| FHTrait(t, tl) ->
+					begin try
+						AccessorFound (forward (List.find (fun f -> f.cf_name = name) t.tt_fields) fa.fa_host)
+					with Not_found ->
+						AccessorNotFound
+					end
 				end
 			| _ ->
 				AccessorInvalid

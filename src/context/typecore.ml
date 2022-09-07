@@ -162,6 +162,7 @@ type field_host =
 	| FHStatic of tclass
 	| FHInstance of tclass * tparams
 	| FHAbstract of tabstract * tparams * tclass
+	| FHTrait of ttrait * tparams
 	| FHAnon
 
 type field_access = {

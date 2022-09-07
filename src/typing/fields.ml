@@ -161,6 +161,8 @@ let field_access ctx mode f fh e pfield =
 			maybe_check_visibility c true;
 			let sea = make_abstract_static_extension_access a tl c f e false pfull in
 			AKUsingField sea
+		| FHTrait(_, _) ->
+			die "traits-TODO" __LOC__
 		end;
 	| Var v ->
 		begin match fh with
@@ -181,6 +183,8 @@ let field_access ctx mode f fh e pfield =
 				| _ ->
 					display_error ctx.com "Normal variables cannot be accessed with 'super', use 'this' instead" pfield;
 			end;
+		| FHTrait(_, _) ->
+			die "traits-TODO" __LOC__
 		| FHAnon ->
 			()
 		end;
@@ -399,7 +403,9 @@ let type_field cfg ctx e i p mode (with_type : WithType.t) =
 				type_field_by_forward_member type_field_by_type e a tl
 			)
 		| TTrait (t, tl) ->
-			die "TODO" __LOC__
+			Printf.eprintf "Hello World!";
+			let f = List.find (fun f -> f.cf_name = i) t.tt_fields in
+			field_access f (FHTrait(t,tl))
 		| _ -> raise Not_found
 	in
 	let type_field_by_extension f t e =
@@ -530,6 +536,9 @@ let type_field cfg ctx e i p mode (with_type : WithType.t) =
 			with Not_found when not (has_class_field_flag (PMap.find i (find_some a.a_impl).cl_statics) CfImpl) ->
 				typing_error ("Invalid call to static function " ^ i ^ " through abstract instance") pfield
 			)
+		| TTrait (t, tl) ->
+			let f = List.find (fun f -> f.cf_name = i) t.tt_fields in
+			field_access e f (FHTrait(t,tl))
 		| _ -> raise Not_found
 	in
 	let t = follow_without_type e.etype in

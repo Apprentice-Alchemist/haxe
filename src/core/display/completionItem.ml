@@ -21,6 +21,7 @@ module CompletionModuleKind = struct
 		| Struct
 		| TypeParameter
 		| Static
+		| Trait
 
 	let to_int = function
 		| Class -> 0
@@ -32,6 +33,7 @@ module CompletionModuleKind = struct
 		| Struct -> 6
 		| TypeParameter -> 7
 		| Static -> 8
+		| Trait -> 9
 end
 
 module ImportStatus = struct
@@ -161,6 +163,25 @@ module CompletionModuleType = struct
 				has_constructor = ctor;
 				source = Syntax td;
 			}
+		| ETrait t ->
+			{
+				pack = pack;
+				name = fst t.d_name;
+				module_name = module_name;
+				pos = p;
+				is_private = List.mem TFPrivate t.d_flags;
+				params = t.d_params;
+				meta = t.d_meta;
+				doc = t.d_doc;
+				is_extern = false;
+				is_final = false;
+				is_abstract = false;
+				kind = Trait;
+				has_constructor = No;
+				source = Syntax td;
+			}
+		| EImpl _ ->
+			die "traits-TODO" __LOC__
 		| EStatic d ->
 			{
 				pack = pack;
@@ -220,6 +241,8 @@ module CompletionModuleType = struct
 					| _ -> false,false,false,No
 				in
 				is_extern,is_final,is_abstract,kind,ctor
+			| TTraitDecl _ ->
+				false,false,false,Trait,No
 		in
 		let is_extern,is_final,is_abstract,kind,ctor = ctor_info mt in
 		let infos = t_infos mt in
@@ -390,6 +413,7 @@ module CompletionType = struct
 		| CTFunction of ct_function
 		| CTAnonymous of ct_anonymous
 		| CTDynamic of t option
+		| CTTrait of ct_path_with_params
 
 	let rec generate_path_with_params ctx pwp = jobject [
 		"path",jobject [
@@ -439,6 +463,7 @@ module CompletionType = struct
 			| CTEnum pwp -> "TEnum",Some (generate_path_with_params ctx pwp)
 			| CTTypedef pwp -> "TType",Some (generate_path_with_params ctx pwp)
 			| CTAbstract pwp -> "TAbstract",Some (generate_path_with_params ctx pwp)
+			| CTTrait pwp -> "TTrait",Some (generate_path_with_params ctx pwp)
 			| CTFunction ctf -> "TFun",Some (generate_function ctx ctf)
 			| CTAnonymous cta -> "TAnonymous",Some (generate_anon ctx cta)
 			| CTDynamic cto -> "TDynamic",Option.map (generate_type ctx) cto;
@@ -486,6 +511,8 @@ module CompletionType = struct
 				CTTypedef (ppath td.t_module.m_path td.t_path tl)
 			| TAbstract(a,tl) ->
 				CTAbstract (ppath a.a_module.m_path a.a_path tl)
+			| TTrait(t,tl) ->
+				CTTrait (ppath t.tt_module.m_path t.tt_path tl)
 			| TFun(tl,t) when not (PMap.is_empty values) ->
 				let get_arg n = try Some (PMap.find n values) with Not_found -> None in
 				CTFunction {

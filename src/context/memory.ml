@@ -31,6 +31,7 @@ let update_module_type_deps deps md =
 			List.iter (fun n -> deps := Obj.repr (PMap.find n e.e_constrs) :: !deps) e.e_names;
 		| TTypeDecl t -> deps := Obj.repr t :: !deps;
 		| TAbstractDecl a -> deps := Obj.repr a :: !deps;
+		| TTraitDecl t -> deps := Obj.repr t :: !deps;
 	) md.m_types;
 	!deps
 
@@ -211,6 +212,10 @@ let get_memory_json (cs : CompilationCache.t) mreq =
 					let repr = Obj.repr a in
 					let deps = List.filter (fun repr' -> repr' != repr) deps in
 					[],Objsize.objsize a deps out
+				| TTraitDecl t ->
+					let repr = Obj.repr t in
+					let deps = List.filter (fun repr' -> repr' != repr) deps in
+					[],Objsize.objsize t deps out
 			in
 			let size = Objsize.size_with_headers inf in
 			let jo = jobject [

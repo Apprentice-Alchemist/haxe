@@ -186,12 +186,11 @@ let map_expr_type f ft fv e =
 	| TEnumIndex e1 ->
 		{ e with eexpr = TEnumIndex (f e1); etype = ft e.etype }
 	| TField (e1,v) ->
-		(* Printf.printf "TField thingy %s %s\n" (s_expr_debug e1) (s_field_access s_type_kind v); *)
 		let e1 = f e1 in
 		let v = try
 			let n = match v with
 				| FClosure _ -> raise Not_found
-				| FAnon f | FInstance (_,_,f) | FStatic (_,f) -> f.cf_name
+				| FAnon f | FInstance (_,_,f) | FStatic (_,f) | FTrait(_,f) -> f.cf_name
 				| FEnum (_,f) -> f.ef_name
 				| FDynamic n -> n
 			in
