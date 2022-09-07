@@ -350,6 +350,10 @@ type abstract_flag =
 	| AbExtern
 	| AbEnum
 
+type trait_flag =
+	| TFExtends of placed_type_path
+	| TFPrivate
+
 type enum_constructor = {
 	ec_name : placed_name;
 	ec_doc : documentation;
@@ -369,6 +373,15 @@ type ('a,'b) definition = {
 	d_data : 'b;
 }
 
+type impl_definition = {
+	impl_type: type_hint;
+	trait_type: type_hint;
+	impl_params: type_param list;
+	impl_meta: metadata;
+	impl_doc: documentation;
+	impl_fields: class_field list;
+}
+
 type import_mode =
 	| INormal
 	| IAsName of placed_name
@@ -384,6 +397,8 @@ type type_def =
 	| EStatic of (placed_access, class_field_kind) definition
 	| EImport of import
 	| EUsing of placed_name list
+	| ETrait of (trait_flag, class_field list) definition
+	| EImpl of impl_definition
 
 type type_decl = type_def * pos
 

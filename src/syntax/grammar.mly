@@ -305,6 +305,24 @@ and parse_type_decl mode s =
 					serror()
 				end
 			end
+		| [< '(Const Ident "trait", p1); name = type_name; tl = parse_constraint_params; '(BrOpen,_); l,p2 = parse_class_fields true p1 >] ->
+			(ETrait {
+				d_name = name;
+				d_doc = doc_from_string_opt doc;
+				d_meta = meta;
+				d_params = tl;
+				d_flags = [];
+				d_data = l;
+			}, punion p1 p2)
+		| [< '(Const Ident "impl", p1); tl = parse_constraint_params; trait_type = parse_complex_type; '(Kwd For,_); impl_type = parse_complex_type; '(BrOpen,_); l,p2 = parse_class_fields true p1 >] ->
+			(EImpl {
+				impl_doc = doc_from_string_opt doc;
+				impl_meta = meta;
+				trait_type = trait_type;
+				impl_params = tl;
+				impl_type = impl_type;
+				impl_fields = l;
+			}, punion p1 p2)
 		| [< >] ->
 			match List.rev c with
 			| (DFinal,p1) :: crest ->
