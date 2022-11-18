@@ -30,6 +30,7 @@ package sys;
 
 	See `sys.io.File` for the complementary file API.
 **/
+@:deprecated("use sys.fs.Fs instead")
 extern class FileSystem {
 	/**
 		Returns `true` if the file or directory specified by `path` exists.

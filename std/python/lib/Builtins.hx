@@ -45,8 +45,9 @@ extern class Builtins {
 	static function isinstance(obj:Dynamic, cl:Dynamic):Bool;
 
 	static function hasattr(obj:Dynamic, attr:String):Bool;
-	static function getattr(obj:Dynamic, attr:String):Dynamic;
-
+	overload static function getattr(obj:Dynamic, attr:String):Dynamic;
+	overload static function getattr(obj:Dynamic, attr:String, def:Dynamic):Dynamic;
+	
 	@:overload(function(f:Set<Dynamic>):Int {})
 	@:overload(function(f:StringBuf):Int {})
 	@:overload(function(f:Array<Dynamic>):Int {})

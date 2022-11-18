@@ -20,24 +20,29 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-package python.lib.io;
+package sys.net;
 
-import python.lib.io.FileIO;
-import python.lib.io.IOBase;
+import haxe.io.Bytes;
+import java.net.InetAddress;
+import sys.net.IpAddress;
 
-@:pythonImport("io", "RawIOBase")
-extern class RawIOBase extends IOBase implements IRawIOBase {
-	function readall():Bytes;
-	function read(n:Int = -1):Null<Bytes>;
-	overload function write(b:Memoryview):Null<Int>;
-	overload function write(b:Bytearray):Null<Int>;
-	overload function readinto(v:Memoryview):Null<Int>;
-	overload function readinto(b:Bytearray):Null<Int>;
-}
+class Dns {
+	public static function resolve(host:String):Iterator<IpAddress> {
+		var addrs = InetAddress.getAllByName(host);
+		var result = [];
+		for (i in 0...addrs.length) {
+			var raw = addrs[i].getAddress();
+			switch raw.length {
+				case 4:
+					result.push(Ipv4(cast Bytes.ofData(raw)));
+				case 16:
+					result.push(Ipv6(cast Bytes.ofData(raw)));
+			}
+		}
+		return result.iterator();
+	}
 
-@:remove extern interface IRawIOBase extends IIOBase {
-	function readall():Bytes;
-	function read(n:Int = -1):Null<Bytes>;
-	function write(b:Bytearray):Null<Int>;
-	function readinto(b:Bytearray):Null<Int>;
+	public static function reverse(ip:Iterator<IpAddress>):String {
+		return "";
+	}
 }

@@ -25,6 +25,7 @@ package sys.net;
 /**
 	A given IP host name.
 **/
+@:deprecated("use Dns and IpAddress instead")
 extern class Host {
 	/**
 		The provided host string.
