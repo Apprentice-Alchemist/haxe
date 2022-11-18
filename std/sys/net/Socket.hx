@@ -25,6 +25,7 @@ package sys.net;
 /**
 	A TCP socket class : allow you to both connect to a given server and exchange messages or start your own server and wait for connections.
 **/
+@:deprecated("use TcpListener and TcpStream instead")
 extern class Socket {
 	/**
 		The stream on which you can read available data. By default the stream is blocking until the requested data is available,

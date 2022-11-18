@@ -26,6 +26,7 @@ package sys.net;
 	An address is used to represent a port on a given host ip.
 	It is used by `sys.net.UdpSocket`.
 **/
+@:deprecated("use SocketAddress instead")
 class Address {
 	public var host:Int;
 	public var port:Int;

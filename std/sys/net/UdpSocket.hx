@@ -25,6 +25,7 @@ package sys.net;
 /**
 	A UDP socket class
 **/
+@:deprecated("TODO: replacement api")
 class UdpSocket extends Socket {
 	public function new() {
 		throw "Not available on this platform";

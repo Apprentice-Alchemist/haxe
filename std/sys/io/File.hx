@@ -27,6 +27,7 @@ package sys.io;
 
 	See `sys.FileSystem` for the complementary file system API.
 **/
+@:deprecated("use sys.fs.File instead")
 extern class File {
 	/**
 		Retrieves the content of the file specified by `path` as a String.
