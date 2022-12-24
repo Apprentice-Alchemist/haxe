@@ -20,7 +20,7 @@ extern class TcpStream {
 	var readTimeout(get, set):Int;
 	var writeTimeout(get, set):Int;
 	var noDelay(get, set):Bool;
-	var linger(get, set):Null<Int>; // TODO: duration
+	var linger(get, set):Null<haxe.time.Duration>;
 	var nonBlocking(get, set):Bool;
 	var timeToLive(get, set):Int;
 }
