@@ -12,4 +12,6 @@ extern class TcpListener {
 
 	public var ttl(get, set):Int;
 	public var nonBlocking(get, set):Bool;
+
+	function close():Void;
 }

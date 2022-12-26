@@ -25,7 +25,6 @@ package sys;
 /**
 	File information, as given by `sys.FileSystem.stat`.
 **/
-@:deprecated("use the new file metadata api instead")
 typedef FileStat = {
 	/**
 		The user group id for the file owner.

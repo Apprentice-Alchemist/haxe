@@ -23,4 +23,9 @@ extern class TcpStream {
 	var linger(get, set):Null<haxe.time.Duration>;
 	var nonBlocking(get, set):Bool;
 	var timeToLive(get, set):Int;
+
+	function read(bytes:haxe.io.Bytes, bufferOffset:Int, bufferLength:Int):Result<Int, Error>;
+	function write(bytes:haxe.io.Bytes, bufferOffset:Int, bufferLength:Int):Result<Int, Error>;
+
+	function close():Void;
 }

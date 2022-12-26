@@ -8,9 +8,9 @@ extern class Metadata {
 	function isSymlink():Bool;
 	function size():haxe.Int64;
 	function permissions():Permissions;
-	function modified():Null<haxe.Time.SystemTime>;
-	function accessed():Null<haxe.Time.SystemTime>;
-	function created():Null<haxe.Time.SystemTime>;
+	function modified():Null<haxe.time.SystemTime>;
+	function accessed():Null<haxe.time.SystemTime>;
+	function created():Null<haxe.time.SystemTime>;
 }
 
 extern class Permissions {
