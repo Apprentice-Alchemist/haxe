@@ -2,6 +2,8 @@ package sys.fs;
 
 import haxe.Result;
 import sys.fs.Metadata;
+import sys.fs.Path;
+import sys.Error;
 
 @:coreApi
 extern class Fs {

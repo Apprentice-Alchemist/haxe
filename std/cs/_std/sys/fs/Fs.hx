@@ -3,7 +3,6 @@ package sys.fs;
 import haxe.Result;
 import sys.fs.Metadata;
 
-@:coreApi
 extern class Fs {
 	static function metadata(path:Path):Result<Metadata, Error>;
 	/**

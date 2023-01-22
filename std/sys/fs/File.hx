@@ -4,12 +4,7 @@ import haxe.io.Bytes;
 import haxe.Result;
 import sys.fs.Metadata;
 
-enum SeekPos {
-	SeekBegin(offset:Int);
-	SeekCurrent(offset:Int);
-	SeekEnd(offset:Int);
-}
-
+@:coreApi
 extern class File {
 	/**
 		Opens the file in read-only mode.
@@ -32,11 +27,11 @@ extern class File {
 	function syncData():Result<Void /* TODO */, Error>;
 	function metadata():Result<Metadata, Error>;
 	function setPermissions(perm:Permissions):Result<Void /* TODO */, Error>;
-	// TODO: these should all use Int64's (uint64's even)
+	// TODO: technically these should all use a Int64 or even uint64 type, but `haxe.io.Bytes` uses an int length, so...
 
 	function read(bytes:haxe.io.Bytes, bufferOffset:Int, bufferLength:Int):Result<Int, Error>;
 	function write(bytes:haxe.io.Bytes, bufferOffset:Int, bufferLength:Int):Result<Int, Error>;
-	function seek(pos:SeekPos):Result<Int, Error>;
+	function seek(pos:SeekPos):Result<haxe.Int64, Error>;
 
 	function close():Void;
 }

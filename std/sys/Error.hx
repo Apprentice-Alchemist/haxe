@@ -8,4 +8,9 @@ enum Error {
 	**/
 	Blocked;
 	Unknown;
+	/**
+		Resource was closed.
+	**/
+	Closed;
+	NoPermissions;
 }

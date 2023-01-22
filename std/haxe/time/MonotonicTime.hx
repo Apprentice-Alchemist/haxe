@@ -5,7 +5,7 @@ package haxe.time;
 /**
 	Time measured from a monotonic clock.
 **/
-@:coreApi extern abstract MonotonicTime {
+@:coreType extern abstract MonotonicTime {
 	/**
 		The current time stamp of a monotonic clock.
 	**/
