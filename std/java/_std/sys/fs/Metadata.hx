@@ -34,14 +34,14 @@ class Metadata {
 	}
 
 	public function modified():Null<haxe.time.SystemTime> {
-		return SystemTime.unixEpoch();
+		return SystemTime.unixEpoch(); // TODO
 	}
 
 	public function accessed():Null<haxe.time.SystemTime> {
-		return SystemTime.unixEpoch();
+		return SystemTime.unixEpoch(); // TODO
 	}
 
 	public function created():Null<haxe.time.SystemTime> {
-		return SystemTime.unixEpoch();
+		return SystemTime.unixEpoch(); // TODO
 	}
 }

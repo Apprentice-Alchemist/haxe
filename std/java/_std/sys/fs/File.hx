@@ -23,56 +23,43 @@ import java.io.File as NativeFile;
 
 @:coreApi
 class File {
-	/**
-		Opens the file in read-only mode.
-	**/
-	public static function open(p:Path):Result<File, Error> {
+	public static function open(p:Path):File {
 		var read:OpenOption = cast StandardOpenOption.READ;
 		return openImpl(p, read);
 	}
 
-	/**
-		Opens the file in write-only mode, creating it if needed.
-	**/
-	public static function create(p:Path):Result<File, Error> {
+	public static function create(p:Path):File {
 		var create:OpenOption = cast StandardOpenOption.CREATE;
 		var write:OpenOption = cast StandardOpenOption.WRITE;
 		return openImpl(p, create, write);
 	}
 
-	/**
-		Opens the file in write-only mode, always creating a new one.
-		Returns an error if the file already exists.
-	**/
-	public static function createNew(p:Path):Result<File, Error> {
+	public static function createNew(p:Path):File {
 		var createNew:OpenOption = cast StandardOpenOption.CREATE_NEW;
 		var write:OpenOption = cast StandardOpenOption.WRITE;
 		return openImpl(p, createNew, write);
 	}
 
-	public static function readAll(p:Path):Result<Bytes, Error> {
-		var file = switch open(p) {
-			case Ok(file): file;
-			case Err(e): return Err(e);
-		}
+	public static function readAll(p:Path):Bytes {
+		var file = open(p);
 		var size = file.channel.size();
 		var bytes = haxe.io.Bytes.alloc(Int64.toInt(size));
 		file.read(bytes, 0, bytes.length);
-		return Ok(bytes);
+		return bytes;
 	}
 
-	public static function writeAll(p:Path, b:Bytes):Result<Void /* TODO */, Error> {
-		return Err(Unsupported);
+	public static function writeAll(p:Path, b:Bytes):Void {
+		throw new haxe.exceptions.NotImplementedException();
 	}
 
-	public static function appendAll(p:Path, b:Bytes):Result<Void /* TODO */, Error> {
-		return Err(Unsupported);
+	public static function appendAll(p:Path, b:Bytes):Void {
+		throw new haxe.exceptions.NotImplementedException();
 	}
 
-	static function openImpl(path:Path, ...options:OpenOption):Result<File, Error> {
+	static function openImpl(path:Path, ...options:OpenOption):File {
 		final path = java.nio.file.Paths.get(path.toString());
-		return try Ok(new File(path, FileChannel.open(path, ...options))) catch (e) {
-			Err(Unknown);
+		return try new File(path, FileChannel.open(path, ...options)) catch (e) {
+			throw e;
 		};
 	}
 
@@ -84,74 +71,65 @@ class File {
 		this.channel = channel;
 	}
 
-	public function syncAll():Result<Void /* TODO */, Error> {
+	public function syncAll():Void {
 		try {
 			channel.force(true);
-			return Ok((null : Void));
+			// return Ok((null : Void));
 		} catch (e:ClosedChannelException) {
-			return Err(Closed);
+			// return Err(Closed);
 		} catch (e:IOException) {
-			return Err(Unknown);
+			// return Err(Unknown);
 		}
 	}
 
-	public function syncData():Result<Void /* TODO */, Error> {
+	public function syncData():Void {
 		try {
 			channel.force(false);
-			return Ok((null : Void));
+			// return Ok((null : Void));
 		} catch (e:ClosedChannelException) {
-			return Err(Closed);
+			// return Err(Closed);
 		} catch (e:IOException) {
-			return Err(Unknown);
+			// return Err(Unknown);
 		}
 	}
 
-	public function metadata():Result<Metadata, Error> {
-		// TODO: timestamps, error handling?
-		return Ok(new Metadata(path));
+	public function metadata():Metadata {
+		return new Metadata(path);
 	}
 
-	public function setPermissions(perm:Permissions):Result<Void /* TODO */, Error> {
+	public function setPermissions(perm:Permissions):Void {
 		try {
 			if (path.toFile().setWritable(true)) {
-				return Err(NoPermissions);
+				// return Err(NoPermissions);
 			}
-			return Ok((null : Void));
+			// return Ok((null : Void));
 		} catch (e:SecurityException) {
-			return Err(NoPermissions);
+			// return Err(NoPermissions);
 		}
 	}
 
-	public function read(bytes:haxe.io.Bytes, bufferOffset:Int, bufferLength:Int):Result<Int, Error> {
+	public function read(bytes:haxe.io.Bytes, bufferOffset:Int, bufferLength:Int):Int {
 		try {
-			var i = channel.read(ByteBuffer.wrap(bytes.getData(), bufferOffset, bufferLength));
-			return Ok(i);
-		} catch(e) {
-			return Err(Unknown);
-		}
-	}
-
-	public function write(bytes:haxe.io.Bytes, bufferOffset:Int, bufferLength:Int):Result<Int, Error> {
-		try {
-			var i = channel.write(ByteBuffer.wrap(bytes.getData(), bufferOffset, bufferLength));
-			return Ok(i);
+			return channel.read(ByteBuffer.wrap(bytes.getData(), bufferOffset, bufferLength));
+			// return Ok(i);
 		} catch (e) {
-			return Err(Unknown);
+			throw e;
+			// return Err(Unknown);
 		}
 	}
 
-	public function seek(pos:SeekPos):Result<haxe.Int64, Error> {
-		try {
-			var realPos = switch pos {
-				case SeekBegin(offset): offset;
-				case SeekCurrent(offset): channel.position() + offset;
-				case SeekEnd(offset): channel.size() + offset;
-			}
-			channel.position(realPos);
-			return Ok(channel.position());
-		} catch (e) {
-			return Err(Unknown);
+	public function write(bytes:haxe.io.Bytes, bufferOffset:Int, bufferLength:Int):Int {
+		return channel.write(ByteBuffer.wrap(bytes.getData(), bufferOffset, bufferLength));
+	}
+
+	public function seek(pos:SeekPos):Int64 {
+		var realPos = switch pos {
+			case SeekBegin(offset): offset;
+			case SeekCurrent(offset): channel.position() + offset;
+			case SeekEnd(offset): channel.size() + offset;
 		}
+		channel.position(realPos);
+		return channel.position();
 	}
 
 	public function close():Void {
