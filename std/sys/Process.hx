@@ -28,7 +28,7 @@ enum Stdio {
 	Piped;
 }
 
-typedef ProcessOptions = {
+@:structInit class ProcessOptions  {
 	/**
 		Arguments to be passed to the process.
 
@@ -49,7 +49,7 @@ typedef ProcessOptions = {
 		The working directory for the process.
 	**/
 	var workingDirectory:Null<String> = null;
-};
+}
 
 @:coreApi
 extern class Process {
@@ -87,7 +87,7 @@ extern class Process {
 
 		This function will not close the stdin stream.
 	**/
-	function tryWait():Result<Null<Int>, Error>
+	function tryWait():Result<Null<Int>, Error>;
 
 	/**
 		Close the process handle and release the associated resources.
