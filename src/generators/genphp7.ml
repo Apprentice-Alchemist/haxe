@@ -46,7 +46,7 @@ let write_resource dir name data =
 *)
 let copy_file src dst =
 	let buffer_size = 8192 in
-	let buffer = String.create buffer_size in
+	let buffer = Bytes.create buffer_size in
 	let fd_in = Unix.openfile src [O_RDONLY] 0 in
 	let fd_out = Unix.openfile dst [O_WRONLY; O_CREAT; O_TRUNC] 0o644 in
 	let rec copy_loop () =
@@ -196,7 +196,7 @@ end
 (**
 	Check if specified string is a reserved word in PHP
 *)
-let is_keyword str = Hashtbl.mem php_keywords_tbl (String.lowercase str)
+let is_keyword str = Hashtbl.mem php_keywords_tbl (String.lowercase_ascii str)
 
 (**
 	Check if specified type is php.NativeArray
@@ -3667,7 +3667,7 @@ class class_builder ctx (cls:tclass) =
 				List.iter
 					(fun field ->
 						if not !required then
-							required := (String.lowercase field.cf_name = String.lowercase self#get_name)
+							required := (String.lowercase_ascii field.cf_name = String.lowercase_ascii self#get_name)
 					)
 					(cls.cl_ordered_statics @ cls.cl_ordered_fields);
 				!required

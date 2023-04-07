@@ -23,7 +23,7 @@ let max_completion_items = ref 0
 let filter_somehow ctx items kind subj =
 	let subject = match subj.s_name with
 		| None -> ""
-		| Some name-> String.lowercase name
+		| Some name-> String.lowercase_ascii name
 	in
 	let subject_length = String.length subject in
 	let determine_cost s =
@@ -67,7 +67,7 @@ let filter_somehow ctx items kind subj =
 	let rec loop acc items index =
 		match items with
 		| item :: items ->
-			let name = String.lowercase (get_filter_name item) in
+			let name = String.lowercase_ascii (get_filter_name item) in
 			let cost = determine_cost name in
 			let acc = if cost >= 0 then
 				(item,index,cost) :: acc

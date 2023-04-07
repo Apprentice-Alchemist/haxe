@@ -68,7 +68,7 @@ let cs_unops =
 let netname_to_hx name =
 	let len = String.length name in
 	let chr = String.get name 0 in
-	String.make 1 (Char.uppercase chr) ^ (String.sub name 1 (len-1))
+	String.make 1 (Char.uppercase_ascii chr) ^ (String.sub name 1 (len-1))
 
 (* -net-lib implementation *)
 
@@ -105,7 +105,7 @@ let escape_chars =
 
 let netcl_to_hx cl =
 	let cl = if String.length cl > 0 && String.get cl 0 >= 'a' && String.get cl 0 <= 'z' then
-			Char.escaped (Char.uppercase (String.get cl 0)) ^ (String.sub cl 1 (String.length cl - 1))
+			Char.escaped (Char.uppercase_ascii (String.get cl 0)) ^ (String.sub cl 1 (String.length cl - 1))
 		else
 			cl
 	in
@@ -118,11 +118,11 @@ let netcl_to_hx cl =
 let netpath_to_hx std = function
 	| [],[], cl -> [], netcl_to_hx cl
 	| ns,[], cl ->
-		let ns = (List.map (fun s -> String.lowercase (escape_chars s)) ns) in
+		let ns = (List.map (fun s -> String.lowercase_ascii (escape_chars s)) ns) in
 		add_cs ns, netcl_to_hx cl
 	| ns,(nhd :: ntl as nested), cl ->
 		let nested = List.map (netcl_to_hx) nested in
-		let ns = (List.map (fun s -> String.lowercase (escape_chars s)) ns) @ [nhd] in
+		let ns = (List.map (fun s -> String.lowercase_ascii (escape_chars s)) ns) @ [nhd] in
 		add_cs ns, String.concat "_" nested ^ "_" ^ netcl_to_hx cl
 
 let lookup_ilclass std com ilpath =
@@ -1277,7 +1277,7 @@ let before_generate com =
 
 	(* net target *)
 	let net_target = try
-			String.lowercase (Common.defined_value com Define.NetTarget)
+			String.lowercase_ascii (Common.defined_value com Define.NetTarget)
 		with | Not_found ->
 			"net"
 	in
@@ -1310,7 +1310,7 @@ let before_generate com =
 		let rec loop () =
 			try
 				let f = Unix.readdir f in
-				let finsens = String.lowercase f in
+				let finsens = String.lowercase_ascii f in
 				if String.ends_with finsens ".dll" then
 					add_net_lib com (path ^ "/" ^ f) true false ();
 				loop()

@@ -22,6 +22,7 @@
 		unix str bigarray threads dynlink
 		xml-light extlib sha
 		luv
+		camlp-streams
 	)
 	(modules (:standard \ haxe))
 	(preprocess (per_module

@@ -45,7 +45,7 @@ let if_some f opt def =
 	| None -> def
 	| Some v -> f v
 
-let print str = print_endline str; flush Pervasives.stdout
+let print str = print_endline str; flush Stdlib.stdout
 
 let (???) file =
 	failwith ("Don't know what to do with file " ^ file)
@@ -68,7 +68,7 @@ let extension file =
 	in
 	let file = unescape file in
 	let s = try snd(rsplit_char file '.') with Not_found -> "" in
-	String.uppercase s
+	String.uppercase_ascii s
 
 let (+!) file suff =
 	let base = Filename.chop_extension file in
@@ -653,9 +653,9 @@ match files with
 		close_out out
 with
 	Failure msg ->
-		Pervasives.flush Pervasives.stdout;
+		Stdlib.flush Stdlib.stdout;
 		prerr_endline msg;
-		Pervasives.flush Pervasives.stderr;
+		Stdlib.flush Stdlib.stderr;
 		exit 1;
 
 (* ************************************************************************ *)
