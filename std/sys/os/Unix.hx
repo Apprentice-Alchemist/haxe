@@ -1,5 +1,6 @@
 package sys.os;
 
+import sys.fs.Permissions;
 import sys.fs.Metadata;
 import sys.fs.Fs;
 import sys.fs.File;
@@ -76,7 +77,7 @@ class PermissionsExt {
 
 	On Windows and other non-Unix platforms these methods will not return consistent values.
 **/
-extern class FileExt {
+class FileExt {
 	public static function openWithModeAndFlags(_:Class<sys.fs.File>, mode:UInt, flags:Int):haxe.Result<File, sys.Error> {
 		return Err(Unsupported);
 	}

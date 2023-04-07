@@ -20,7 +20,7 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-package sys.io;
+package sys;
 
 enum Stdio {
 	Inherit;
@@ -41,9 +41,9 @@ enum Stdio {
 	**/
 	var env:Map<String, String> = [];
 
-	var stdin:Stdio = Inherit;
-	var stdout:Stdio = Inherit;
-	var stderr:Stdio = Inherit;
+	var stdin:Stdio = Piped;
+	var stdout:Stdio = Piped;
+	var stderr:Stdio = Piped;
 
 	/**
 		The working directory for the process.
@@ -53,23 +53,29 @@ enum Stdio {
 
 @:coreApi
 extern class Process {
-	static function spawn(cmd:String, opts:ProcessOptions = {}):Result<Process, Error>;
+	static function spawn(cmd:String, ?opts:ProcessOptions):Process;
 
 
 	/**
 		Standard output. The output stream where a process writes its output data.
+
+		Only available when stdout is in `Piped` mode.
 	**/
-	var stdout(default, null):haxe.io.Input;
+	var stdout(default, null):Null<haxe.io.Input>;
 
 	/**
 		Standard error. The output stream to output error messages or diagnostics.
+
+		Only available when stderr is in `Piped` mode.
 	**/
-	var stderr(default, null):haxe.io.Input;
+	var stderr(default, null):Null<haxe.io.Input>;
 
 	/**
 		Standard input. The stream data going into a process.
+
+		Only available when stdin is in `Piped` mode.
 	**/
-	var stdin(default, null):haxe.io.Output;
+	var stdin(default, null):Null<haxe.io.Output>;
 
 	/**
 		Return the process ID.
@@ -81,13 +87,13 @@ extern class Process {
 
 		This function will close the stdin stream to avoid deadlocks.
 	**/
-	function wait():Result<Int, Error>;
+	function wait():Int;
 	/**
 		Checks wether the process has existed, and returns either null or the exitcode.
 
 		This function will not close the stdin stream.
 	**/
-	function tryWait():Result<Null<Int>, Error>;
+	function tryWait():Null<Int>;
 
 	/**
 		Close the process handle and release the associated resources.

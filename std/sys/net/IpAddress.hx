@@ -55,7 +55,6 @@ class Ipv6Addr {
 	**/
 	public static final LOCALHOST = new Ipv6Addr(0, 0, 0, 0, 0, 0, 0, 1);
 
-	// this is not the most efficient representation, but it'll have to do
 	var a:Int;
 	var b:Int;
 	var c:Int;
@@ -81,7 +80,7 @@ class Ipv6Addr {
 
 class IpAddressTools {
 	public static function toSocketAddress(i:IpAddress, port:Int):SocketAddress {
-		switch i {
+		return switch i {
 			case Ipv4(a): Ipv4(a, port);
 			case Ipv6(a): Ipv6(a, port, 0, 0);
 		}
