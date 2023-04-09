@@ -1,7 +1,6 @@
 package sys.fs;
 
 import haxe.io.Bytes;
-import haxe.Result;
 import sys.fs.Metadata;
 
 /**
@@ -10,9 +9,9 @@ import sys.fs.Metadata;
 @:coreApi
 extern class File {
 	/**
-		Opens the file in read-only mode.
+		Opens the file in read-only mode, or with a specific set of options.
 	**/
-	static function open(p:Path):File;
+	static function open(p:Path, ?options:OpenOptions):File;
 	/**
 		Opens the file in write-only mode, creating it if needed.
 	**/

@@ -1,6 +1,5 @@
 package sys.fs;
 
-import haxe.Result;
 import sys.fs.Metadata;
 
 @:coreApi
@@ -13,7 +12,7 @@ extern class Fs {
 	static function setPermissions(path:Path, perm:Permissions):Void;
 	static function copy(from:Path, to:Path):Void;
 	static function rename(from:Path, to:Path):Void;
-	static function readDir(path:Path):Iterator<Path>;
+	static function readDir(path:Path):Iterator<DirEntry>;
 	static function createDir(path:Path):Void;
 	static function createDirRec(path:Path):Void;
 	static function removeDir(path:Path):Void;

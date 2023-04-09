@@ -1,8 +1,8 @@
 package haxe.time;
 
 private class DurationInner {
-	final seconds:haxe.Int64;
-	final nanoseconds:Int;
+	public final seconds:haxe.Int64;
+	public final nanoseconds:Int;
 
 	public inline function new(seconds:haxe.Int64, nanos:Int) {
 		this.seconds = seconds;
@@ -26,15 +26,23 @@ abstract Duration(DurationInner) from DurationInner {
 		this = new DurationInner(seconds, nanos);
 	}
 
-	@:op(A + B) function add(b:Duration):Duration @:privateAccess {
-		var seconds = this.seconds + (cast b : DurationInner).seconds;
-		var nanos = this.nanoseconds + (cast b : DurationInner).nanoseconds;
+	public function seconds():haxe.Int64 {
+		return this.seconds;
+	}
+
+	public function subSecondNanos():Int {
+		return this.nanoseconds;
+	}
+
+	@:op(A + B) function add(b:Duration):Duration {
+		var seconds = this.seconds + b.seconds();
+		var nanos = this.nanoseconds + b.subSecondNanos();
 		seconds += Std.int(nanos / NANOSECONDS_PER_SECOND);
 		nanos %= NANOSECONDS_PER_SECOND;
 		return new Duration(seconds, nanos);
 	}
 
-	@:commutative @:op(A * b) function imul(b:Int):Duration @:privateAccess {
+	@:commutative @:op(A * b) function imul(b:Int):Duration {
 		var nanos = this.nanoseconds * b;
 		var extra_seconds = Std.int(nanos / NANOSECONDS_PER_SECOND);
 		nanos %= NANOSECONDS_PER_SECOND;
@@ -48,7 +56,7 @@ abstract Duration(DurationInner) from DurationInner {
 	// @:op(A / B) function div(b:Int):Duration;
 
 	// TODO: overflow behaviour?
-	public function toNanoseconds():haxe.Int64 @:privateAccess {
+	public function toNanoseconds():haxe.Int64 {
 		return this.seconds * NANOSECONDS_PER_SECOND + this.nanoseconds;
 	}
 }

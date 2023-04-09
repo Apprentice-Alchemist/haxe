@@ -1,7 +1,5 @@
 package sys.fs;
 
-import haxe.Result;
-
 @:coreApi
 extern class Metadata {
 	function isDir():Bool;
