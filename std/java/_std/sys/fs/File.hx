@@ -21,23 +21,34 @@ import sys.fs.Path;
 import sys.fs.SeekPos;
 import java.io.File as NativeFile;
 
+private final READ:OpenOption = cast StandardOpenOption.READ;
+private final WRITE:OpenOption = cast StandardOpenOption.WRITE;
+private final CREATE:OpenOption = cast StandardOpenOption.CREATE;
+private final CREATE_NEW:OpenOption = cast StandardOpenOption.CREATE_NEW;
+private final APPEND:OpenOption = cast StandardOpenOption.APPEND;
+private final TRUNCATE_EXISTING:OpenOption = cast StandardOpenOption.TRUNCATE_EXISTING;
+
 @:coreApi
 class File {
-	public static function open(p:Path):File {
-		var read:OpenOption = cast StandardOpenOption.READ;
-		return openImpl(p, read);
+	public static function open(p:Path, ?options:OpenOptions):File {
+		options ??= {read: true};
+		var opts = new java.util.HashSet();
+		if(options.read) opts.add(READ);
+		if(options.write) opts.add(WRITE);
+		if(options.create) opts.add(CREATE);
+		if(options.create_new) opts.add(CREATE_NEW);
+		final path = java.nio.file.Paths.get(p.toString());
+		return try new File(path, FileChannel.open(path, opts)) catch (e) {
+			throw e;
+		};
 	}
 
 	public static function create(p:Path):File {
-		var create:OpenOption = cast StandardOpenOption.CREATE;
-		var write:OpenOption = cast StandardOpenOption.WRITE;
-		return openImpl(p, create, write);
+		return open(p, {write: true});
 	}
 
 	public static function createNew(p:Path):File {
-		var createNew:OpenOption = cast StandardOpenOption.CREATE_NEW;
-		var write:OpenOption = cast StandardOpenOption.WRITE;
-		return openImpl(p, createNew, write);
+		return open(p, {write: true, create_new: true});
 	}
 
 	public static function readAll(p:Path):Bytes {
@@ -54,13 +65,6 @@ class File {
 
 	public static function appendAll(p:Path, b:Bytes):Void {
 		throw new haxe.exceptions.NotImplementedException();
-	}
-
-	static function openImpl(path:Path, ...options:OpenOption):File {
-		final path = java.nio.file.Paths.get(path.toString());
-		return try new File(path, FileChannel.open(path, ...options)) catch (e) {
-			throw e;
-		};
 	}
 
 	final path:java.nio.file.Path;

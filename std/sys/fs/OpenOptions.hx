@@ -1,6 +1,8 @@
 package sys.fs;
 
-@:structInit class OpenOptions {
+@:structInit
+@:publicFields
+class OpenOptions {
 	var read:Bool = true;
 	var write:Bool = false;
 	var append:Bool = false;

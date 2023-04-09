@@ -1,12 +1,10 @@
 package sys.net;
 
-import haxe.Result;
-
 // TODO: docs
 
 @:coreApi
 extern class TcpListener {
-	static function bind(address:SocketAddress):Result<TcpListener, Error>;
+	static function bind(address:SocketAddress):TcpListener;
 	function localAddress():Address;
 	function accept():TcpStream;
 
@@ -14,4 +12,9 @@ extern class TcpListener {
 	public var nonBlocking(get, set):Bool;
 
 	function close():Void;
+
+	private	function get_ttl():Int;
+	private	function set_ttl(value:Int):Int;
+	private	function get_nonBlocking():Bool;
+	private	function set_nonBlocking(value:Bool):Bool;
 }
