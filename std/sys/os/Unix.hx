@@ -1,5 +1,6 @@
 package sys.os;
 
+import haxe.exceptions.NotImplementedException;
 import sys.fs.Permissions;
 import sys.fs.Metadata;
 import sys.fs.Fs;
@@ -79,6 +80,6 @@ class PermissionsExt {
 **/
 class FileExt {
 	public static function openWithModeAndFlags(_:Class<sys.fs.File>, mode:UInt, flags:Int):haxe.Result<File, sys.Error> {
-		return Err(Unsupported);
+		throw new NotImplementedException();
 	}
 }

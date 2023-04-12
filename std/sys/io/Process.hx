@@ -22,7 +22,7 @@
 
 package sys.io;
 
-@:deprecated("use sys.Process instead")
+@:deprecated("use sys.process.Process instead")
 extern class Process {
 	/**
 		Standard output. The output stream where a process writes its output data.

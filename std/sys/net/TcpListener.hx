@@ -5,7 +5,7 @@ package sys.net;
 @:coreApi
 extern class TcpListener {
 	static function bind(address:SocketAddress):TcpListener;
-	function localAddress():Address;
+	function localAddress():SocketAddress;
 	function accept():TcpStream;
 
 	public var ttl(get, set):Int;

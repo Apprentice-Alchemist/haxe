@@ -13,14 +13,14 @@ enum Shutdown {
 @:coreApi
 extern class TcpStream {
 	static function connect(address:SocketAddress, ?timeout:Int):TcpStream;
-	function peerAddress():Address;
-	function localAddress():Address;
+	function peerAddress():SocketAddress;
+	function localAddress():SocketAddress;
 	function shutdown(how:Shutdown):Void;
 
-	var readTimeout(get, set):Int;
-	var writeTimeout(get, set):Int;
+	var readTimeout(get, set):Null<Duration>;
+	var writeTimeout(get, set):Null<Duration>;
 	var noDelay(get, set):Bool;
-	var linger(get, set):Null<haxe.time.Duration>;
+	var linger(get, set):Null<Duration>;
 	var nonBlocking(get, set):Bool;
 	var timeToLive(get, set):Int;
 
@@ -29,10 +29,10 @@ extern class TcpStream {
 
 	function close():Void;
 
-	private function get_readTimeout():Int;
-	private function set_readTimeout(value:Int):Int;
-	private function get_writeTimeout():Int;
-	private function set_writeTimeout(value:Int):Int;
+	private function get_readTimeout():Null<Duration>;
+	private function set_readTimeout(value:Null<Duration>):Null<Duration>;
+	private function get_writeTimeout():Null<Duration>;
+	private function set_writeTimeout(value:Null<Duration>):Null<Duration>;
 	private function get_noDelay():Bool;
 	private function set_noDelay(value:Bool):Bool;
 	private function get_linger():Null<Duration>;

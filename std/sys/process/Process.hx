@@ -20,41 +20,13 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-package sys;
+package sys.process;
 
-enum Stdio {
-	Inherit;
-	Null;
-	Piped;
-}
-
-@:structInit class ProcessOptions  {
-	/**
-		Arguments to be passed to the process.
-
-		These arguments are not passed through the shell, and thus will not be escaped or subjected to command substitution.
-	**/
-	var args:Array<String> = [];
-	// TODO: exact behaviour wrt existing env vars?
-	/**
-		Environment variables to pass to the process.
-	**/
-	var env:Map<String, String> = [];
-
-	var stdin:Stdio = Piped;
-	var stdout:Stdio = Piped;
-	var stderr:Stdio = Piped;
-
-	/**
-		The working directory for the process.
-	**/
-	var workingDirectory:Null<String> = null;
-}
+import haxe.io.Bytes;
 
 @:coreApi
 extern class Process {
 	static function spawn(cmd:String, ?opts:ProcessOptions):Process;
-
 
 	/**
 		Standard output. The output stream where a process writes its output data.
@@ -88,12 +60,20 @@ extern class Process {
 		This function will close the stdin stream to avoid deadlocks.
 	**/
 	function wait():Int;
+
 	/**
 		Checks wether the process has existed, and returns either null or the exitcode.
 
 		This function will not close the stdin stream.
 	**/
 	function tryWait():Null<Int>;
+	// TODO mention Piped vs Inherit
+	/**
+		Waits for the process to end while collecting output, and returns the exit code.
+
+		This function will close the stdin stream to avoid deadlocks.
+	**/
+	function waitWithOutput():{code:Int, stdout:Bytes, stderr:Bytes};
 
 	/**
 		Close the process handle and release the associated resources.
