@@ -1,5 +1,6 @@
 package sys.process;
 
+@:publicFields
 @:structInit class ProcessOptions {
 	/**
 		Arguments to be passed to the process.
