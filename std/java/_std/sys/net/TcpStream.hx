@@ -2,8 +2,6 @@ package sys.net;
 
 import haxe.time.Duration;
 
-// TODO: docs
-
 @:coreApi
 extern class TcpStream {
 	static function connect(address:SocketAddress, ?timeout:Int):TcpStream;

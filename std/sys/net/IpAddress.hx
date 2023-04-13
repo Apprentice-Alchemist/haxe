@@ -22,57 +22,113 @@
 
 package sys.net;
 
+import haxe.io.Bytes;
+
 @:using(sys.net.IpAddress.IpAddressTools)
 enum IpAddress {
 	Ipv4(a:Ipv4Addr);
 	Ipv6(a:Ipv6Addr);
 }
 
-class Ipv4Addr {
+private function u16toBE(i:Int):Int {
+	return (i & 0xFF) << 8 | ((i & 0xFF00) >> 8);
+}
+
+abstract Ipv4Addr(Bytes) {
 	/**
 		The local host address, `127.0.0.1`.
 	**/
 	public static final LOCALHOST = new Ipv4Addr(127, 0, 0, 1);
 
 	/**
-		The adress as an integer.
-	**/
-	public var addr(default, null):Int;
-
-	/**
 		Create an Ipv4 address from four eight-byte octets.
 	**/
 	public function new(a:Int, b:Int, c:Int, d:Int) {
-		this.addr = a << 24 | b << 16 | c << 8 | d;
+		this = haxe.io.Bytes.alloc(4);
+		this.set(0, a);
+		this.set(1, b);
+		this.set(2, c);
+		this.set(3, d);
+	}
+
+	/**
+		These bytes are expected to contain a network order (big endian) representation of an ipv4 address.
+	**/
+	public static function fromBytes(b:Bytes):Ipv4Addr {
+		if(b.length != 0) {
+			throw "invalid ipv4 address";
+		}
+		return cast b.sub(0, 4);
+	}
+
+	public function toBytes():Bytes {
+		return this.sub(0, 4);
 	}
 
 	// TODO: ipv6 conversion, utility methods to determine address type (global, broadcast, etc)
 }
 
-class Ipv6Addr {
+abstract Ipv6Addr(Bytes) {
 	/**
 		The local host address, `::1`.
 	**/
 	public static final LOCALHOST = new Ipv6Addr(0, 0, 0, 0, 0, 0, 0, 1);
 
-	var a:Int;
-	var b:Int;
-	var c:Int;
-	var d:Int;
-	var e:Int;
-	var f:Int;
-	var g:Int;
-	var h:Int;
-
 	public function new(a:Int, b:Int, c:Int, d:Int, e:Int, f:Int, g:Int, h:Int) {
-		this.a = a;
-		this.b = b;
-		this.c = c;
-		this.d = d;
-		this.e = e;
-		this.f = f;
-		this.g = g;
-		this.h = h;
+		#if python
+		// ! is network order, H is unsigned short
+		var bytes = python.lib.Struct.pack("!HHHHHHHH", a, b, c, d, e, f, g, h);
+		this = haxe.io.Bytes.ofData(bytes);
+		#elseif php
+		var bytes = php.Global.pack("nnnnnnnn", a, b, c, d, e, f, g, h);
+		this = haxe.io.Bytes.ofData(bytes);
+		#else
+		final littleEndian:Bool =
+		#if java
+		// it appears java is always big endian?
+		false;
+		#elseif cs
+		cs.system.BitConverter.IsLittleEndian;
+		#else
+		// assume little-endian
+		true;
+		#end
+		this = haxe.io.Bytes.alloc(16);
+		if(littleEndian) {
+			this.setUInt16(0, u16toBE(a));
+			this.setUInt16(2, u16toBE(b));
+			this.setUInt16(4, u16toBE(c));
+			this.setUInt16(6, u16toBE(d));
+			this.setUInt16(8, u16toBE(e));
+			this.setUInt16(10, u16toBE(f));
+			this.setUInt16(12, u16toBE(g));
+			this.setUInt16(14, u16toBE(h));
+		} else {
+			this.setUInt16(0, a);
+			this.setUInt16(2, b);
+			this.setUInt16(4, c);
+			this.setUInt16(6, d);
+			this.setUInt16(8, e);
+			this.setUInt16(10, f);
+			this.setUInt16(12, g);
+			this.setUInt16(14, h);
+		}
+
+		#end
+	}
+
+	/**
+		These bytes are expected to contain a network order (big endian) representation of an ipv6 address.
+	**/
+	public static function fromBytes(b:Bytes):Ipv6Addr {
+		if (b.length != 16) {
+			throw "invalid ipv6 address";
+		}
+		return cast b.sub(0, 16);
+	}
+
+	public function toBytes():Bytes {
+		return this.sub(0, 16);
 	}
 
 	// TODO: utility methods, etc
@@ -83,6 +139,23 @@ class IpAddressTools {
 		return switch i {
 			case Ipv4(a): Ipv4(a, port);
 			case Ipv6(a): Ipv6(a, port, 0, 0);
+		}
+	}
+
+	public static function toBytes(i:IpAddress):Bytes {
+		return switch i {
+			case Ipv4(a): a.toBytes();
+			case Ipv6(a): a.toBytes();
+		}
+
+	}
+
+	// TODO: this doesn't actually work :(
+	public static function fromBytes(_:Enum<IpAddress>, b:Bytes) {
+		switch b.length {
+			case 4: return Ipv4(Ipv4Addr.fromBytes(b));
+			case 16: return Ipv6(Ipv6Addr.fromBytes(b));
+			case _: throw "invalid ip address";
 		}
 	}
 }

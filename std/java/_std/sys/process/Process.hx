@@ -11,9 +11,9 @@ using StringTools;
 
 @:coreApi
 class Process {
+	static final NUL_FILE = new java.io.File((java.lang.System.getProperty("os.name").startsWith("Windows") ? "NUL" : "/dev/null"));
 	public static function spawn(cmd:String, ?opts:ProcessOptions):Process {
 		// a nice hack to be able to support Java < 9
-		static final NUL_FILE = new File((java.lang.System.getProperty("os.name").startsWith("Windows") ? "NUL" : "/dev/null"));
 		opts ??= {};
 		var a = [cmd].concat(opts.args);
 		var builder = new ProcessBuilder(...a);
