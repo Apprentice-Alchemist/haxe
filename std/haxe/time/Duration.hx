@@ -59,4 +59,8 @@ abstract Duration(DurationInner) from DurationInner {
 	public function toNanoseconds():haxe.Int64 {
 		return this.seconds * NANOSECONDS_PER_SECOND + this.nanoseconds;
 	}
+
+	public function toMilliseconds():haxe.Int64 {
+		return this.seconds * 1000 + Std.int(this.nanoseconds / 1000000);
+	}
 }

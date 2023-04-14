@@ -6,7 +6,7 @@ import haxe.time.Duration;
 
 @:coreApi
 extern class TcpStream {
-	static function connect(address:SocketAddress, ?timeout:Int):TcpStream;
+	static function connect(address:SocketAddress, ?timeout:Duration):TcpStream;
 	function peerAddress():SocketAddress;
 	function localAddress():SocketAddress;
 	function shutdown(how:Shutdown):Void;
