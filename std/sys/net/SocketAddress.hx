@@ -1,5 +1,6 @@
 package sys.net;
 
+import haxe.io.Bytes;
 import sys.net.IpAddress;
 
 @:using(sys.net.SocketAddress.SocketAddressTools)
@@ -20,6 +21,14 @@ class SocketAddressTools {
 		return switch s {
 			case Ipv4(_, p): p;
 			case Ipv6(_, p, _, _): p;
+		}
+	}
+
+	public static function fromBytes(_:SocketAddress, bytes:Bytes, port:Int) {
+		return switch bytes.length {
+			case 4: Ipv4(Ipv4Addr.fromBytes(bytes), port);
+			case 16: Ipv6(Ipv6Addr.fromBytes(bytes), port, 0, 0);
+			case _: throw "invalid ip address";
 		}
 	}
 }
