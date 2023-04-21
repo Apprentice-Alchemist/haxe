@@ -16,10 +16,10 @@ extern class DatagramSocket {
 	public var ttl(get, set):Int;
 	public var onlyV6(get, set):Bool;
 
-	public function joinMulticastV4(multiaddr:Ipv4Addr, inter:Ipv4Addr):Void;
-	public function joinMulticastV6(multiaddr:Ipv6Addr, inter:Int):Void;
-	public function leaveMulticastV4(multiaddr:Ipv4Addr):Void;
-	public function leaveMulticastV6(multiaddr:Ipv6Addr):Void;
+	// public function joinMulticastV4(multiaddr:Ipv4Addr, inter:Ipv4Addr):Void;
+	// public function joinMulticastV6(multiaddr:Ipv6Addr, inter:Int):Void;
+	// public function leaveMulticastV4(multiaddr:Ipv4Addr):Void;
+	// public function leaveMulticastV6(multiaddr:Ipv6Addr):Void;
 
 	public function sendTo(buf:Bytes, bufOffset:Int, bufSize:Int, address:SocketAddress):Int;
 	public function receiveFrom(buf:Bytes, bufOffset:Int, bufSize:Int):{bytesRead:Int, address:SocketAddress};

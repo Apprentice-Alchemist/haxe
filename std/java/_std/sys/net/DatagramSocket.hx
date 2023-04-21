@@ -30,12 +30,12 @@ class DatagramSocket {
 	public var ttl(get, set):Int;
 	public var onlyV6(get, set):Bool;
 
-	public function joinMulticastV4(multiaddr:Ipv4Addr, inter:Ipv4Addr):Void {
-		// channel.join()
-	}
-	public function joinMulticastV6(multiaddr:Ipv6Addr, inter:Int):Void {}
-	public function leaveMulticastV4(multiaddr:Ipv4Addr):Void {}
-	public function leaveMulticastV6(multiaddr:Ipv6Addr):Void {}
+	// public function joinMulticastV4(multiaddr:Ipv4Addr, inter:Ipv4Addr):Void {
+	// 	// channel.join()
+	// }
+	// public function joinMulticastV6(multiaddr:Ipv6Addr, inter:Int):Void {}
+	// public function leaveMulticastV4(multiaddr:Ipv4Addr):Void {}
+	// public function leaveMulticastV6(multiaddr:Ipv6Addr):Void {}
 
 	public function sendTo(buf:Bytes, bufOffset:Int, bufSize:Int, address:SocketAddress):Int {
 		var buf = ByteBuffer.wrap(buf.getData(), bufOffset, bufSize);
