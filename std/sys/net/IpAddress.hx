@@ -41,7 +41,7 @@ abstract Ipv4Addr(Bytes) {
 	public static final LOCALHOST = new Ipv4Addr(127, 0, 0, 1);
 
 	/**
-		Create an Ipv4 address from four eight-byte octets.
+		Create an Ipv4 address from four eight-bit octets.
 	**/
 	public function new(a:Int, b:Int, c:Int, d:Int) {
 		this = haxe.io.Bytes.alloc(4);
@@ -55,7 +55,7 @@ abstract Ipv4Addr(Bytes) {
 		These bytes are expected to contain a network order (big endian) representation of an ipv4 address.
 	**/
 	public static function fromBytes(b:Bytes):Ipv4Addr {
-		if(b.length != 0) {
+		if(b.length != 4) {
 			throw "invalid ipv4 address";
 		}
 		return cast b.sub(0, 4);
@@ -150,7 +150,7 @@ class IpAddressTools {
 
 	}
 
-	// TODO: this doesn't actually work :(
+	// TODO: this static extension doesn't actually work :(
 	public static function fromBytes(_:Enum<IpAddress>, b:Bytes) {
 		switch b.length {
 			case 4: return Ipv4(Ipv4Addr.fromBytes(b));

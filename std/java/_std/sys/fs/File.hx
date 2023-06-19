@@ -37,6 +37,8 @@ class File {
 		if(options.write) opts.add(WRITE);
 		if(options.create) opts.add(CREATE);
 		if(options.create_new) opts.add(CREATE_NEW);
+		if(options.append) opts.add(APPEND);
+		if(options.truncate) opts.add(TRUNCATE_EXISTING);
 		final path = java.nio.file.Paths.get(p.toString());
 		return try new File(path, FileChannel.open(path, opts)) catch (e) {
 			throw e;

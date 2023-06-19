@@ -26,6 +26,7 @@ import python.Exceptions.OSError;
 import python.Tuple;
 import python.Dict;
 
+@:pythonImport("stat")
 extern class Stat {
 	var st_mode:Int;
 	var st_ino:Int;
@@ -49,6 +50,9 @@ extern class Stat {
 	@:optional var st_rsize:Int;
 	@:optional var st_creator:Int;
 	@:optional var st_type:Int;
+
+	static function S_ISDIR(mode:Int):Int;
+	static function S_ISLNK(mode:Int):Int;
 }
 
 @:pythonImport("os")
@@ -95,4 +99,20 @@ extern class Os {
 	static function makedirs(path:String, mode:Int = 511 /* Oktal 777 */, exist_ok:Bool = false):Void;
 
 	static function mkdir(path:String, mode:Int = 511 /* Oktal 777 */):Void;
+
+	static function open(path:String, flags:Int, mode:Int = 511):Int;
+
+	static final O_RDONLY:Int;
+	static final O_WRONLY:Int;
+	static final O_RDWR:Int;
+	static final O_APPEND:Int;
+	static final O_CREAT:Int;
+	static final O_EXCL:Int;
+	static final O_TRUNC:Int;
+
+	static function fsync(fd:Int):Void;
+	/** only available on Unix platforms (but not macOS) **/
+	static function fdatasync(fd:Int):Void;
+
+	static function lstat(path:String):Stat;
 }

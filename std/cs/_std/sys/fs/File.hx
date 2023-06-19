@@ -1,96 +1,106 @@
 package sys.fs;
 
+import cs.system.io.SeekOrigin;
 import cs.system.io.FileStream;
+import cs.system.io.FileAccess;
+import cs.system.io.FileMode;
+import haxe.Int64;
+import cs.system.io.File as CsFile;
+import haxe.time.SystemTime;
 import haxe.io.Bytes;
 import haxe.Result;
 import sys.fs.Metadata;
 import sys.Error;
 import sys.fs.Path;
+import sys.fs.SeekPos;
 
-import cs.system.io.FileMode;
-import cs.system.io.File as NativeFile;
-
-enum SeekPos {
-	SeekBegin(offset:haxe.Int64);
-	SeekCurrent(offset:haxe.Int64);
-	SeekEnd(offset:haxe.Int64);
-}
-
+@:coreApi
 class File {
-	/**
-		Opens the file in read-only mode.
-	**/
-	static function open(p:Path):Result<File, Error> {
-		try {
-			cs.system.io.File.Open(p.toString(), FileMode.Open);
-
-		}
-		return Err(Unsupported);
+	public static function open(p:Path, ?options:OpenOptions):File {
+		options ??= {read: true};
+		var mode:FileMode = if (options.append) Append else if (options.truncate) Truncate else if (options.create_new) CreateNew else if (options.create)
+			Create else Open;
+		var access:FileAccess = if (options.read && options.write) ReadWrite else if (options.write) Write else if (options.read) Read else
+			throw "can never read nor write to file";
+		final stream = CsFile.Open(p.toString(), mode, access);
+		return new File(p.toString(), stream);
 	}
 
-	/**
-		Opens the file in write-only mode, creating it if needed.
-	**/
-	static function create(p:Path):Result<File, Error> {
-		return Err(Unsupported);
+	public static function create(p:Path):File {
+		return open(p, {write: true});
 	}
 
-	/**
-		Opens the file in write-only mode, always creating a new one.
-		Returns an error if the file already exists.
-	**/
-	static function createNew(p:Path):Result<File, Error> {
-		return Err(Unsupported);
+	public static function createNew(p:Path):File {
+		return open(p, {write: true, create_new: true});
 	}
 
-	static function readAll(p:Path):Result<Bytes, Error> {
-		return Err(Unsupported);
+	public static function readAll(p:Path):Bytes {
+		return Bytes.ofData(CsFile.ReadAllBytes(p.toString()));
 	}
 
-	static function writeAll(p:Path, b:Bytes):Result<Void /* TODO */, Error> {
-		return Err(Unsupported);
+	public static function writeAll(p:Path, b:Bytes):Void {
+		CsFile.WriteAllBytes(p.toString(), b.getData());
 	}
 
-	static function appendAll(p:Path, b:Bytes):Result<Void /* TODO */, Error> {
-		return Err(Unsupported);
+	public static function appendAll(p:Path, b:Bytes):Void {
+		final file = open(p, {append: true, write: true});
+		file.write(b, 0, b.length);
+		file.close();
 	}
 
+	final path:String;
 	final stream:FileStream;
 
-	function new(file:FileStream) {
-		this.stream = file;
+	function new(path:String, stream:FileStream) {
+		this.path = path;
+		this.stream = stream;
 	}
 
-	function syncAll():Result<Void /* TODO */, Error> {
+	public function syncAll():Void {
 		stream.Flush();
-		return Ok((null:Void));
 	}
 
-	function syncData():Result<Void /* TODO */, Error> {
-		return syncAll();
+	public function syncData():Void {
+		stream.Flush();
 	}
 
-	function metadata():Result<Metadata, Error> {
-		return Err(Unsupported);
+	public function metadata():Metadata {
+		return new Metadata(path, true);
 	}
 
-	function setPermissions(perm:Permissions):Result<Void /* TODO */, Error> {
-		return Err(Unsupported);
+	public function setPermissions(perm:Permissions):Void {
+		throw new haxe.exceptions.NotImplementedException();
 	}
 
-	// TODO: technically these should all use a UInt64 type
-
-	function read(bytes:haxe.io.Bytes, bufferOffset:Int, bufferLength:Int):Result<haxe.Int64, Error> {
-		return Err(Unsupported);
+	public function read(bytes:haxe.io.Bytes, bufferOffset:Int, bufferLength:Int):Int {
+		return stream.Read(bytes.getData(), bufferOffset, bufferLength);
 	}
 
-	function write(bytes:haxe.io.Bytes, bufferOffset:Int, bufferLength:Int):Result<haxe.Int64, Error> {
-		return Err(Unsupported);
+	public function write(bytes:haxe.io.Bytes, bufferOffset:Int, bufferLength:Int):Int {
+		var prevPos = stream.Position;
+		stream.Write(bytes.getData(), bufferOffset, bufferLength);
+		return (cast stream.Position - prevPos:Int);
 	}
 
-	function seek(pos:SeekPos):Result<haxe.Int64, Error> {
-		return Err(Unsupported);
+	public function seek(pos:SeekPos):Int64 {
+		var origin:SeekOrigin;
+		var offset:cs.StdTypes.Int64;
+		switch pos {
+			case SeekBegin(_offset):
+				offset = _offset;
+				origin = Begin;
+			case SeekCurrent(_offset):
+				offset = _offset;
+				origin = Current;
+			case SeekEnd(_offset):
+				offset = _offset;
+				origin = End;
+		}
+
+		return stream.Seek(offset, origin);
 	}
 
-	function close():Void {}
+	public function close():Void {
+		stream.Close();
+	}
 }
