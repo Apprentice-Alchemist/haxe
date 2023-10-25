@@ -1727,18 +1727,6 @@ module StdMath = struct
 	let tan = vfun1 (fun v -> vfloat (tan (num v)))
 end
 
-module StdMd5 = struct
-	let encode = vfun1 (fun s ->
-		let s = decode_string s in
-		encode_string (Digest.to_hex (Digest.string s))
-	)
-
-	let make = vfun1 (fun b ->
-		let b = decode_bytes b in
-		encode_bytes (Bytes.unsafe_of_string (Digest.string (Bytes.unsafe_to_string b)))
-	)
-end
-
 module StdMutex = struct
 	let this vthis = match vthis with
 		| VInstance {ikind=IMutex mutex} -> mutex
@@ -2004,18 +1992,6 @@ module StdResource = struct
 
 	let getBytes = vfun1 (fun name ->
 		try encode_bytes (Bytes.unsafe_of_string (Hashtbl.find ((get_ctx()).curapi.MacroApi.get_com()).resources (decode_string name))) with Not_found -> vnull
-	)
-end
-
-module StdSha1 = struct
-	let encode = vfun1 (fun s ->
-		let s = decode_string s in
-		encode_string (Sha1.to_hex (Sha1.string s))
-	)
-
-	let make = vfun1 (fun b ->
-		let b = decode_bytes b in
-		encode_bytes (Bytes.unsafe_of_string (Sha1.to_bin (Sha1.string (Bytes.unsafe_to_string b))))
 	)
 end
 
@@ -3594,10 +3570,6 @@ let init_standard_library builtins =
 		"sqrt",StdMath.sqrt;
 		"tan",StdMath.tan;
 	] [];
-	init_fields builtins (["haxe";"crypto"],"Md5") [
-		"encode",StdMd5.encode;
-		"make",StdMd5.make;
-	] [];
 	init_fields builtins (["sys";"thread"],"Mutex") [] [
 		"acquire",StdMutex.acquire;
 		"tryAcquire",StdMutex.tryAcquire;
@@ -3634,10 +3606,6 @@ let init_standard_library builtins =
 		"listNames",StdResource.listNames;
 		"getString",StdResource.getString;
 		"getBytes",StdResource.getBytes;
-	] [];
-	init_fields builtins (["haxe";"crypto"],"Sha1") [
-		"encode",StdSha1.encode;
-		"make",StdSha1.make;
 	] [];
 	init_fields builtins (["eval";"vm"],"NativeSocket") [
 		"select",StdSocket.select;
