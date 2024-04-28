@@ -83,6 +83,7 @@ jobs:
       - name: Build Haxe
         run: |
           set -ex
+          eval $(opam env)
           make -s -j`nproc` STATICLINK=1 haxe
           make -s haxelib
           make -s package_unix
