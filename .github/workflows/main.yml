@@ -455,7 +455,9 @@ jobs:
       OPAMYES: 1
       MACOSX_DEPLOYMENT_TARGET: 10.13
       OCAML_VERSION: 5.1.1
-      CTYPES: 0.21.1
+      ZLIB_VERSION: 1.3.1
+      MBEDTLS_VERSION: 2.28.5
+      PCRE2_VERSION: 10.42
     steps:
       - uses: actions/checkout@main
         with:
@@ -485,45 +487,61 @@ jobs:
       - name: Print Neko version
         run: neko -version 2>&1
 
-      - name: Install dependencies
-        env:
-          # For compatibility with macOS 10.13
-          ZLIB_VERSION: 1.3.1
-          MBEDTLS_VERSION: 2.28.5
-          PCRE2_VERSION: 10.42
+      # Zlib, Mbedtls and PCRE2 are built from source and statically linked
+      # to ensure compatibility with the chosen deployment target
+      # Deployment target and library versions are defined by env vars in main.yml
+
+      - name: Cache native dependencies
+        id: cache-native-deps
+        uses: actions/cache@v4
+        with:
+          path: |
+            zlib-${{ env.ZLIB_VERSION }}
+            mbedtls-${{ env.MBEDTLS_VERSION }}
+            pcre2-${{ env.PCRE2_VERSION }}
+          key: ${{ matrix.os }}-${{ env.ZLIB_VERSION }}-${{ env.MBEDTLS_VERSION }}-${{ env.PCRE2_VERSION }}
+
+      - name: Install Homebrew & CPAN dependencies
         run: |
           set -ex
           brew update
           brew bundle --file=tests/Brewfile --no-upgrade
           cpanm IPC::System::Simple
           cpanm String::ShellQuote
+
+      - name: Build native dependencies
+        if: steps.cache-deps.outputs.cache-hit != 'true'
+        run: |
           curl -L https://github.com/madler/zlib/releases/download/v$ZLIB_VERSION/zlib-$ZLIB_VERSION.tar.gz | tar xz
           cd zlib-$ZLIB_VERSION
           ./configure
-          sudo make && sudo make install
+          sudo make -j`sysctl -n hw.ncpu`
           cd ..
           curl -L https://github.com/ARMmbed/mbedtls/archive/v$MBEDTLS_VERSION.tar.gz | tar xz
           cd mbedtls-$MBEDTLS_VERSION
-          sudo make && sudo make install
+          sudo make -j`sysctl -n hw.ncpu`
           cd ..
           curl -L https://github.com/PCRE2Project/pcre2/releases/download/pcre2-$PCRE2_VERSION/pcre2-$PCRE2_VERSION.tar.gz | tar xz
           cd pcre2-$PCRE2_VERSION
           ./configure --enable-unicode --enable-pcre2-8 --enable-pcre2-16 --enable-pcre2-32 --enable-unicode-properties --enable-pcre2grep-libz --enable-pcre2grep-libbz2 --enable-jit
-          sudo make && sudo make install
+          sudo make -j`sysctl -n hw.ncpu`
           cd ..
+
+      - name: Install native dependencies
+        run: |
+         sudo make -C zlib-$ZLIB_VERSION install
+         sudo make -C mbedtls-$MBEDTLS_VERSION install
+         sudo make -C pcre2-$PCRE2_VERSION install
 
       - name: Install OCaml libraries
         if: steps.cache-opam.outputs.cache-hit != 'true'
         run: |
           set -ex
-          opam init # --disable-sandboxing
-          opam update
-          opam switch create ${{env.OCAML_VERSION}}
+          opam init -c ${{env.OCAML_VERSION}}
           eval $(opam env)
+          opam update
           opam env
-          opam pin add ctypes ${{env.CTYPES}} --yes
-          opam pin add haxe . --no-action
-          opam install haxe --deps-only --assume-depexts
+          opam install . --deps-only --assume-depexts
           opam list
           ocamlopt -v
 
@@ -535,8 +553,8 @@ jobs:
         run: |
           set -ex
           eval $(opam env)
-          opam config exec -- make -s -j`sysctl -n hw.ncpu` STATICLINK=1 "LIB_PARAMS=/usr/local/lib/libz.a /usr/local/lib/libpcre2-8.a /usr/local/lib/libmbedtls.a /usr/local/lib/libmbedcrypto.a /usr/local/lib/libmbedx509.a -cclib '-framework Security -framework CoreFoundation'" haxe
-          opam config exec -- make -s haxelib
+          make -s STATICLINK=1 haxe
+          make -s haxelib
           make -s package_unix package_installer_mac
           ls -l out
           otool -L ./haxe
