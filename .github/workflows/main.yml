@@ -178,6 +178,7 @@ jobs:
           set -ex
           opam init --bare --auto-setup --enable-shell-hook
           opam switch create ${{ matrix.ocaml }}
+          eval $(opam env)
           opam update
           opam install . --deps-only --assume-depexts
           opam list
