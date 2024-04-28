@@ -165,17 +165,15 @@ jobs:
           sudo add-apt-repository ppa:avsm/ppa -y # provides OPAM 2
           sudo add-apt-repository ppa:haxe/ocaml -y # provides newer version of mbedtls
           sudo apt-get update -qqy
-          sudo apt-get install -qqy ocaml-nox camlp5 opam libpcre2-dev zlib1g-dev libgtk2.0-dev libmbedtls-dev ninja-build libstring-shellquote-perl libipc-system-simple-perl
+          sudo apt-get install -qqy opam libpcre2-dev zlib1g-dev libgtk2.0-dev libmbedtls-dev libstring-shellquote-perl libipc-system-simple-perl
 
       - name: Install OCaml libraries
         if: steps.cache-opam.outputs.cache-hit != 'true'
         run: |
           set -ex
-          opam init # --disable-sandboxing
+          opam init -c ${{ matrix.ocaml }}
           opam update
-          opam switch create ${{ matrix.ocaml }}
-          opam pin add haxe . --no-action
-          opam install haxe --deps-only --assume-depexts
+          opam install . --deps-only --assume-depexts
           opam list
           ocamlopt -v
 
@@ -553,7 +551,9 @@ jobs:
         run: |
           set -ex
           eval $(opam env)
-          make -s STATICLINK=1 haxe
+          export "LIB_PARAMS=/usr/local/lib/libz.a /usr/local/lib/libpcre2-8.a /usr/local/lib/libmbedtls.a /usr/local/lib/libmbedcrypto.a /usr/local/lib/libmbedx509.a -cclib '-framework Security -framework CoreFoundation'"
+          export STATICLINK=1
+          make -s haxe
           make -s haxelib
           make -s package_unix package_installer_mac
           ls -l out
