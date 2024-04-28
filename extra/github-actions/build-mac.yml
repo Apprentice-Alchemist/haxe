@@ -21,7 +21,7 @@
     cpanm String::ShellQuote
 
 - name: Build native dependencies
-  if: steps.cache-deps.outputs.cache-hit != 'true'
+  if: steps.cache-native-deps.outputs.cache-hit != 'true'
   run: |
     curl -L https://github.com/madler/zlib/releases/download/v$ZLIB_VERSION/zlib-$ZLIB_VERSION.tar.gz | tar xz
     cd zlib-$ZLIB_VERSION

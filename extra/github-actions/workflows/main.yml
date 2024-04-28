@@ -68,7 +68,7 @@ jobs:
         if: steps.cache-opam.outputs.cache-hit != 'true'
         run: |
           set -ex
-          opam init --bare
+          opam init --bare --auto-setup --enable-shell-hook
           opam switch create ${{ matrix.ocaml }}
           opam update
           opam install . --deps-only --assume-depexts
@@ -82,7 +82,6 @@ jobs:
       - name: Build Haxe
         run: |
           set -ex
-          eval $(opam env)
           make -s -j`nproc` STATICLINK=1 haxe
           make -s haxelib
           make -s package_unix

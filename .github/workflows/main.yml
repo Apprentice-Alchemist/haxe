@@ -176,7 +176,7 @@ jobs:
         if: steps.cache-opam.outputs.cache-hit != 'true'
         run: |
           set -ex
-          opam init --bare
+          opam init --bare --auto-setup --enable-shell-hook
           opam switch create ${{ matrix.ocaml }}
           opam update
           opam install . --deps-only --assume-depexts
@@ -190,7 +190,6 @@ jobs:
       - name: Build Haxe
         run: |
           set -ex
-          eval $(opam env)
           make -s -j`nproc` STATICLINK=1 haxe
           make -s haxelib
           make -s package_unix
@@ -514,7 +513,7 @@ jobs:
           cpanm String::ShellQuote
 
       - name: Build native dependencies
-        if: steps.cache-deps.outputs.cache-hit != 'true'
+        if: steps.cache-native-deps.outputs.cache-hit != 'true'
         run: |
           curl -L https://github.com/madler/zlib/releases/download/v$ZLIB_VERSION/zlib-$ZLIB_VERSION.tar.gz | tar xz
           cd zlib-$ZLIB_VERSION
