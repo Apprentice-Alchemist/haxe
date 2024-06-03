@@ -205,6 +205,7 @@ type opcode =
 	| OPrefetch of reg * field index * int
 	| OAsm of int * int * reg
 	| OCatch of global
+	| OFieldRef of reg * reg * field index
 
 type fundecl = {
 	fpath : string * string;
@@ -616,6 +617,8 @@ let ostr fstr o =
 			Printf.sprintf "asm[%d] %d%s" mode value (if reg = 0 then "" else ", " ^ string_of_int (reg-1))
 		)
 	| OCatch g -> Printf.sprintf "catch %d" g
+	| OFieldRef (r, o, field) ->
+		Printf.sprintf "fieldref %d,&%d[%d]" r o field
 
 let fundecl_name f = if snd f.fpath = "" then "fun$" ^ (string_of_int f.findex) else (fst f.fpath) ^ "." ^ (snd f.fpath)
 

@@ -43,4 +43,6 @@ package hl;
 	extern public inline function offset(v:Int):Ref<T> {
 		return untyped $refoffset(this, v);
 	}
+
+	public static macro function fieldRef(obj:haxe.macro.Expr):haxe.macro.Expr;
 }

@@ -27,6 +27,7 @@ open Error
 open Gctx
 open Hlcode
 open Semver
+open Abstract
 
 (* compiler *)
 
@@ -142,6 +143,22 @@ type access =
 	| ADynamic of texpr * string index
 	| AEnum of tenum * field index
 	| ACaptured of field index
+
+let s_hl_access = function
+	| ANone -> "ANone"
+	| AGlobal _ -> "AGlobal"
+	| ALocal _ -> "ALocal"
+	| AStaticVar _ -> "AStaticVar"
+	| AStaticFun _ -> "AStaticFun"
+	| AInstanceFun _ -> "AInstanceFun"
+	| AInstanceProto _ -> "AInstanceProto"
+	| AInstanceField _ -> "AInstanceField"
+	| AArray _ -> "AArray"
+	| ACArray _ -> "ACArray"
+	| AVirtualMethod _ -> "AVirtualMethod"
+	| ADynamic _ -> "ADynamic"
+	| AEnum _ -> "AEnum"
+	| ACaptured _ -> "ACaptured"
 
 let is_to_string t =
 	match follow t with
@@ -2096,6 +2113,14 @@ and eval_expr ctx e =
 			| t ->
 				abort ("Invalid array type " ^ s_type (print_context()) t) a.epos)
 		| "$ref", [v] ->
+			(match follow_with_abstracts v.etype with
+			(* This is disallowed because it's a big footgun due to type parameter erasure *)
+			| TInst ({cl_kind = KTypeParameter _}, []) ->
+				abort "Taking a reference to an expression whose underlying type is a type parameter is not supported" e.epos
+			| TMono _ ->
+				abort "Taking a reference to an expression whose underlying type is not known is not supported" e.epos
+			| _ -> ()
+			);
 			(match v.eexpr with
 			| TLocal v ->
 				let r = alloc_tmp ctx (to_type ctx e.etype) in
@@ -2103,8 +2128,25 @@ and eval_expr ctx e =
 				hold ctx rv; (* infinite hold *)
 				op ctx (ORef (r,rv));
 				r
+			| TField (obj, access) ->
+				let r = alloc_tmp ctx (to_type ctx e.etype) in
+				(match get_access ctx v with
+				| AStaticVar (g,t,fid) ->
+					let o = alloc_tmp ctx t in
+					op ctx (OGetGlobal (o,g));
+					op ctx (OFieldRef (r,o,fid));
+				| ADynamic (ethis, fid) ->
+					let robj = eval_null_check ctx ethis in
+					op ctx (OFieldRef (r,robj,fid));
+				| AInstanceField (ethis,fid, is_packed) ->
+					let robj = eval_null_check ctx ethis in
+					if is_packed then abort "Cannot take reference to a packed field" e.epos
+					else op ctx (OFieldRef (r,robj,fid));
+				| a ->
+					abort ("Invalid access " ^ (s_hl_access a)) e.epos);
+				r
 			| _ ->
-				abort "Ref should be a local variable" v.epos)
+				abort "Ref should be a local variable or field access" v.epos)
 		| "$setref", [e1;e2] ->
 			let rec loop e = match e.eexpr with
 				| TParenthesis e1 | TMeta(_,e1) | TCast(e1,None) -> loop e1
