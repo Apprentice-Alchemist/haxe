@@ -1114,6 +1114,21 @@ let generate_function ctx f =
 			sexpr "__hl_prefetch_m%d(%s)" mode expr
 		| OAsm _ ->
 			sexpr "UNSUPPORTED ASM OPCODE";
+		| OFieldRef (r, obj, fid) ->
+			let val_type = (match (rtype r) with HRef t -> t | _ -> Globals.die "" __LOC__) in
+			match rtype obj with
+			| HObj o | HStruct o ->
+				let name, t = resolve_field o fid in
+				sexpr "%s &%s->%s" (rassign r (HRef t)) (reg obj) (obj_field fid name)
+			| HVirtual v ->
+				let name, nid, t = v.vfields.(fid) in
+				let dget = sprintf "hl_dyn_get_ref(%s->value,%ld/*%s*/,%s)" (reg obj) (hash ctx nid) name (type_value val_type) in
+				sexpr "%shl_vfields(%s)[%d] ? ((%s*)(hl_vfields(%s)[%d])) : %s" (rassign r (HRef t)) (reg obj) fid (ctype t) (reg obj) fid dget
+			| HDyn ->
+				let h = hash ctx fid in
+				sexpr "%s = hl_dyn_get_ref((vdynamic*)%s,%ld/*%s*/,%s)" (reg r) (reg obj) h code.strings.(fid) (type_value val_type)
+			| _ ->
+				Globals.die "" __LOC__
 	) f.code;
 	flush_options (Array.length f.code);
 	unblock();

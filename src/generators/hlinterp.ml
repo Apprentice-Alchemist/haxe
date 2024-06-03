@@ -48,6 +48,7 @@ and ref_value =
 	| RStack of int
 	| RValue of value ref
 	| RArray of value array * int
+	| RField of vobject * int
 
 and vabstract =
 	| AHashBytes of (string, value) Hashtbl.t
@@ -281,12 +282,14 @@ let get_ref ctx = function
 	| RStack i -> ctx.stack.(i)
 	| RValue r -> !r
 	| RArray (a,i) -> a.(i)
+	| RField (o, fid) -> o.ofields.(fid)
 
 let set_ref ctx r v =
 	match r with
 	| RStack i -> ctx.stack.(i) <- v
 	| RValue r -> r := v
 	| RArray (a,i) -> a.(i) <- v
+	| RField (o, fid) -> o.ofields.(fid) <- v
 
 let fstr = function
 	| FFun f -> "function@" ^ string_of_int f.findex
@@ -1157,6 +1160,13 @@ let interp ctx f args =
 			throw_msg ctx "Unsupported ASM"
 		| ONop _ | OPrefetch _ ->
 			()
+		| OFieldRef (r, o, fid) ->
+			set r (match get o with
+				| VObj v | VStruct v -> 
+					let _, t = resolve_field v.oproto.pclass fid in
+					VRef ((RField (v, fid)), t)
+				| VNull -> null_access()
+				| _ -> Globals.die "" __LOC__)
 		);
 		loop()
 	in
@@ -2539,6 +2549,8 @@ let check comerror code =
 				if f = 0 then ignore(rtype r) else ignore(tfield r (f - 1) false)
 			| OAsm (_,_,r) ->
 				if r > 0 then ignore(rtype (r - 1))
+			| OFieldRef (r, o, fid) ->
+				reg r (HRef (tfield o fid false))
 		) f.code
 		(* TODO : check that all path correctly initialize NULL values and reach a return *)
 	in
