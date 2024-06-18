@@ -38,8 +38,6 @@ class Fs {
 		}
 	}
 
-	public static function setPermissions(path:Path, perm:Permissions):Void {}
-
 	public static function copy(from:Path, to:Path):Void {
 		Files.copy(getPath(from), getPath(to));
 	}

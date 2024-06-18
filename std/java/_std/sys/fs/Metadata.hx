@@ -31,10 +31,6 @@ class Metadata {
 		return Files.size(path);
 	}
 
-	public function permissions():Permissions {
-		return new Permissions(!Files.isWritable(path));
-	}
-
 	public function modified():Null<haxe.time.SystemTime> {
 		return SystemTime.unixEpoch(); // TODO
 	}

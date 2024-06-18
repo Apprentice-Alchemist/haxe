@@ -103,17 +103,6 @@ class File {
 		return new Metadata(path);
 	}
 
-	public function setPermissions(perm:Permissions):Void {
-		try {
-			if (path.toFile().setWritable(true)) {
-				// return Err(NoPermissions);
-			}
-			// return Ok((null : Void));
-		} catch (e:SecurityException) {
-			// return Err(NoPermissions);
-		}
-	}
-
 	public function read(bytes:haxe.io.Bytes, bufferOffset:Int, bufferLength:Int):Int {
 		try {
 			return channel.read(ByteBuffer.wrap(bytes.getData(), bufferOffset, bufferLength));

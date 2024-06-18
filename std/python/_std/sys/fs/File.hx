@@ -76,10 +76,6 @@ class File {
 		throw new NotImplementedException();
 	}
 
-	public function setPermissions(perm:Permissions):Void {
-		throw new NotImplementedException();
-	}
-
 	// TODO: technically these should all use a Int64 or even uint64 type, but `haxe.io.Bytes` uses an int length, so...
 
 	public function read(bytes:haxe.io.Bytes, bufferOffset:Int, bufferLength:Int):Int {

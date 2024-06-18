@@ -28,12 +28,7 @@ class Metadata {
 		return stat.st_size
 	}
 
-	public function permissions():Permissions {
-		throw new NotImplementedException();
-	}
-
 	public function modified():Null<haxe.time.SystemTime> {
-		stat.
 		throw new NotImplementedException();
 	}
 
