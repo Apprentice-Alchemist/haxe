@@ -4,6 +4,12 @@ import haxe.time.Duration;
 
 // TODO: docs
 
+#if available(feature = "new_tcp_api")
+
+#end
+
+@:experimental(feature = "new_tcp_api")
+@:stable(feature = "new_tcp_api", since = "5.0.0")
 @:coreApi
 extern class TcpStream {
 	static function connect(address:SocketAddress, ?timeout:Duration):TcpStream;

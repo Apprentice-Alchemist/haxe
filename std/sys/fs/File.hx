@@ -28,7 +28,6 @@ extern class File {
 	function syncAll():Void;
 	function syncData():Void;
 	function metadata():Metadata;
-	function setPermissions(perm:Permissions):Void;
 	// TODO: technically these should all use a Int64 or even uint64 type, but `haxe.io.Bytes` uses an int length, so...
 
 	function read(bytes:haxe.io.Bytes, bufferOffset:Int, bufferLength:Int):Int;
