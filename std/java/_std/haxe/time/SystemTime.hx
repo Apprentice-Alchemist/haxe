@@ -3,7 +3,7 @@ package haxe.time;
 import haxe.time.Duration;
 import java.time.Instant;
 
-abstract SystemTime(java.time.Instant) {
+abstract SystemTime(java.time.Instant) from java.time.Instant {
 	/**
 		The Unix Epoch, "1970-01-01 00:00:00 UTC".
 	**/

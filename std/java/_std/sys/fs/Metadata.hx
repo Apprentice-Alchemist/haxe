@@ -1,45 +1,47 @@
 package sys.fs;
 
+import java.nio.file.attribute.BasicFileAttributes;
 import haxe.time.SystemTime;
-import haxe.Result;
 import java.nio.file.Files;
 
 @:coreApi
 class Metadata {
-	final path:java.nio.file.Path;
-	final followLinks:Bool;
+	final attr:BasicFileAttributes;
 
 	@:allow(sys.fs)
 	function new(path:java.nio.file.Path, followLinks:Bool = false) {
-		this.path = path;
-		this.followLinks = followLinks;
+		if (followLinks) {
+			this.attr = Files.readAttributes(path, java.Lib.toNativeType(BasicFileAttributes));
+		} else {
+			this.attr = Files.readAttributes(path, java.Lib.toNativeType(BasicFileAttributes), NOFOLLOW_LINKS);
+		}
 	}
 
 	public function isDir():Bool {
-		return if(followLinks) Files.isDirectory(path) else Files.isDirectory(path, NOFOLLOW_LINKS);
+		return attr.isDirectory();
 	}
 
 	public function isFile():Bool {
-		return if (followLinks) Files.isRegularFile(path) else Files.isRegularFile(path, NOFOLLOW_LINKS);
+		return attr.isRegularFile();
 	}
 
 	public function isSymlink():Bool {
-		return Files.isSymbolicLink(path);
+		return attr.isSymbolicLink();
 	}
 
 	public function size():haxe.Int64 {
-		return Files.size(path);
+		return attr.size();
 	}
 
 	public function modified():Null<haxe.time.SystemTime> {
-		return SystemTime.unixEpoch(); // TODO
+		return attr.lastModifiedTime().toInstant();
 	}
 
 	public function accessed():Null<haxe.time.SystemTime> {
-		return SystemTime.unixEpoch(); // TODO
+		return attr.lastAccessTime().toInstant();
 	}
 
 	public function created():Null<haxe.time.SystemTime> {
-		return SystemTime.unixEpoch(); // TODO
+		return attr.creationTime().toInstant();
 	}
 }
