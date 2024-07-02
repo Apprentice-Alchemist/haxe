@@ -696,19 +696,23 @@ jobs:
 
   mac-test:
     needs: mac-build-universal
-    runs-on: macos-13
+    runs-on: ${{ matrix.os }}
     env:
-      PLATFORM: mac
+      PLATFORM: mac${{ matrix.os == 'macos-14' && '-arm64' || '' }}
       TEST: ${{matrix.target}}
       HXCPP_COMPILE_CACHE: ~/hxcache
       HAXE_STD_PATH: /usr/local/share/haxe/std
     strategy:
       fail-fast: false
       matrix:
+        os: [macos-14, macos-13]
         target: [macro, js, hl, cpp, jvm, php, python, lua, flash, neko]
         include:
           - target: hl
             BREW_PACKAGES: ninja
+        exclude:
+          - os: macos-14
+            target: hl
     steps:
       - uses: actions/checkout@main
         with:

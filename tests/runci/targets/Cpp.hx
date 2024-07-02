@@ -54,6 +54,8 @@ class Cpp {
 				'HXCPP_M32';
 			case 'Linux' if(Linux.arch == Arm64):
 				'HXCPP_LINUX_ARM64';
+			case 'Mac' if(commandResult('arch', []).stdout == "arm64"):
+				'HXCPP_ARM64';
 			case _:
 				'HXCPP_M64';
 		}
