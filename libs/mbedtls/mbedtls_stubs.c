@@ -428,6 +428,9 @@ static struct custom_operations ssl_context_ops = {
 CAMLprim value ml_mbedtls_ssl_init(void) {
 	CAMLparam0();
 	CAMLlocal1(obj);
+#ifdef MBEDTLS_PSA_CRYPTO_C
+	psa_crypto_init();
+#endif
 	obj = caml_alloc_custom(&ssl_context_ops, sizeof(mbedtls_ssl_context*), 0, 1);
 	mbedtls_ssl_context* ssl_context = malloc(sizeof(mbedtls_ssl_context));
 	mbedtls_ssl_init(ssl_context);
