@@ -60,6 +60,12 @@ class Mbedtls {
 		}
 	}
 
+	static function __init__() {
+		init();
+	}
+
+	extern static function init():Void;
+
 	extern static public function setSocket(ssl:Ssl, socket:NativeSocket):Int;
 
 	extern static function loadDefaults(certificate:X509Crt):Int;

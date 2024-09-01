@@ -105,6 +105,10 @@ let init_fields init_fields builtins =
 		);
 	];
 	init_fields builtins (["sys";"ssl"],"Mbedtls") [
+		"init", vfun0 (fun () ->
+			mbedtls_init();
+			vnull
+		);
 		"loadDefaults",vfun1 (fun this ->
 			vint (hx_cert_load_defaults (as_x509_crt this));
 		);

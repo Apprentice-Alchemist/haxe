@@ -9,6 +9,8 @@ type mbedtls_result = int
 
 type t_mbedtls_entropy_func = mbedtls_entropy_context -> bytes -> int -> mbedtls_result
 
+external mbedtls_init: unit -> unit = "ml_mbedtls_init"
+
 external mbedtls_strerror : int -> string = "ml_mbedtls_strerror"
 
 external mbedtls_ctr_drbg_init : unit -> mbedtls_ctr_drbg_context = "ml_mbedtls_ctr_drbg_init"

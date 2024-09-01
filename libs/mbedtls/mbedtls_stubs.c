@@ -22,6 +22,9 @@
 #include "mbedtls/entropy.h"
 #include "mbedtls/ctr_drbg.h"
 #include "mbedtls/oid.h"
+#ifdef MBEDTLS_PSA_CRYPTO_C
+#include <psa/crypto.h>
+#endif
 
 #define PVoid_val(v) (*((void**) Data_custom_val(v)))
 
@@ -594,4 +597,11 @@ CAMLprim value hx_get_ssl_transport_flags(value unit) {
 	const char* names[] = {"SSL_TRANSPORT_STREAM", "SSL_TRANSPORT_DATAGRAM"};
 	int values[] = {MBEDTLS_SSL_TRANSPORT_STREAM, MBEDTLS_SSL_TRANSPORT_DATAGRAM};
 	CAMLreturn(build_fields(sizeof(values) / sizeof(values[0]), names, values));
+}
+
+CAMLprim value ml_mbedtls_init(value unit) {
+	#ifdef MBEDTLS_PSA_CRYPTO_C
+	psa_crypto_init();
+	#endif
+	return Val_unit;
 }
