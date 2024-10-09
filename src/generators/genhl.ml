@@ -2136,8 +2136,9 @@ and eval_expr ctx e =
 					op ctx (OGetGlobal (o,g));
 					op ctx (OFieldRef (r,o,fid));
 				| ADynamic (ethis, fid) ->
-					let robj = eval_null_check ctx ethis in
-					op ctx (OFieldRef (r,robj,fid));
+					abort "Taking a reference to a field of Dynamic is not supported" e.epos
+					(* let robj = eval_null_check ctx ethis in
+					op ctx (OFieldRef (r,robj,fid)); *)
 				| AInstanceField (ethis,fid, is_packed) ->
 					let robj = eval_null_check ctx ethis in
 					if is_packed then abort "Cannot take reference to a packed field" e.epos
