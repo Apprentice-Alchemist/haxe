@@ -6,12 +6,6 @@ import haxe.macro.Expr;
 
 @:noPackageRestrict
 @:coreType abstract Ref<T> {
-	/**
-		Take reference to the field of an object.
-		Usage: ```
-			hl.Ref.fieldRef(obj.a);
-		```
-	**/
 	public static macro function fieldRef(expr:Expr):Expr {
 		switch expr.expr {
 			case EField(_, _, _):
@@ -30,16 +24,17 @@ import haxe.macro.Expr;
 
 		switch typedFieldExpr.expr {
 			case TField(e, FDynamic(s)):
-				final expectedType = Context.getExpectedType();
-				switch expectedType {
-					case TAbstract(_.get() => {pack: ["hl"], name: "Ref"}, [param]):
-						refType = expectedType;
-						valType = param;
-					case null, TMono(_):
-						Context.error("Taking reference to a field of a dynamic requires an explicit type hint", pos);
-					case _:
-						// this case will fail later
-				}
+				Context.error("Taking reference to a field of a dynamic is not supported", pos);
+				// final expectedType = Context.getExpectedType();
+				// switch expectedType {
+				// 	case TAbstract(_.get() => {pack: ["hl"], name: "Ref"}, [param]):
+				// 		refType = expectedType;
+				// 		valType = param;
+				// 	case null, TMono(_):
+				// 		Context.error("Taking reference to a field of a dynamic requires an explicit type hint", pos);
+				// 	case _:
+				// 		// this case will fail later
+				// }
 			case _:
 		}
 

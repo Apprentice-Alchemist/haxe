@@ -44,5 +44,11 @@ package hl;
 		return untyped $refoffset(this, v);
 	}
 
-	public static macro function fieldRef(obj:haxe.macro.Expr):haxe.macro.Expr;
+	/**
+		Take reference to the field of an object.
+		Usage: ```
+			hl.Ref.fieldRef(obj.a);
+		```
+	**/
+	public static macro function fieldRef<T>(val:haxe.macro.Expr.ExprOf<T>):haxe.macro.Expr.ExprOf<Ref<T>>;
 }
