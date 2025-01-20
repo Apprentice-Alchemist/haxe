@@ -16,8 +16,7 @@
     Expand-Archive $DOWNLOADDIR/*_bin.zip -DestinationPath $DOWNLOADDIR
     Set-PSDebug -Trace 1
     $HAXEPATH = Get-ChildItem $DOWNLOADDIR/haxe_*_* -Directory
-    Write-Host "::add-path::$HAXEPATH"
-    Write-Host "::set-env name=HAXELIB_ROOT::$HAXEPATH\lib"
+    echo "$HAXEPATH" >> $env:GITHUB_PATH
 
 - name: Print Haxe version
   shell: pwsh
@@ -46,12 +45,6 @@
   run: |
     choco install wget
     wget --version
-
-- name: Setup haxelib
-  shell: pwsh
-  run: |
-    mkdir "$env:HAXELIB_ROOT"
-    haxelib setup "$env:HAXELIB_ROOT"
 
 - name: Test
   shell: pwsh

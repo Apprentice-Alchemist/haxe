@@ -21,6 +21,12 @@ class RunCi {
 
 		infoMsg('Going to test: $tests');
 
+		final installPath = getInstallPath();
+		final haxelibRepoPath = installPath + "/haxelib";
+		if(!sys.FileSystem.exists(haxelibRepoPath))
+			sys.FileSystem.createDirectory(haxelibRepoPath);
+		Sys.putEnv("HAXELIB_PATH", haxelibRepoPath);
+
 		final downloadPath = getDownloadPath();
 		if (!sys.FileSystem.exists(downloadPath))
 			sys.FileSystem.createDirectory(downloadPath);

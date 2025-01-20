@@ -11,4 +11,4 @@
 
 - name: Prepend Chocolatey path
   shell: pwsh
-  run: Write-Host "::add-path::C:\ProgramData\chocolatey\bin"
+  run: echo "C:\ProgramData\chocolatey\bin" >> $env:GITHUB_PATH

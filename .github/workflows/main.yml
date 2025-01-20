@@ -8,7 +8,6 @@ jobs:
   windows64-build:
     runs-on: windows-latest
     env:
-      ACTIONS_ALLOW_UNSECURE_COMMANDS: true
       PLATFORM: windows64
       ARCH: 64
       MINGW_ARCH: x86_64
@@ -31,7 +30,7 @@ jobs:
 
       - name: Prepend Chocolatey path
         shell: pwsh
-        run: Write-Host "::add-path::C:\ProgramData\chocolatey\bin"
+        run: echo "C:\ProgramData\chocolatey\bin" >> $env:GITHUB_PATH
 
       - name: Install Neko from S3
         shell: pwsh
@@ -698,8 +697,7 @@ jobs:
           Expand-Archive $DOWNLOADDIR/*_bin.zip -DestinationPath $DOWNLOADDIR
           Set-PSDebug -Trace 1
           $HAXEPATH = Get-ChildItem $DOWNLOADDIR/haxe_*_* -Directory
-          Write-Host "::add-path::$HAXEPATH"
-          Write-Host "::set-env name=HAXELIB_ROOT::$HAXEPATH\lib"
+          echo "$HAXEPATH" >> $env:GITHUB_PATH
 
       - name: Print Haxe version
         shell: pwsh
@@ -728,12 +726,6 @@ jobs:
         run: |
           choco install wget
           wget --version
-
-      - name: Setup haxelib
-        shell: pwsh
-        run: |
-          mkdir "$env:HAXELIB_ROOT"
-          haxelib setup "$env:HAXELIB_ROOT"
 
       - name: Test
         shell: pwsh

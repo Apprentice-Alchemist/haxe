@@ -237,11 +237,22 @@ class System {
 		if (exitCode != 0)
 			throw new CommandFailure(exitCode);
 	}
-
-	static final installPath = if (systemName == "Windows")
-			Sys.getEnv("USERPROFILE") + "/haxe-ci";
-		else
-			Sys.getEnv("HOME") + "/haxe-ci";
+	// Github Actions: use RUNNER_TEMP, on Windows runners it is located on a faster drive
+	// Respect XDG environment variables on all systems
+	// Windows: %LOCALAPPDATA%
+	// macOS: ~/Library/Caches
+	// Other: ~/.cache (default XDG cache home) 
+	static final installPath = 
+		if(Config.ci == GithubActions) {
+			Sys.getEnv("RUNNER_TEMP") + "/haxe-ci";
+		} else if (Sys.getEnv("XDG_CACHE_HOME") != null) {
+			Sys.getEnv("XDG_CACHE_HOME") + "/haxe-ci";
+		} else if (systemName == "Windows")
+			Sys.getEnv("LOCALAPPDATA") + "/haxe-ci";
+		else if (systemName == "Mac") {
+			Sys.getEnv("HOME") + "/Library/Caches/haxe-ci";
+		} else
+			Sys.getEnv("HOME") + "/.cache/haxe-ci";
 
 	/** Returns path where packages should be installed. **/
 	public static inline function getInstallPath():String {
