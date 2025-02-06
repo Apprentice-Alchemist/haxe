@@ -193,7 +193,7 @@ and vinstance_kind =
 	| IBuffer of vstring_buffer(* StringBuf *)
 	| IPos of pos
 	| IUtf8 of UTF8.Buf.buf
-	| IProcess of Process.process
+	| IProcess of vprocess
 	| IInChannel of in_channel * bool ref (* FileInput *)
 	| IOutChannel of out_channel (* FileOutput *)
 	| ISocket of Unix.file_descr
@@ -260,6 +260,13 @@ and vmutex = {
 
 and vlock = {
 	ldeque : vdeque;
+}
+
+and vprocess = {
+	pid: int;
+	mutable stdin: Unix.file_descr option;
+	stdout: Unix.file_descr;
+	stderr: Unix.file_descr;
 }
 
 let same_handle h1 h2 =

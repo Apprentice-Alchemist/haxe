@@ -1799,50 +1799,68 @@ module StdNativeProcess = struct
 		| VInstance {ikind=IProcess proc} -> proc
 		| _ -> unexpected_value vthis "NativeProcess"
 
-	let call f vthis bytes pos len =
+	let pid vthis = match vthis with
+		| VInstance {ikind=IProcess proc} -> proc.pid
+		| _ -> unexpected_value vthis "NativeProcess"
+
+
+	let close = vifun0 (fun vthis ->
+		let this = this vthis in
+		Option.may Unix.close this.stdin;
+		Unix.close this.stderr;
+		Unix.close this.stdout;
+		vnull
+	)
+
+	let exitCode = vifun1 (fun vthis block ->
+		let pid = pid vthis in
+		let block = decode_bool block in
+		let ret_pid,status = Unix.waitpid (if block then [] else [WNOHANG]) pid in
+		if ret_pid = 0 then vnull else
+		vint (match status with WEXITED code -> code | _ -> exc_string "Process was stopped or terminated by signal")
+	)
+
+	let getPid = vifun0 (fun vthis ->
+		let pid = pid vthis in
+		try vint pid with _ -> exc_string "Could not get process PID"
+	)
+
+	let kill = vifun0 (fun vthis ->
+		let pid = pid vthis in
+		try Unix.kill pid Sys.sigkill; vnull with _ -> exc_string "Could not kill process"
+	)
+
+	let readStderr = vifun3 (fun vthis bytes pos len ->
 		let this = this vthis in
 		let bytes = decode_bytes bytes in
 		let pos = decode_int pos in
 		let len = decode_int len in
-		f this (Bytes.unsafe_to_string bytes) pos len
-
-	let process_catch f vthis =
-		try f (this vthis)
-		with Failure msg -> exc_string msg
-
-	let close = vifun0 (fun vthis ->
-		process_catch Process.close vthis;
-		vnull
-	)
-
-	let exitCode = vifun0 (fun vthis ->
-		vint (process_catch Process.exit vthis)
-	)
-
-	let getPid = vifun0 (fun vthis ->
-		vint (process_catch Process.pid vthis)
-	)
-
-	let kill = vifun0 (fun vthis ->
-		process_catch Process.kill vthis;
-		vnull
-	)
-
-	let readStderr = vifun3 (fun vthis bytes pos len ->
-		try vint (call Process.read_stderr vthis bytes pos len) with _ -> exc_string "Could not read stderr"
+		try vint (Unix.read this.stderr bytes pos len) with _ -> exc_string "Could not read stderr"
 	)
 
 	let readStdout = vifun3 (fun vthis bytes pos len ->
-		try vint (call Process.read_stdout vthis bytes pos len) with _ -> exc_string "Could not read stdout"
+		let this = this vthis in
+		let bytes = decode_bytes bytes in
+		let pos = decode_int pos in
+		let len = decode_int len in
+		try vint (Unix.read this.stdout bytes pos len) with _ -> exc_string "Could not read stdout"
 	)
 
 	let closeStdin = vifun0 (fun vthis ->
-		process_catch Process.close_stdin vthis;
-		vnull
-	)
+		let this = this vthis in
+		try 
+			Option.may Unix.close this.stdin;
+			this.stdin <- None;
+			vnull
+		with _ -> exc_string "Could not close process stdin"
+		)
 
 	let writeStdin = vifun3 (fun vthis bytes pos len ->
-		vint (call Process.write_stdin vthis bytes pos len)
+		let this = this vthis in
+		let bytes = decode_bytes bytes in
+		let pos = decode_int pos in
+		let len = decode_int len in
+		try vint (Unix.write (Option.get this.stdin) bytes pos len) with _ -> exc_string "Could not write to stdin"
 	)
 end
 
@@ -3287,12 +3305,34 @@ let init_constructors builtins =
 		(fun vl -> match vl with
 			| [cmd;args] ->
 				let cmd = decode_string cmd in
-				let args = match args with
-					| VNull -> None
-					| VArray va -> Some (Array.map decode_string (Array.sub va.avalues 0 va.alength))
+				let cmd, args = match args with
+					| VNull -> if Sys.win32 then
+						let comspec = Sys.getenv "COMSPEC" in
+						let args = [|comspec; "/C"; cmd|] in
+ 						comspec, args
+					else
+						let shell = "/bin/sh" in
+						let args = [|shell; "-c"; cmd|] in
+						shell, args
+					| VArray va ->
+						let args = Array.append [|cmd|] (Array.map decode_string (Array.sub va.avalues 0 va.alength)) in
+						cmd, args
 					| _ -> unexpected_value args "array"
 				in
-				encode_instance key_sys_io__Process_NativeProcess ~kind:(IProcess (try Process.run cmd args with Failure msg -> exc_string msg))
+				let stdin_read, stdin_write = Unix.pipe ~cloexec:true () in
+				let stdout_read, stdout_write = Unix.pipe ~cloexec:true () in
+				let stderr_read, stderr_write = Unix.pipe ~cloexec:true () in
+				let finally () = Unix.close stdin_read; Unix.close stdout_write; Unix.close stderr_write in
+				(try
+					let pid = Fun.protect ~finally (fun () -> Unix.create_process cmd args stdin_read stdout_write stderr_write) in
+					encode_instance key_sys_io__Process_NativeProcess ~kind:(IProcess {
+						pid;
+						stdin = Some stdin_write;
+						stdout = stdout_read;
+						stderr = stderr_read;
+					})
+				with _ ->
+					exc_string "Failed to create process")
 			| _ -> die "" __LOC__
 		);
 	add key_eval_vm_NativeSocket

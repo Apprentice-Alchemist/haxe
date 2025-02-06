@@ -26,7 +26,7 @@ private extern class NativeProcess {
 	function new(cmd:String, ?args:Array<String>):Void;
 
 	function close():Void;
-	function exitCode():Int;
+	function exitCode(block:Bool):Int;
 	function getPid():Int;
 	function kill():Void;
 
@@ -84,11 +84,13 @@ private class Stdout extends haxe.io.Input {
 
 	public override function readBytes(bytes:haxe.io.Bytes, pos:Int, len:Int):Int {
 		try {
-			if (out) {
-				return proc.readStdout(bytes, pos, len);
+			var read = if (out) {
+				proc.readStdout(bytes, pos, len);
 			} else {
-				return proc.readStderr(bytes, pos, len);
+				proc.readStderr(bytes, pos, len);
 			}
+			// Throw Eof, otherwise readAll will throw Error.Blocked
+			if (read == 0) throw new haxe.io.Eof() else return read; 
 		} catch (e:Dynamic) {
 			throw new haxe.io.Eof();
 		}
@@ -118,9 +120,7 @@ class Process {
 	}
 
 	public function exitCode(block:Bool = true):Null<Int> {
-		if (block == false)
-			throw "Non blocking exitCode() not supported on this platform";
-		return proc.exitCode();
+		return proc.exitCode(block);
 	}
 
 	public inline function close():Void {
