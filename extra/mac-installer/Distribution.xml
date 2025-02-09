@@ -15,6 +15,6 @@
     <choice id="org.haxe.neko" title="Neko" description="Neko VM, required for a number of Haxe tools">
         <pkg-ref id="org.haxe.neko"/>
     </choice>
-    <pkg-ref id="org.haxe.haxe">org.haxe.haxe.pkg</pkg-ref>
-    <pkg-ref id="org.haxe.neko">org.haxe.neko.pkg</pkg-ref>
+    <pkg-ref id="org.haxe.haxe">#org.haxe.haxe.pkg</pkg-ref>
+    <pkg-ref id="org.haxe.neko">#org.haxe.neko.pkg</pkg-ref>
 </installer-script>
