@@ -225,6 +225,8 @@ package_installer_mac: $(INSTALLER_TMP_DIR)/neko-osx.tar.gz package_unix
 		--identifier org.haxe.toolkit \
 		$(PACKAGE_FILE_NAME).pkg
 
+	cp $(PACKAGE_FILE_NAME).pkg org.haxe.toolkit.pkg
+
 	tar -zcvf $(OUTFILE) $(PACKAGE_FILE_NAME).pkg
 
 # Clean

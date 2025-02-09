@@ -773,6 +773,10 @@ jobs:
           ls -l out
           otool -L ./haxe
           otool -L ./haxelib
+      - name: Test installer
+        run: |
+          set -ex
+          sudo installer -pkg org.haxe.toolkit.pkg -target /
 
       - name: Upload artifact (universal)
         uses: actions/upload-artifact@v4
