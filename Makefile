@@ -190,12 +190,14 @@ package_installer_mac: $(INSTALLER_TMP_DIR)/neko-osx.tar.gz package_unix
 	$(eval VERSION := $(shell $(CURDIR)/$(HAXE_OUTPUT) -version 2>&1))
 
 	cd $(INSTALLER_TMP_DIR) && tar -zxvf neko-osx.tar.gz
-	install -d $(INSTALLER_TMP_DIR)/neko_root/bin $(INSTALLER_TMP_DIR)/neko_root/lib/neko $(INSTALLER_TMP_DIR)/neko_root/include
-	install $(INSTALLER_TMP_DIR)/neko-*/{neko,nekoc,nekoml,nekotools} -t installer/neko_root/bin
-	install $(INSTALLER_TMP_DIR)/neko-*/libneko.* -t installer/neko_root/lib
-	install $(INSTALLER_TMP_DIR)/neko-*/*.ndll -t installer/neko_root/lib/neko 
-	install $(INSTALLER_TMP_DIR)/neko-*/nekoml.std -t installer/neko_root/lib/neko 
-	install $(INSTALLER_TMP_DIR)/neko-*/include/* -t installer/neko_root/include 
+	install -d $(INSTALLER_TMP_DIR)/neko_root/bin \
+			   $(INSTALLER_TMP_DIR)/neko_root/lib/neko \
+			   $(INSTALLER_TMP_DIR)/neko_root/include
+	install $(INSTALLER_TMP_DIR)/neko-*/{neko,nekoc,nekoml,nekotools} installer/neko_root/bin
+	install $(INSTALLER_TMP_DIR)/neko-*/libneko.* installer/neko_root/lib
+	install $(INSTALLER_TMP_DIR)/neko-*/*.ndll installer/neko_root/lib/neko 
+	install $(INSTALLER_TMP_DIR)/neko-*/nekoml.std installer/neko_root/lib/neko 
+	install $(INSTALLER_TMP_DIR)/neko-*/include/* installer/neko_root/include 
 
 	pkgbuild \
 		--root installer/neko_root \
@@ -207,7 +209,8 @@ package_installer_mac: $(INSTALLER_TMP_DIR)/neko-osx.tar.gz package_unix
 
 	cd $(INSTALLER_TMP_DIR) && tar -zxvf $(PACKFILE)
 
-	install $(INSTALLER_TMP_DIR)/haxe_*/{haxe,haxelib} -D -t intaller/haxe_root/bin
+	install -d $(INSTALLER_TMP_DIR)/haxe_root/bin
+	install $(INSTALLER_TMP_DIR)/haxe_*/{haxe,haxelib} intaller/haxe_root/bin
 	install -d $(INSTALLER_TMP_DIR)/haxe_root/share/haxe/
 	cp -r $(INSTALLER_TMP_DIR)/haxe_*/std $(INSTALLER_TMP_DIR)/haxe_root/share/haxe/
 
