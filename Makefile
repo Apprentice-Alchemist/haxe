@@ -210,9 +210,9 @@ package_installer_mac: $(INSTALLER_TMP_DIR)/neko-osx.tar.gz package_unix
 	cd $(INSTALLER_TMP_DIR) && tar -zxvf $(PACKFILE)
 
 	mkdir -p $(INSTALLER_TMP_DIR)/haxe_root/bin
-	cp $(INSTALLER_TMP_DIR)/haxe_*/{haxe,haxelib} intaller/haxe_root/bin
+	cp $(INSTALLER_TMP_DIR)/$(PACKAGE_FILE_NAME)/{haxe,haxelib} intaller/haxe_root/bin
 	mkdir -p $(INSTALLER_TMP_DIR)/haxe_root/share/haxe/
-	cp -r $(INSTALLER_TMP_DIR)/haxe_*/std $(INSTALLER_TMP_DIR)/haxe_root/share/haxe/
+	cp -r $(INSTALLER_TMP_DIR)/$(PACKAGE_FILE_NAME)/std $(INSTALLER_TMP_DIR)/haxe_root/share/haxe/
 
 	pkgbuild \
 		--root installer/haxe_root \
