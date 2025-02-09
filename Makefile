@@ -189,7 +189,7 @@ package_installer_mac: $(INSTALLER_TMP_DIR)/neko-osx.tar.gz package_unix
 	$(eval PACKFILE := $(shell pwd)/$(PACKAGE_OUT_DIR)/$(PACKAGE_FILE_NAME)_bin.tar.gz)
 	$(eval VERSION := $(shell $(CURDIR)/$(HAXE_OUTPUT) -version 2>&1))
 
-	cd $(INSTALLER_TMP_DIR) && tar -zxvf neko-osx.tar.gz
+	cd $(INSTALLER_TMP_DIR) && tar -zxf neko-osx.tar.gz
 	mkdir -p $(INSTALLER_TMP_DIR)/neko_root/bin \
 			   $(INSTALLER_TMP_DIR)/neko_root/lib/neko \
 			   $(INSTALLER_TMP_DIR)/neko_root/include
@@ -205,9 +205,11 @@ package_installer_mac: $(INSTALLER_TMP_DIR)/neko-osx.tar.gz package_unix
 		--identifier org.haxe.neko \
 		--install-location /usr/local/ \
 		--scripts extra/mac-installer/neko-scripts \
-		org.haxe.neko.pkg
+		$(INSTALLER_TMP_DIR)/neko.pkg
 
-	cd $(INSTALLER_TMP_DIR) && tar -zxvf $(PACKFILE)
+	pkgutil --payload-files $(INSTALLER_TMP_DIR)/neko.pkg
+
+	cd $(INSTALLER_TMP_DIR) && tar -zxf $(PACKFILE)
 
 	mkdir -p $(INSTALLER_TMP_DIR)/haxe_root/bin
 	cp $(INSTALLER_TMP_DIR)/$(PACKAGE_FILE_NAME)/{haxe,haxelib} $(INSTALLER_TMP_DIR)/haxe_root/bin
@@ -220,12 +222,14 @@ package_installer_mac: $(INSTALLER_TMP_DIR)/neko-osx.tar.gz package_unix
 		--identifier org.haxe.haxe \
 		--install-location /usr/local/ \
 		--scripts extra/mac-installer/haxe-scripts \
-		org.haxe.haxe.pkg
+		$(INSTALLER_TMP_DIR)/haxe.pkg
+
+	pkgutil --payload-files $(INSTALLER_TMP_DIR)/haxe.pkg
 
 	productbuild \
 		--distribution extra/mac-installer/Distribution.xml \
 		--resources extra/mac-installer/resources \
-		--identifier org.haxe.toolkit \
+		--package-path $(INSTALLER_TMP_DIR) \
 		$(PACKAGE_FILE_NAME).pkg
 
 	cp $(PACKAGE_FILE_NAME).pkg org.haxe.toolkit.pkg
