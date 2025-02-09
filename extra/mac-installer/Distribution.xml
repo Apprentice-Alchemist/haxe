@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<installer-script minSpecVersion="1">
+    <title>Haxe</title>
+    <options customize="allow" require-scripts="false"/>
+    <domains enable_localSystem="true"/>
+    <background file="background.png" alignment="bottomleft" scaling="none" mime-type="image/png"/>
+    <license file="License.txt" mime-type="text/plain"/>
+    <choices-outline>
+        <line choice="haxe" />
+        <line choice="neko" />
+    </choices-outline>
+    <choice id="haxe" title="Haxe" description="Haxe compiler and standard library" selected="true" enabled="false">
+        <pkg-ref id="org.haxe.haxe"/>
+    </choice>
+    <choice id="org.haxe.neko" title="Neko" description="Neko VM, required for a number of Haxe tools">
+        <pkg-ref id="org.haxe.neko"/>
+    </choice>
+    <pkg-ref id="org.haxe.haxe">org.haxe.haxe.pkg</pkg-ref>
+    <pkg-ref id="org.haxe.neko">org.haxe.neko.pkg</pkg-ref>
+</installer-script>

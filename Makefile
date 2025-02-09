@@ -188,46 +188,44 @@ package_installer_mac: $(INSTALLER_TMP_DIR)/neko-osx.tar.gz package_unix
 	$(eval OUTFILE := $(shell pwd)/$(PACKAGE_OUT_DIR)/$(PACKAGE_FILE_NAME)_installer.tar.gz)
 	$(eval PACKFILE := $(shell pwd)/$(PACKAGE_OUT_DIR)/$(PACKAGE_FILE_NAME)_bin.tar.gz)
 	$(eval VERSION := $(shell $(CURDIR)/$(HAXE_OUTPUT) -version 2>&1))
-	bash -c "rm -rf $(INSTALLER_TMP_DIR)/{resources,pkg,tgz,haxe.tar.gz}"
-	mkdir $(INSTALLER_TMP_DIR)/resources
-	# neko - unpack to change the dir name
-	cd $(INSTALLER_TMP_DIR)/resources && tar -zxvf ../neko-osx.tar.gz
-	mv $(INSTALLER_TMP_DIR)/resources/neko* $(INSTALLER_TMP_DIR)/resources/neko
-	cd $(INSTALLER_TMP_DIR)/resources && tar -zcvf neko.tar.gz neko
-	# haxe - unpack to change the dir name
-	cd $(INSTALLER_TMP_DIR)/resources && tar -zxvf $(PACKFILE)
-	mv $(INSTALLER_TMP_DIR)/resources/haxe* $(INSTALLER_TMP_DIR)/resources/haxe
-	cd $(INSTALLER_TMP_DIR)/resources && tar -zcvf haxe.tar.gz haxe
-	# scripts
-	cp -rf extra/mac-installer/* $(INSTALLER_TMP_DIR)/resources
-	sed -i '' 's/%%NEKO_VERSION%%/$(NEKO_VERSION)/g' $(INSTALLER_TMP_DIR)/resources/scripts/neko-postinstall.sh
-	sed -i '' 's/%%NEKO_MAJOR_VERSION%%/$(NEKO_MAJOR_VERSION)/g' $(INSTALLER_TMP_DIR)/resources/scripts/neko-postinstall.sh
-	cd $(INSTALLER_TMP_DIR)/resources && tar -zcvf scripts.tar.gz scripts
-	# installer structure
-	mkdir -p $(INSTALLER_TMP_DIR)/pkg
-	cd $(INSTALLER_TMP_DIR)/pkg && xar -xf ../resources/installer-structure.pkg .
-	mkdir $(INSTALLER_TMP_DIR)/tgz; mv $(INSTALLER_TMP_DIR)/resources/*.tar.gz $(INSTALLER_TMP_DIR)/tgz
-	cd $(INSTALLER_TMP_DIR)/tgz; find . | cpio -o --format odc | gzip -c > ../pkg/files.pkg/Payload
-	cd $(INSTALLER_TMP_DIR)/pkg/files.pkg && bash -c "INSTKB=$$(du -sk ../../tgz | awk '{print $$1;}'); \
-	du -sk ../../tgz; \
-	echo $$INSTKB ; \
-	INSTKBH=`expr $$INSTKB - 4`; \
-	echo $$INSTKBH ;\
-	sed -i '' 's/%%INSTKB%%/$$INSTKBH/g' PackageInfo ;\
-	sed -i '' 's/%%VERSION%%/$(VERSION)/g' PackageInfo ;\
-	sed -i '' 's/%%VERSTRING%%/$(VERSION)/g' PackageInfo ;\
-	sed -i '' 's/%%VERLONG%%/$(VERSION)/g' PackageInfo ;\
-	sed -i '' 's/%%NEKOVER%%/$(NEKO_VERSION)/g' PackageInfo ;\
-	cd .. ;\
-	sed -i '' 's/%%VERSION%%/$(VERSION)/g' Distribution ;\
-	sed -i '' 's/%%VERSTRING%%/$(VERSION)/g' Distribution ;\
-	sed -i '' 's/%%VERLONG%%/$(VERSION)/g' Distribution ;\
-	sed -i '' 's/%%NEKOVER%%/$(NEKO_VERSION)/g' Distribution ;\
-	sed -i '' 's/%%INSTKB%%/$$INSTKBH/g' Distribution"
-	# repackage
-	cd $(INSTALLER_TMP_DIR)/pkg; xar --compression none -cf ../$(PACKAGE_FILE_NAME).pkg *
-	# tar
-	cd $(INSTALLER_TMP_DIR); tar -zcvf $(OUTFILE) $(PACKAGE_FILE_NAME).pkg
+
+	cd $(INSTALLER_TMP_DIR) && tar -zxvf neko-osx.tar.gz
+	install -d $(INSTALLER_TMP_DIR)/neko_root/bin $(INSTALLER_TMP_DIR)/neko_root/lib/neko $(INSTALLER_TMP_DIR)/neko_root/include
+	install $(INSTALLER_TMP_DIR)/neko-*/{neko,nekoc,nekoml,nekotools} -t installer/neko_root/bin
+	install $(INSTALLER_TMP_DIR)/neko-*/libneko.* -t installer/neko_root/lib
+	install $(INSTALLER_TMP_DIR)/neko-*/*.ndll -t installer/neko_root/lib/neko 
+	install $(INSTALLER_TMP_DIR)/neko-*/nekoml.std -t installer/neko_root/lib/neko 
+	install $(INSTALLER_TMP_DIR)/neko-*/include/* -t installer/neko_root/include 
+
+	pkgbuild \
+		--root installer/neko_root \
+		--version $(NEKO_VERSION) \
+		--identifier org.haxe.neko \
+		--install-location /usr/local/ \
+		--scripts extra/mac-installer/neko-scripts \
+		org.haxe.neko.pkg
+
+	cd $(INSTALLER_TMP_DIR) && tar -zxvf $(PACKFILE)
+
+	install $(INSTALLER_TMP_DIR)/haxe_*/{haxe,haxelib} -D -t intaller/haxe_root/bin
+	install -d $(INSTALLER_TMP_DIR)/haxe_root/share/haxe/
+	cp -r $(INSTALLER_TMP_DIR)/haxe_*/std $(INSTALLER_TMP_DIR)/haxe_root/share/haxe/
+
+	pkgbuild \
+		--root installer/haxe_root \
+		--version $(VERSION) \
+		--identifier org.haxe.haxe \
+		--install-location /usr/local/ \
+		--scripts extra/mac-installer/haxe-scripts \
+		org.haxe.haxe.pkg
+
+	productbuild \
+		--distribution extra/mac-installer/Distribution.xml \
+		--resources extra/mac-installer/resources \
+		--identifier org.haxe.toolkit \
+		$(PACKAGE_FILE_NAME).pkg
+
+	tar -zcvf $(OUTFILE) $(PACKAGE_FILE_NAME).pkg
 
 # Clean
 

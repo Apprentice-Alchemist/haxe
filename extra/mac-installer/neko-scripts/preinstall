@@ -1,0 +1,8 @@
+#!/bin/sh
+
+rm -f /usr/local/bin/neko
+rm -f /usr/local/bin/nekoc
+rm -f /usr/local/bin/nekoml
+rm -f /usr/local/bin/nekotools
+rm -f /usr/local/lib/libneko*.dylib
+rm -f /usr/local/lib/neko/
