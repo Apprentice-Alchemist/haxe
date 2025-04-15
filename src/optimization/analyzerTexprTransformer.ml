@@ -188,6 +188,7 @@ let rec func ctx bb tf t p =
 			bb,mk (TConst TNull) t_dynamic e.epos
 		| TVar _ | TWhile _ | TIf _ ->
 			Error.raise_typing_error "Cannot use this expression as value" e.epos
+		| TYield _ -> die "yield should not reach analyzer" __LOC__
 	and value bb e =
 		let bb,e = value' bb e in
 		no_void e.etype e.epos;
@@ -632,6 +633,7 @@ let rec func ctx bb tf t p =
 			block_el false bb (List.map snd fl)
 		| TWhile(_,_,DoWhile) ->
 			die "" __LOC__
+		| TYield _ -> die "yield should not reach analyzer" __LOC__
 	and block_el allow_void bb el =
 		let block_element = if allow_void then
 			block_element

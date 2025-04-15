@@ -209,6 +209,7 @@ let s_expr_kind e =
 	| TCast _ -> "Cast"
 	| TMeta _ -> "Meta"
 	| TIdent _ -> "Ident"
+	| TYield _ -> "Yield"
 
 let s_const = function
 	| TInt i -> Int32.to_string i
@@ -296,6 +297,8 @@ let rec s_expr_pretty print_var_ids tabs top_level s_type e =
 		sprintf "@%s%s %s" (Meta.to_string n) (match el with [] -> "" | _ -> "(" ^ (String.concat ", " (List.map Ast.Printer.s_expr el)) ^ ")") (loop e)
 	| TIdent s ->
 		s
+	| TYield e ->
+		"yield " ^ (loop e)
 
 let s_flags flags all_flags =
 	let _,l = List.fold_left (fun (i,acc) name ->
@@ -394,6 +397,8 @@ let rec s_expr_ast print_var_ids tabs s_type e =
 		tag "Meta" [s; loop e1]
 	| TIdent s ->
 		tag "Ident" [s]
+	| TYield e ->
+		tag "Yield" [loop e]
 
 (**
 	Shortcut to pretty-printing expressions for debugging purposes.

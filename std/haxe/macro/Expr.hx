@@ -586,6 +586,11 @@ enum ExprDef {
 		An `expr is Type` expression.
 	**/
 	EIs(e:Expr, t:ComplexType);
+
+	/**
+		A `yield e` expression.
+	**/
+	EYield(e: Expr);
 }
 
 enum DisplayKind {

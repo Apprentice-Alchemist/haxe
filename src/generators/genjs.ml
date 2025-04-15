@@ -730,6 +730,7 @@ and gen_expr ctx e =
 		spr ctx ")"
 	| TIdent s ->
 		spr ctx s
+	| TYield _ -> die "yield should not reach generators" __LOC__
 	);
 	clear_mapping ()
 
@@ -913,7 +914,9 @@ and gen_value ctx e =
 		gen_expr ctx (mk (TTry (block (assign b),
 			List.map (fun (v,e) -> v, block (assign e)) catchs
 		)) e.etype e.epos);
-		v());
+		v()
+	| TYield _ -> die "yield should not reach generators" __LOC__
+	);
 	clear_mapping ()
 
 and gen_syntax ctx meth args pos =

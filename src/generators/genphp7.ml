@@ -1691,6 +1691,7 @@ class code_writer (ctx:php_generator_context) hx_type_path php_name =
 				| TEnumParameter (expr, constructor, index) -> self#write_expr_enum_parameter expr constructor index
 				| TEnumIndex expr -> self#write_expr_enum_index expr
 				| TIdent s -> self#write s
+				| TYield _ -> die "yield should not reach generators" __LOC__
 			);
 			expr_hierarchy <- List.tl expr_hierarchy
 		(**

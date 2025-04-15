@@ -360,6 +360,7 @@ and gen_expr ctx e =
 		gen_expr ctx (Codegen.default_cast ~vtmp:"@tmp" ctx.com.basic ctx.com.std e1 t e.etype e.epos)
 	| TIdent s ->
 		ident p s
+	| TYield _ -> die "yield should not reach generators" __LOC__
 	| TSwitch {switch_subject = e;switch_cases = cases;switch_default = eo} ->
 		let e = gen_expr ctx e in
 		let eo = (match eo with None -> None | Some e -> Some (gen_expr ctx e)) in

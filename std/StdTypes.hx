@@ -170,3 +170,7 @@ typedef KeyValueIterable<K, V> = {
 	@see https://haxe.org/manual/types-abstract-array-access.html
 **/
 extern interface ArrayAccess<T> {}
+
+@:coreType abstract Generator<T> {
+	public function iterator(): Iterator<T>;
+}

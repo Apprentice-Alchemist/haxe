@@ -1919,7 +1919,7 @@ and type_expr ?(mode=MGet) ctx (e,p) (with_type:WithType.t) =
 	| EMeta (m,e1) ->
 		type_meta ~mode ctx m e1 with_type p
 	| EIs (e,(t,p_t)) ->
-		match t with
+		begin match t with
 		| CTPath tp ->
 			if tp.path.tparams <> [] then display_error ctx.com "Type parameters are not supported for the `is` operator" p_t;
 			let e = type_expr ctx e WithType.value in
@@ -1931,6 +1931,8 @@ and type_expr ?(mode=MGet) ctx (e,p) (with_type:WithType.t) =
 		| _ ->
 			display_error ctx.com "Unsupported type for `is` operator" p_t;
 			Texpr.Builder.make_bool ctx.com.basic false p
+		end
+	| EYield _ -> die "TODO: yield" __LOC__
 ;;
 unify_min_ref := unify_min;
 unify_min_for_type_source_ref := unify_min_for_type_source;

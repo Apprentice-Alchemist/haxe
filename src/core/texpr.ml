@@ -27,7 +27,8 @@ let iter f e =
 	| TParenthesis e
 	| TCast (e,_)
 	| TUnop (_,_,e)
-	| TMeta(_,e) ->
+	| TMeta(_,e)
+	| TYield e ->
 		f e
 	| TArrayDecl el
 	| TNew (_,_,el)
@@ -68,7 +69,7 @@ let check_expr predicate e =
 		| TArray (e1,e2) | TBinop (_,e1,e2) | TWhile (e1,e2,_) ->
 			predicate e1 || predicate e2;
 		| TThrow e | TField (e,_) | TEnumParameter (e,_,_) | TEnumIndex e | TParenthesis e
-		| TCast (e,_) | TUnop (_,_,e) | TMeta(_,e) ->
+		| TCast (e,_) | TUnop (_,_,e) | TMeta(_,e) | TYield e ->
 			predicate e
 		| TArrayDecl el | TNew (_,_,el) | TBlock el ->
 			List.exists predicate el
@@ -155,6 +156,8 @@ let map_expr f e =
 		{ e with eexpr = TCast (f e1,t) }
 	| TMeta (m,e1) ->
 		 {e with eexpr = TMeta(m,f e1)}
+	| TYield e1 ->
+		{e with eexpr = TYield(f e1)}
 
 let map_expr_type f ft fv e =
 	match e.eexpr with
@@ -262,6 +265,8 @@ let map_expr_type f ft fv e =
 		{ e with eexpr = TCast (f e1,t); etype = ft e.etype }
 	| TMeta (m,e1) ->
 		{e with eexpr = TMeta(m, f e1); etype = ft e.etype }
+	| TYield e1 ->
+		{e with eexpr = TYield (f e1); etype = ft e.etype}
 
 let equal_fa fa1 fa2 = match fa1,fa2 with
 	| FStatic(c1,cf1),FStatic(c2,cf2) -> c1 == c2 && cf1.cf_name == cf2.cf_name
@@ -466,6 +471,9 @@ let foldmap f acc e =
 	| TMeta (m,e1) ->
 		let acc,e1 = f acc e1 in
 		acc,{ e with eexpr = TMeta(m,e1)}
+	| TYield e1 ->
+		let acc,e1 = f acc e1 in
+		acc, { e with eexpr = TYield e1 }
 	end
 
 (* Collection of functions that return expressions *)
@@ -584,6 +592,7 @@ let set_default basic a c p =
 *)
 let rec constructor_side_effects e =
 	match e.eexpr with
+	| TYield _ -> false
 	| TBinop (op,_,_) when op <> OpAssign ->
 		true
 	| TField (_,FEnum _) ->
@@ -793,6 +802,9 @@ let dump_with_pos tabs e =
 		| TMeta((m,_,_),e1) ->
 			add ("TMeta " ^ (Meta.to_string m));
 			loop e1
+		| TYield e ->
+			add "TYield";
+			loop e
 	in
 	loop' tabs e;
 	Buffer.contents buf

@@ -1342,6 +1342,7 @@ let expression ctx request_type function_args function_type expression_tree forI
               (retyper_ctx, baseCpp.cppexpr, baseCpp.cpptype)
             | _ ->
               (retyper_ctx, CppTCast (baseCpp, return_type), return_type))
+      | TYield _ -> die "yield should not reach generators" __LOC__
     in
     let cppExpr = mk_cppexpr retypedExpr retypedType in
 

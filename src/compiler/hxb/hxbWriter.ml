@@ -857,6 +857,9 @@ module HxbWriter = struct
 			Chunk.write_u8 writer.chunk 36;
 			write_metadata_entry writer m;
 			write_expr writer e1
+		| EYield e1 ->
+			Chunk.write_u8 writer.chunk 37;
+			write_expr writer e1
 
 	(* References *)
 
@@ -1525,6 +1528,10 @@ module HxbWriter = struct
 				true;
 			| TThrow e1 ->
 				Chunk.write_u8 writer.chunk 94;
+				loop e1;
+				true;
+			| TYield e1 ->
+				Chunk.write_u8 writer.chunk 95;
 				loop e1;
 				true;
 			(* access 100-119 *)

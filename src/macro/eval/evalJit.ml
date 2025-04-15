@@ -631,6 +631,7 @@ and jit_expr jit return e =
 		emit_mk_pos e.epos
 	| TIdent s ->
 		Error.raise_typing_error ("Unknown identifier: " ^ s) e.epos
+	| TYield _ -> die "unhandled yield" __LOC__
 	in
 	let f = loop e in
 	begin match ctx.debug.debug_socket with

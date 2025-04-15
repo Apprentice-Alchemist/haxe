@@ -72,6 +72,7 @@ class TypedExprTools {
 			case TReturn(e1): with(e, TReturn(e1 == null ? null : f(e1)));
 			case TCast(e1, mt): with(e, TCast(f(e1), mt));
 			case TMeta(m, e1): with(e, TMeta(m, f(e1)));
+			case TYield(e1): with(e, TYield(f(e1)));
 		}
 	}
 
@@ -88,7 +89,7 @@ class TypedExprTools {
 			case TArray(e1, e2) | TBinop(_, e1, e2) | TFor(_, e1, e2) | TWhile(e1, e2, _):
 				f(e1);
 				f(e2);
-			case TThrow(e1) | TEnumParameter(e1, _, _) | TEnumIndex(e1) | TField(e1, _) | TParenthesis(e1) | TUnop(_, _, e1) | TCast(e1, _) | TMeta(_, e1):
+			case TThrow(e1) | TEnumParameter(e1, _, _) | TEnumIndex(e1) | TField(e1, _) | TParenthesis(e1) | TUnop(_, _, e1) | TCast(e1, _) | TMeta(_, e1) | TYield(e1):
 				f(e1);
 			case TArrayDecl(el) | TNew(_, _, el) | TBlock(el):
 				for (e in el)
@@ -164,6 +165,7 @@ class TypedExprTools {
 			case TReturn(e1): with(e, TReturn(e1 == null ? null : f(e1)), ft(e.t));
 			case TCast(e1, mt): with(e, TCast(f(e1), mt), ft(e.t));
 			case TMeta(m, e1): with(e, TMeta(m, f(e1)), ft(e.t));
+			case TYield(e1): with(e, TYield(f(e1)), ft(e.t));
 		}
 	}
 

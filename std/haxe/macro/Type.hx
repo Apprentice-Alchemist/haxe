@@ -984,6 +984,11 @@ enum TypedExprDef {
 		An unknown identifier.
 	**/
 	TIdent(s:String);
+
+	/**
+		A `yield e` expression.
+	**/
+	TYield(e1:TypedExpr);
 }
 
 /**

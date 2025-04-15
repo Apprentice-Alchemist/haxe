@@ -1208,6 +1208,7 @@ class expr_checker mode immediate_execution report =
 				| TEnumIndex idx -> self#check_enum_index idx e.epos
 				| TEnumParameter (e, _, _) -> self#check_expr e (** Checking enum value itself is not needed here because this expr always follows after TEnumIndex *)
 				| TIdent _ -> ()
+				| TYield e -> self#check_expr e
 		(**
 			Check expressions in a block
 		*)

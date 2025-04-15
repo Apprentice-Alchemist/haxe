@@ -367,6 +367,7 @@ let rec expr_to_value ctx env e =
 		| ETry _ | ESwitch _ | EFunction _ | EFor _ | EDisplay _
 		| ECast(_,Some _) | EIs _ ->
 			raise NoValueExpr
+		| EYield _ -> die "yield not handled" __LOC__
 	in
 	loop e
 

@@ -20,6 +20,7 @@
  * DEALINGS IN THE SOFTWARE.
  *)
 
+open Globals
 open Extlib_leftovers
 open Ast
 open Type
@@ -1053,6 +1054,7 @@ and gen_expr ?(local=true) ctx e = begin
         gen_value ctx e1;
     | TIdent s ->
         spr ctx s;
+    | TYield _ -> ignore(die "yield should not reach generators" __LOC__);
 
     clear_mapping ()
 end;
@@ -1294,6 +1296,7 @@ and gen_value ctx e =
                                          List.map (fun (v,e) -> v, block (assign e)) catchs
                                         )) e.etype e.epos);
         v();
+    | TYield _ -> ignore(die "yield should not reach generators" __LOC__);
     clear_mapping ()
 
 and gen_tbinop ctx op e1 e2 =

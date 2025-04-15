@@ -177,7 +177,8 @@ module TExprToExpr = struct
 			ECast (convert_expr e,t)
 		| TMeta ((Meta.Ast,[e1,_],_),_) -> e1
 		| TMeta (m,e) -> EMeta(m,convert_expr e)
-		| TIdent s -> EConst (Ident s))
+		| TIdent s -> EConst (Ident s)
+		| TYield e -> EYield (convert_expr e))
 		,e.epos)
 
 end

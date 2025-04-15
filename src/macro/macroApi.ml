@@ -625,6 +625,7 @@ and encode_expr e =
 				27, [encode_meta_entry m;loop e]
 			| EIs (e,t) ->
 				28, [loop e;encode_ctype t]
+			| EYield e -> 29, [loop e]
 		in
 		encode_obj [
 			"pos", encode_pos p;
@@ -991,6 +992,7 @@ and decode_expr v =
 			EMeta (decode_meta_entry m,loop e)
 		| 28, [e;t] ->
 			EIs (loop e,decode_ctype t)
+		| 29, [e] -> EYield (loop e)
 		| _ ->
 			raise Invalid_expr
 	in
@@ -1424,6 +1426,7 @@ and encode_texpr e =
 			| TEnumParameter(e1,ef,i) -> 26,[loop e1;encode_efield ef;vint i]
 			| TEnumIndex e1 -> 27,[loop e1]
 			| TIdent s -> 28,[encode_string s]
+			| TYield e1 -> 29,[loop e1]
 		in
 		encode_obj [
 			"pos", encode_pos e.epos;
@@ -1574,6 +1577,7 @@ and decode_texpr v =
 		| 26, [v1;ef;i] -> TEnumParameter(loop v1,decode_efield ef,decode_int i)
 		| 27, [v1] -> TEnumIndex(loop v1)
 		| 28, [v1] -> TIdent(decode_string v1)
+		| 29, [v1] -> TYield(loop v1)
 		| i,el -> Printf.printf "%i %i\n" i (List.length el); raise Invalid_expr
 	in
 	try
