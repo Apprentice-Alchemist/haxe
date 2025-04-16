@@ -1451,6 +1451,17 @@ and expr (ctx : parser_ctx) s = match%parser s with
 			| [ ] ->
 				serror()
 		end
+	| [ (Const (Ident "gen"), p);] ->
+		begin match%parser s with
+			| [(BrOpen,p1);] ->
+				begin match%parser s with
+				| [ [%let b = block ctx []]; (BrClose,p2) ] -> make_meta (Meta.Custom ":gen") [] (EBlock b, (punion p1 p2)) (punion p p2)
+				| [ ] ->
+					serror ()
+					(* syntax_error ctx (Expected ["}"]) s (pos (next_token ctx s)) *)
+				end
+			| [ ] -> expr_next ctx (EConst (Ident "gen"), p) s
+			end
 	| [ (Const c,p) ] -> expr_next ctx (EConst c,p) s
 	| [ (Kwd This,p) ] -> expr_next ctx (EConst (Ident "this"),p) s
 	| [ (Kwd Abstract,p) ] -> expr_next ctx (EConst (Ident "abstract"),p) s
@@ -1610,6 +1621,8 @@ and expr_next ctx e1 s =
 		handle_stream_error ctx msg s;
 		e1
 
+and is_yield e = match (fst e) with | EConst (Ident "yield") -> true | _ -> false
+
 and expr_next' ctx e1 s = match%parser s with
 	| [ (BrOpen,p1); [%let eparam = expr ctx]; (BrClose,p2) ] when is_dollar_ident e1 ->
 		(match fst e1 with
@@ -1655,7 +1668,13 @@ and expr_next' ctx e1 s = match%parser s with
 		let p2 = pos t in
 		let e_is = EIs (e1,t), (punion p1 p2) in
 		expr_next ctx e_is s
-	| [ ] -> e1
+	| [ ] ->
+		if is_yield e1 then
+			begin match%parser s with
+			| [[%let e = expr ctx]] -> EYield e, (punion (pos e1) (pos e))
+			| [ ] -> e1
+			end
+		else e1
 
 and parse_field ctx e1 efk p s =
 	check_resume ctx p (fun () -> (EDisplay (e1,DKDot),p)) (fun () ->
