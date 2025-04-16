@@ -1561,6 +1561,8 @@ and type_meta ?(mode=MGet) ctx m e1 with_type p =
 			print_endline "IMPORT:";
 			print ctx.m.import_resolution#get_list;
 			e()
+		| (Meta.Custom ":gen", _, p) ->
+			type_generator ctx e1 with_type p
 		| _ ->
 			if ctx.g.retain_meta then
 				let e = e() in
@@ -1570,6 +1572,26 @@ and type_meta ?(mode=MGet) ctx m e1 with_type p =
 	in
 	ctx.f.meta <- old;
 	e
+
+and type_generator ctx e with_type p =
+	let ctx = TyperManager.clone_for_expr ctx ctx.e.curfun FunGenerator in
+	let yield_type = match with_type with 
+		| WithType (t, source) ->
+			begin match t with
+				| TAbstract ({a_path = ([], "Generator")}, [tp]) -> tp
+				| _ -> spawn_monomorph ctx p
+			end
+		| _ -> spawn_monomorph ctx p
+	in
+	ctx.e.yield_type <- Some yield_type;
+	ctx.e.in_generator <- true;
+	let e = type_expr ctx e WithType.NoValue in
+	let gen_type = ctx.t.tgenerator yield_type in
+	begin match with_type with
+		| WithType (t, source) -> unify ctx gen_type t p
+		| _ -> ()
+	end;
+	{e with eexpr = TConst TNull; etype = gen_type;}
 
 and type_call_target ctx e el with_type p_inline =
 	let p = (pos e) in
@@ -1932,7 +1954,13 @@ and type_expr ?(mode=MGet) ctx (e,p) (with_type:WithType.t) =
 			display_error ctx.com "Unsupported type for `is` operator" p_t;
 			Texpr.Builder.make_bool ctx.com.basic false p
 		end
-	| EYield _ -> die "TODO: yield" __LOC__
+	| EYield e -> 
+		if not ctx.e.in_generator then begin
+			display_error ctx.com "Yield outside of generator" p;
+		end;
+		let e = type_expr ctx e (WithType.with_type (Option.get ctx.e.yield_type)) in
+		let e = AbstractCast.cast_or_unify ctx (Option.get ctx.e.yield_type) e e.epos in
+		mk (TYield e) ctx.t.tvoid p
 ;;
 unify_min_ref := unify_min;
 unify_min_for_type_source_ref := unify_min_for_type_source;

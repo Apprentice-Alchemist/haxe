@@ -793,6 +793,7 @@ let create timer_ctx compilation_step cs version args display_mode =
 			tnull = (fun _ -> die "Could use locate abstract Null<T> (was it redefined?)" __LOC__);
 			tarray = (fun _ -> die "Could not locate class Array<T> (was it redefined?)" __LOC__);
 			titerator = (fun _ -> die "Could not locate typedef Iterator<T> (was it redefined?)" __LOC__);
+			tgenerator = (fun _ -> die "Could not locate abstract Generator<T> (was it redefined?)" __LOC__);
 		};
 		std = null_class;
 		file_keys = new file_keys;
@@ -923,6 +924,7 @@ let clone com is_macro_context =
 			tnull = (fun _ -> die "Could use locate abstract Null<T> (was it redefined?)" __LOC__);
 			tarray = (fun _ -> die "Could not locate class Array<T> (was it redefined?)" __LOC__);
 			titerator = (fun _ -> die "Could not locate typedef Iterator<T> (was it redefined?)" __LOC__);
+			tgenerator = (fun _ -> die "Could not locate abstract Generator<T> (was it redefined?)" __LOC__);
 		};
 		local_wrapper = LocalWrapper.null_wrapper;
 		std = null_class;

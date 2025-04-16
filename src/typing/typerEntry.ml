@@ -51,6 +51,9 @@ let load_std_types ctx =
 						TLazy r
 				in
 				ctx.t.tnull <- mk_null;
+			| "Generator" ->
+				let mk_generator t = TAbstract (a, [t]) in
+				ctx.t.tgenerator <- mk_generator
 			| _ -> ())
 		| TTypeDecl td ->
 			begin match snd td.t_path with
