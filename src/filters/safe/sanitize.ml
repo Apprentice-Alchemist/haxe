@@ -40,7 +40,7 @@ let rec need_parent e =
 	| TCall _ | TNew _ | TTypeExpr _ | TObjectDecl _ | TArrayDecl _ | TIdent _ -> false
 	| TCast (e,None) | TMeta(_,e) -> need_parent e
 	| TCast _ | TThrow _ | TReturn _ | TTry _ | TSwitch _ | TIf _ | TWhile _ | TBinop _ | TContinue | TBreak
-	| TBlock _ | TVar _ | TFunction _ | TUnop _ | TYield _ | TGen _ -> true
+	| TBlock _ | TVar _ | TFunction _ | TUnop _ | TYield _ | TGen _ | TAwait _ -> true
 
 let sanitize_expr config e =
 	let parent e =

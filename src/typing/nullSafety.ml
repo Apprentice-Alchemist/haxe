@@ -1210,6 +1210,7 @@ class expr_checker mode immediate_execution report =
 				| TIdent _ -> ()
 				| TYield e -> self#check_expr e
 				| TGen e -> self#check_expr e
+				| TAwait e -> self#check_expr e
 		(**
 			Check expressions in a block
 		*)

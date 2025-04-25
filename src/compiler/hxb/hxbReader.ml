@@ -1238,6 +1238,12 @@ class hxb_reader
 						TBreak,None
 					| 94 ->
 						TThrow (loop ()),None
+					| 95 ->
+						TYield (loop ()),None
+					| 96 ->
+						TGen (loop ()),None
+					| 97 ->
+						TAwait (loop ()),None
 
 					(* access 100-119 *)
 					| 100 ->

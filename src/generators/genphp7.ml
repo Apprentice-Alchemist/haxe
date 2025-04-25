@@ -1693,6 +1693,7 @@ class code_writer (ctx:php_generator_context) hx_type_path php_name =
 				| TIdent s -> self#write s
 				| TYield _ -> die "yield should not reach generators" __LOC__
 				| TGen _ -> die "gen should not reach generators" __LOC__
+				| TAwait _ -> die "await should not reach generators" __LOC__
 			);
 			expr_hierarchy <- List.tl expr_hierarchy
 		(**

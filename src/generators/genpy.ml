@@ -960,6 +960,7 @@ module Transformer = struct
 			lift_expr ae.a_next_id a_expr
 		| (_, TYield _) -> die "yield should not reach generator" __LOC__
 		| (_, TGen _) -> die "gen should not reach generator" __LOC__
+		| (_, TAwait _) -> die "await should not reach generator" __LOC__
 
 	and transform e =
 		to_expr (transform1 (lift_expr (new_counter()) e))
@@ -1378,6 +1379,7 @@ module Printer = struct
 				die "" __LOC__
 			| TYield _ -> die "yield should not reach generator" __LOC__
 			| TGen _ -> die "gen should not reach generator" __LOC__
+			| TAwait _ -> die "await should not reach generators" __LOC__
 
 	and print_if_else pctx econd eif eelse as_elif =
 		let econd1 = match econd.eexpr with

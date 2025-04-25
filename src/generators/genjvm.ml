@@ -2279,6 +2279,7 @@ class texpr_to_jvm
 			Error.raise_typing_error (s_expr_ast false "" (s_type (print_context())) e) e.epos;
 		| TYield _ -> die "yield should not reach generators" __LOC__
 		| TGen _ -> die "gen should not reach generators" __LOC__
+		| TAwait _ -> die "await should not reach generators" __LOC__
 
 	(* api *)
 

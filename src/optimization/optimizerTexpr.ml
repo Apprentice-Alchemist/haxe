@@ -12,7 +12,7 @@ let has_side_effect e =
 		| TNew(c,_,el) when (match c.cl_constructor with Some cf when PurityState.is_pure c cf -> true | _ -> false) -> List.iter loop el
 		| TField(_,fa) when PurityState.is_explicitly_impure fa -> raise Exit
 		| TNew _ | TCall _ | TBinop ((OpAssignOp _ | OpAssign),_,_) | TUnop ((Increment|Decrement),_,_) -> raise Exit
-		| TReturn _ | TBreak | TContinue | TThrow _ | TCast (_,Some _) | TYield _ -> raise Exit
+		| TReturn _ | TBreak | TContinue | TThrow _ | TCast (_,Some _) | TYield _ | TAwait _ -> raise Exit
 		| TArray _ | TEnumParameter _ | TEnumIndex _ | TCast (_,None) | TBinop _ | TUnop _ | TParenthesis _ | TMeta _ | TWhile _
 		| TField _ | TIf _ | TTry _ | TSwitch _ | TArrayDecl _ | TBlock _ | TObjectDecl _ | TVar _ -> Type.iter loop e
 	in

@@ -29,7 +29,7 @@ let iter f e =
 	| TUnop (_,_,e)
 	| TMeta(_,e)
 	| TYield e 
-	| TGen e ->
+	| TGen e | TAwait e ->
 		f e
 	| TArrayDecl el
 	| TNew (_,_,el)
@@ -70,7 +70,7 @@ let check_expr predicate e =
 		| TArray (e1,e2) | TBinop (_,e1,e2) | TWhile (e1,e2,_) ->
 			predicate e1 || predicate e2;
 		| TThrow e | TField (e,_) | TEnumParameter (e,_,_) | TEnumIndex e | TParenthesis e
-		| TCast (e,_) | TUnop (_,_,e) | TMeta(_,e) | TYield e | TGen e ->
+		| TCast (e,_) | TUnop (_,_,e) | TMeta(_,e) | TYield e | TAwait e | TGen e ->
 			predicate e
 		| TArrayDecl el | TNew (_,_,el) | TBlock el ->
 			List.exists predicate el
@@ -161,6 +161,8 @@ let map_expr f e =
 		{e with eexpr = TYield(f e1)}
 	| TGen e1 ->
 		{e with eexpr = TGen(f e1)}
+	| TAwait e1 ->
+		{e with eexpr = TAwait(f e1)}
 
 let map_expr_type f ft fv e =
 	match e.eexpr with
@@ -272,6 +274,8 @@ let map_expr_type f ft fv e =
 		{e with eexpr = TYield (f e1); etype = ft e.etype}
 	| TGen e1 ->
 		{e with eexpr = TGen (f e1); etype = ft e.etype}
+	| TAwait e1 ->
+		{e with eexpr = TAwait (f e1); etype = ft e.etype}
 
 let equal_fa fa1 fa2 = match fa1,fa2 with
 	| FStatic(c1,cf1),FStatic(c2,cf2) -> c1 == c2 && cf1.cf_name == cf2.cf_name
@@ -482,6 +486,9 @@ let foldmap f acc e =
 	| TGen e1 ->
 		let acc, e1 = f acc e1 in
 		acc, { e with eexpr = TGen e1 }
+	| TAwait e1 ->
+		let acc, e1 = f acc e1 in
+		acc, { e with eexpr = TAwait e1 }
 	end
 
 (* Collection of functions that return expressions *)
@@ -600,12 +607,11 @@ let set_default basic a c p =
 *)
 let rec constructor_side_effects e =
 	match e.eexpr with
-	| TYield _ -> false
 	| TBinop (op,_,_) when op <> OpAssign ->
 		true
 	| TField (_,FEnum _) ->
 		false
-	| TUnop _ | TArray _ | TField _ | TEnumParameter _ | TEnumIndex _ | TCall _ | TNew _ | TWhile _ | TSwitch _ | TReturn _ | TThrow _ ->
+	| TUnop _ | TArray _ | TField _ | TEnumParameter _ | TEnumIndex _ | TCall _ | TNew _ | TWhile _ | TSwitch _ | TReturn _ | TThrow _ | TYield _ | TAwait _->
 		true
 	| TBinop _ | TTry _ | TIf _ | TBlock _ | TVar _
 	| TFunction _ | TArrayDecl _ | TObjectDecl _
@@ -815,6 +821,9 @@ let dump_with_pos tabs e =
 			loop e
 		| TGen e ->
 			add "TGen";
+			loop e;
+		| TAwait e ->
+			add "TAwait";
 			loop e;
 	in
 	loop' tabs e;

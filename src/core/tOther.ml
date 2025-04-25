@@ -179,7 +179,8 @@ module TExprToExpr = struct
 		| TMeta (m,e) -> EMeta(m,convert_expr e)
 		| TIdent s -> EConst (Ident s)
 		| TYield e -> EYield (convert_expr e)
-		| TGen e -> die "TODO: gen to expr" __LOC__)
+		| TGen e -> die "TODO: gen to expr" __LOC__
+		| TAwait e -> die "TODO: await to expr" __LOC__)
 		,e.epos)
 
 end

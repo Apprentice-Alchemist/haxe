@@ -1302,6 +1302,7 @@ class script_writer ctx filename asciiOut =
       | TIdent _ -> abort "Unexpected ident" expression.epos
       | TYield _ -> die "yield should not reach generators" __LOC__
       | TGen _ -> die "gen should not reach generators" __LOC__
+      | TAwait _ -> die "await should not reach generators" __LOC__
 
     (* } *)
     method gen_expression_tree expression_tree =

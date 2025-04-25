@@ -206,3 +206,19 @@ abstract Generator<T>(() -> CoroResult<T, haxe.Unit>) {
 	// @:generic static inline function fromFun<T>(f:() -> CoroResult<T, haxe.Unit>):Generator<T>
 	// 	= untyped f;
 }
+
+enum Poll<T> {
+	Pending;
+	Ready(val:T);
+}
+
+abstract Future<T>(() -> CoroResult<haxe.Unit, T>) {
+	public function poll():Poll<T> {
+		switch this() {
+			case Yield(_): return Pending;
+			case Ret(val): return Ready(val);
+		}
+	}
+
+	public static function fromFun<T>(f:() -> CoroResult<haxe.Unit, T>) = cast f;
+}

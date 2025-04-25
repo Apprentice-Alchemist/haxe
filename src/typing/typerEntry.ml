@@ -54,6 +54,9 @@ let load_std_types ctx =
 			| "Generator" ->
 				let mk_generator t = TAbstract (a, [t]) in
 				ctx.t.tgenerator <- mk_generator
+			| "Future" ->
+				let mk_future t = TAbstract (a, [t]) in
+				ctx.t.tfuture <- mk_future
 			| _ -> ())
 		| TTypeDecl td ->
 			begin match snd td.t_path with

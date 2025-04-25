@@ -1563,6 +1563,19 @@ and type_meta ?(mode=MGet) ctx m e1 with_type p =
 			e()
 		| (Meta.Custom ":gen", _, p) ->
 			type_generator ctx e1 with_type p
+		| (Meta.Custom ":async", _, p) ->
+			type_async ctx e1 with_type p
+		| (Meta.Custom ":await", _, p) ->
+			begin match ctx.e.coro_type with
+			| Some Async -> ()
+			| _ -> 
+				display_error ctx.com "Await outside of async block" p
+			end;
+			let e = type_expr ctx e1 (WithType.value) in
+			let inner_t = match with_type with WithType.WithType (t, _) -> t | _ -> mk_mono () in
+			let fut_t = ctx.com.basic.tfuture inner_t in
+			let e = AbstractCast.cast_or_unify ctx fut_t e e.epos in
+			mk (TAwait e) inner_t p
 		| _ ->
 			if ctx.g.retain_meta then
 				let e = e() in
@@ -1573,8 +1586,31 @@ and type_meta ?(mode=MGet) ctx m e1 with_type p =
 	ctx.f.meta <- old;
 	e
 
+and type_async ctx e with_type p = 
+	let ctx = TyperManager.clone_for_expr ctx ctx.e.curfun FunCoro in
+	let ret_type = match with_type with 
+		| WithType (t, source) ->
+			begin match t with
+				| TAbstract ({a_path = ([], "Future")}, [tp]) -> tp
+				| _ -> spawn_monomorph ctx p
+			end
+		| _ -> spawn_monomorph ctx p
+	in
+	ctx.e.ret <- ret_type;
+	ctx.e.coro_type <- Some Async;
+	let e = type_expr ctx e WithType.NoValue in
+	let gen_type = ctx.t.tfuture ret_type in
+	begin match with_type with
+		| WithType (t, source) -> unify ctx gen_type t p
+		| _ -> ()
+	end;
+	mk (TGen e) gen_type p
+	(* let a,tp = match gen_type with | TAbstract (a, tp) -> a,tp | _ -> die "" __LOC__ in *)
+	(* let e = mk (TCast (e, None)) (TFun ([], mk_mono())) p in *)
+	(* Texpr.Builder.resolve_and_make_static_call (Option.get a.a_impl) "fromFun" [e] p *)
+
 and type_generator ctx e with_type p =
-	let ctx = TyperManager.clone_for_expr ctx ctx.e.curfun FunGenerator in
+	let ctx = TyperManager.clone_for_expr ctx ctx.e.curfun FunCoro in
 	let yield_type = match with_type with 
 		| WithType (t, source) ->
 			begin match t with
@@ -1584,17 +1620,15 @@ and type_generator ctx e with_type p =
 		| _ -> spawn_monomorph ctx p
 	in
 	ctx.e.ret <- ctx.t.tvoid;
-	ctx.e.yield_type <- Some yield_type;
-	ctx.e.in_generator <- true;
+	ctx.e.coro_type <- Some (Generator yield_type);
 	let e = type_expr ctx e WithType.NoValue in
 	let gen_type = ctx.t.tgenerator yield_type in
 	begin match with_type with
 		| WithType (t, source) -> unify ctx gen_type t p
 		| _ -> ()
 	end;
-	let e = {e with eexpr = TGen e; etype = gen_type;} in
+	mk (TGen e) gen_type p
 	(* let a,tp = match gen_type with | TAbstract (a, tp) -> a,tp | _ -> die "" __LOC__ in *)
-	e
 	(* let e = mk (TCast (e, None)) (TFun ([], mk_mono())) p in *)
 	(* Texpr.Builder.resolve_and_make_static_call (Option.get a.a_impl) "fromFun" [e] p *)
 
@@ -1960,12 +1994,15 @@ and type_expr ?(mode=MGet) ctx (e,p) (with_type:WithType.t) =
 			Texpr.Builder.make_bool ctx.com.basic false p
 		end
 	| EYield e -> 
-		if not ctx.e.in_generator then begin
-			display_error ctx.com "Yield outside of generator" p;
-		end;
-		let e = type_expr ctx e (WithType.with_type (Option.get ctx.e.yield_type)) in
-		let e = AbstractCast.cast_or_unify ctx (Option.get ctx.e.yield_type) e e.epos in
-		mk (TYield e) ctx.t.tany p
+		let t = match ctx.e.coro_type with
+			| Some (Generator t) -> t
+			| _ -> 
+				display_error ctx.com "Yield outside of generator" p;
+				ctx.com.basic.tany
+			in
+			let e = type_expr ctx e (WithType.with_type t) in
+			let e = AbstractCast.cast_or_unify ctx t e e.epos in
+			mk (TYield e) ctx.t.tany p
 ;;
 unify_min_ref := unify_min;
 unify_min_for_type_source_ref := unify_min_for_type_source;

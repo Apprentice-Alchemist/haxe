@@ -227,6 +227,7 @@ and texpr_expr =
 	| TIdent of string
 	| TYield of texpr
 	| TGen of texpr
+	| TAwait of texpr
 
 and tswitch = {
 	switch_subject : texpr;
@@ -495,6 +496,7 @@ type basic_types = {
 	mutable tarray : t -> t;
 	mutable titerator : t -> t;
 	mutable tgenerator : t -> t;
+	mutable tfuture : t -> t;
 }
 
 type class_field_scope =

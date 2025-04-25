@@ -93,7 +93,7 @@ type typer_pass_tasks = {
 type function_mode =
 	| FunFunction
 	| FunNotFunction
-	| FunGenerator (* not really a function *)
+	| FunCoro (* not really a function *)
 
 type typer_globals = {
 	mutable delayed : typer_pass_tasks Array.t;
@@ -136,9 +136,10 @@ and typer_expr = {
 	mutable with_type_stack : WithType.t list;
 	mutable call_argument_stack : expr list list;
 	mutable macro_depth : int;
-	mutable in_generator: bool;
-	mutable yield_type: t option;
+	mutable coro_type: coro_type option;
 }
+
+and coro_type = Generator of t | Async
 
 and typer_field = {
 	curfield : tclass_field;
@@ -234,8 +235,7 @@ module TyperManager = struct
 			with_type_stack = [];
 			call_argument_stack = [];
 			macro_depth = 0;
-			in_generator = false;
-			yield_type = None;
+			coro_type = None;
 		}
 
 	let clone_for_module ctx m =
@@ -294,7 +294,7 @@ module TyperManager = struct
 		create ctx ctx.m ctx.c f e PTypeField ctx.type_params
 
 	let is_function_context ctx = match ctx.e.function_mode with
-		| FunFunction | FunGenerator ->
+		| FunFunction | FunCoro ->
 			true
 		| _ ->
 			false

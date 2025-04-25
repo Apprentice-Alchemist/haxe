@@ -211,6 +211,7 @@ let s_expr_kind e =
 	| TIdent _ -> "Ident"
 	| TYield _ -> "Yield"
 	| TGen _ -> "Gen"
+	| TAwait _ -> "Await"
 
 let s_const = function
 	| TInt i -> Int32.to_string i
@@ -302,6 +303,8 @@ let rec s_expr_pretty print_var_ids tabs top_level s_type e =
 		"yield " ^ (loop e)
 	| TGen e ->
 		"gen " ^ (loop e)
+	| TAwait e ->
+		"await " ^ (loop e)
 
 let s_flags flags all_flags =
 	let _,l = List.fold_left (fun (i,acc) name ->
@@ -404,6 +407,8 @@ let rec s_expr_ast print_var_ids tabs s_type e =
 		tag "Yield" [loop e]
 	| TGen e ->
 		tag "Gen" [loop e]
+	| TAwait e ->
+		tag "Await" [loop e]
 
 (**
 	Shortcut to pretty-printing expressions for debugging purposes.

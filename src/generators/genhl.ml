@@ -3117,6 +3117,7 @@ and eval_expr ctx e =
 		abort ("Unbound identifier " ^ s) e.epos
 	| TYield _ -> die "yield should not reach generators" __LOC__
 	| TGen _ -> die "gen should not reach generators" __LOC__
+	| TAwait _ -> die "await should not reach generators" __LOC__
 
 and gen_assign_op ctx acc e1 f =
 	let f r =

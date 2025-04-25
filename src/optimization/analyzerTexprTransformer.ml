@@ -188,8 +188,13 @@ let rec func ctx bb tf t p =
 			bb,mk (TConst TNull) t_dynamic e.epos
 		| TVar _ | TWhile _ | TIf _ ->
 			Error.raise_typing_error "Cannot use this expression as value" e.epos
-		| TYield _ -> die "yield should not reach analyzer" __LOC__
-		| TGen _ -> die "gen should not reach analyzer" __LOC__
+		| TYield e1 ->
+			let bb,e1 = value bb e1 in
+			bb,{e with eexpr = TYield e1}
+		| TAwait e1 ->
+			let bb,e1 = value bb e1 in
+			bb,{e with eexpr = TAwait e1}
+		| TGen _ -> bb, e (* TODO *)
 	and value bb e =
 		let bb,e = value' bb e in
 		no_void e.etype e.epos;
@@ -620,7 +625,7 @@ let rec func ctx bb tf t p =
 			add_texpr bb {e with eexpr = TField(e1,fa)};
 			bb
 		(* no-side-effect *)
-		| TEnumParameter _ | TEnumIndex _ | TFunction _ | TConst _ | TTypeExpr _ | TLocal _ | TIdent _ ->
+		| TEnumParameter _ | TEnumIndex _ | TFunction _ | TConst _ | TTypeExpr _ | TLocal _ | TIdent _ | TGen _ ->
 			bb
 		(* no-side-effect composites *)
 		| TParenthesis e1 | TMeta(_,e1) | TCast(e1,None) | TField(e1,_) | TUnop(_,_,e1) ->
@@ -634,8 +639,15 @@ let rec func ctx bb tf t p =
 			block_el false bb (List.map snd fl)
 		| TWhile(_,_,DoWhile) ->
 			die "" __LOC__
-		| TYield _ -> die "yield should not reach analyzer" __LOC__
-		| TGen _ -> die "gen should not reach analyzer" __LOC__
+		| TYield e1 ->
+			let bb,e1 = value bb e1 in
+			add_texpr bb {e with eexpr = TYield e1};
+			bb
+		| TAwait e1 ->
+			let bb,e1 = value bb e1 in
+			add_texpr bb {e with eexpr = TAwait e1};
+			bb
+		(* | TGen _ -> die "gen should not reach analyzer" __LOC__ *)
 	and block_el allow_void bb el =
 		let block_element = if allow_void then
 			block_element

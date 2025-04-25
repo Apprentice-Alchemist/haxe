@@ -1538,6 +1538,10 @@ module HxbWriter = struct
 				Chunk.write_u8 writer.chunk 96;
 				loop e1;
 				true;
+			| TAwait e1 ->
+				Chunk.write_u8 writer.chunk 97;
+				loop e1;
+				true;
 			(* access 100-119 *)
 			| TEnumIndex e1 ->
 				Chunk.write_u8 writer.chunk 100;

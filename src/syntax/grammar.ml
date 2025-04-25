@@ -1455,12 +1455,25 @@ and expr (ctx : parser_ctx) s = match%parser s with
 		begin match%parser s with
 			| [(BrOpen,p1);] ->
 				begin match%parser s with
-				| [ [%let b = block ctx []]; (BrClose,p2) ] -> make_meta (Meta.Custom ":gen") [] (EBlock b, (punion p1 p2)) (punion p p2)
+				| [ [%let b = block ctx []]; (BrClose,p2) ] ->
+					make_meta (Meta.Custom ":gen") [] (EBlock b, (punion p1 p2)) (punion p p2)
 				| [ ] ->
 					serror ()
 					(* syntax_error ctx (Expected ["}"]) s (pos (next_token ctx s)) *)
 				end
 			| [ ] -> expr_next ctx (EConst (Ident "gen"), p) s
+			end
+	| [ (Const (Ident "async"), p);] ->
+		begin match%parser s with
+			| [(BrOpen,p1);] ->
+				begin match%parser s with
+				| [ [%let b = block ctx []]; (BrClose,p2) ] ->
+					make_meta (Meta.Custom ":async") [] (EBlock b, (punion p1 p2)) (punion p p2)
+				| [ ] ->
+					serror ()
+					(* syntax_error ctx (Expected ["}"]) s (pos (next_token ctx s)) *)
+				end
+			| [ ] -> expr_next ctx (EConst (Ident "async"), p) s
 			end
 	| [ (Const c,p) ] -> expr_next ctx (EConst c,p) s
 	| [ (Kwd This,p) ] -> expr_next ctx (EConst (Ident "this"),p) s
@@ -1622,6 +1635,7 @@ and expr_next ctx e1 s =
 		e1
 
 and is_yield e = match (fst e) with | EConst (Ident "yield") -> true | _ -> false
+and is_await e = match (fst e) with | EConst (Ident "await") -> true | _ -> false
 
 and expr_next' ctx e1 s = match%parser s with
 	| [ (BrOpen,p1); [%let eparam = expr ctx]; (BrClose,p2) ] when is_dollar_ident e1 ->
@@ -1672,6 +1686,11 @@ and expr_next' ctx e1 s = match%parser s with
 		if is_yield e1 then
 			begin match%parser s with
 			| [[%let e = expr ctx]] -> EYield e, (punion (pos e1) (pos e))
+			| [ ] -> e1
+			end
+		else if is_await e1 then
+			begin match%parser s with
+			| [[%let e = expr ctx]] -> make_meta (Meta.Custom ":await") [] e (punion (pos e1) (pos e))
 			| [ ] -> e1
 			end
 		else e1
