@@ -194,7 +194,22 @@ let rec func ctx bb tf t p =
 		| TAwait e1 ->
 			let bb,e1 = value bb e1 in
 			bb,{e with eexpr = TAwait e1}
-		| TCoro _ -> bb, e (* TODO *)
+		| TCoro (var, e1) ->
+			let tf = {
+				tf_args = (match var with Some var -> [(var, None)] | None -> []);
+				tf_expr = e1;
+				tf_type = e.etype;
+			} in
+			let bb_func,bb_func_end = func ctx bb tf e.etype e.epos in
+			let e_fun = mk (TConst (TString "coro")) t_dynamic p in
+			let econst = mk (TConst (TInt (Int32.of_int bb_func.bb_id))) ctx.com.basic.tint e.epos in
+			let ec = mk (TCall(e_fun,[econst])) t_dynamic p in
+			let bb_next = create_node BKNormal bb.bb_type bb.bb_pos in
+			add_cfg_edge bb bb_next CFGGoto;
+			set_syntax_edge bb (SEMerge bb_next);
+			close_node bb;
+			add_cfg_edge bb_func_end bb_next CFGGoto;
+			bb_next,ec
 	and value bb e =
 		let bb,e = value' bb e in
 		no_void e.etype e.epos;
@@ -804,6 +819,11 @@ and func ctx i =
 			end
 		| TCall({eexpr = TConst (TString "fun")},[{eexpr = TConst (TInt i32)}]) ->
 			func ctx (Int32.to_int i32)
+		| TCall({eexpr = TConst (TString "coro")},[{eexpr = TConst (TInt i32)}]) ->
+			let bb,t,p,tf = Hashtbl.find ctx.graph.g_functions (Int32.to_int i32) in
+			let e = block_to_texpr ctx bb in
+			let e = loop e in
+			mk (TCoro ((match tf.tf_args with [(var, _)] -> Some var | _ -> None), e)) t p
 		| TCall({eexpr = TIdent s},_) when is_really_unbound s ->
 			e
 		| _ ->

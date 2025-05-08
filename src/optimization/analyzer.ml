@@ -673,7 +673,7 @@ module LocalDce = struct
 			| TConst _ | TLocal _ | TTypeExpr _ | TFunction _ | TIdent _ | TCoro _ -> ()
 			| TCall ({ eexpr = TField(_,FStatic({ cl_path = ([],"Std") },{ cf_name = "string" })) },args) -> Type.iter loop e
 			| TCall ({eexpr = TField(_,FEnum _)},_) -> Type.iter loop e
-			| TCall ({eexpr = TConst (TString ("phi" | "fun"))},_) -> ()
+			| TCall ({eexpr = TConst (TString ("phi" | "fun" | "coro"))},_) -> ()
 			| TCall({eexpr = TField(e1,fa)},el) when PurityState.is_pure_field_access fa -> loop e1; List.iter loop el
 			| TField(_,fa) when PurityState.is_explicitly_impure fa -> raise Exit
 			| TNew _ | TCall _ | TBinop ((OpAssignOp _ | OpAssign),_,_) | TUnop ((Increment|Decrement),_,_) -> raise Exit
