@@ -48,6 +48,7 @@ let s_value_kind = function
 	| VLazy _ -> "VLazy"
 	| VNativeString _ -> "VNativeString"
 	| VHandle _ -> "VHandle"
+	| VGenerator _ -> "VGenerator"
 
 let unexpected_value : 'a . value -> string -> 'a = fun v s ->
 	let str = match v with

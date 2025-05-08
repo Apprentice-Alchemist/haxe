@@ -3019,6 +3019,7 @@ module StdType = struct
 			| VLazy f ->
 				loop (Lazy.force f)
 			| VInt64 _ | VUInt64 _ | VNativeString _ | VHandle _ -> 8,[||]
+			| VGenerator _ -> die "TODO typeof vgenerator" __LOC__
 		in
 		let i,vl = loop v in
 		encode_enum_value key_ValueType i vl None

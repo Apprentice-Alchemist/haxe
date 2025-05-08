@@ -146,6 +146,9 @@ type value =
 	| VHandle of vhandle
 	| VInt64 of Signed.Int64.t
 	| VUInt64 of Unsigned.UInt64.t
+	| VGenerator of vgenerator ref
+
+and vgenerator = VStart of vfunc | VCont of (value, value) continuation
 
 and vfunc = value list -> value
 

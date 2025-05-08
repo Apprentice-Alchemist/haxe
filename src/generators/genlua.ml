@@ -1055,6 +1055,7 @@ and gen_expr ?(local=true) ctx e = begin
     | TIdent s ->
         spr ctx s;
     | TYield _ -> ignore(die "yield should not reach generators" __LOC__);
+    | TGen _ -> ignore(die "gen should not reach generators" __LOC__);
 
     clear_mapping ()
 end;
@@ -1297,6 +1298,7 @@ and gen_value ctx e =
                                         )) e.etype e.epos);
         v();
     | TYield _ -> ignore(die "yield should not reach generators" __LOC__);
+    | TGen _ -> ignore(die "gen should not reach generators" __LOC__);
     clear_mapping ()
 
 and gen_tbinop ctx op e1 e2 =

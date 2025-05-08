@@ -1403,6 +1403,7 @@ let rec gen_expr_content ctx retval e =
 	| TIdent s ->
 		abort ("Unbound variable " ^ s) e.epos
 	| TYield _ -> die "yield should not reach generators" __LOC__
+	| TGen _ -> die "gen should not reach generators" __LOC__
 and args_as_array ctx mandatory_args spread_arg p =
 	match mandatory_args with
 	| [] ->

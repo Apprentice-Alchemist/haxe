@@ -631,7 +631,43 @@ and jit_expr jit return e =
 		emit_mk_pos e.epos
 	| TIdent s ->
 		Error.raise_typing_error ("Unknown identifier: " ^ s) e.epos
-	| TYield _ -> die "unhandled yield" __LOC__
+	| TYield e1 -> let f = loop e1 in (fun env -> yield (f env))
+	| TGen e -> 
+		let jit_closure = EvalJitContext.create ctx in
+		jit.num_closures <- jit.num_closures + 1;
+		let exec = (*jit_tfunction jit_closure true e.epos tf*)
+		begin 
+			let pos = e.epos in
+			let jit = jit_closure in
+			push_scope jit pos;
+			(* Jit the function expression. *)
+			let exec = jit_expr jit true e in
+			pop_scope jit;
+			exec
+		end
+		in
+		let hasret = jit_closure.has_nonfinal_return in
+		let eci = get_env_creation jit_closure false e.epos.pfile (EKLocalFunction jit.num_closures) in
+		let captures = IntHashtbl.fold (fun vid (i,declared) acc -> (i,vid,declared) :: acc) jit_closure.captures [] in
+		let captures = List.sort (fun (i1,_,_) (i2,_,_) -> Stdlib.compare i1 i2) captures in
+		(* Check if the out-of-scope var is in the outer scope because otherwise we have to promote outwards. *)
+		List.iter (fun var -> ignore(get_capture_slot jit var)) jit_closure.captures_outside_scope;
+		let captures = ExtList.List.filter_map (fun (i,vid,declared) ->
+			if declared then None
+			else Some (i,fst (try IntHashtbl.find jit.captures vid with Not_found -> Error.raise_typing_error (Printf.sprintf "Could not find capture variable %i" vid) e.epos))
+		) captures in
+		let mapping = Array.of_list captures in
+		(fun env ->
+			let refs = Array.map (fun (i,slot) -> i,emit_capture_read slot env) mapping in
+			let create = match hasret,eci.num_captures with
+				| true,0 -> create_function
+				| false,0 -> create_function_noret
+				| _ -> create_closure refs
+			in
+			let f = create ctx eci exec [] in
+			VGenerator (ref (VStart f))
+			)
+		(* emit_closure ctx mapping eci hasret exec [] *)
 	in
 	let f = loop e in
 	begin match ctx.debug.debug_socket with

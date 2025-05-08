@@ -1427,6 +1427,7 @@ and encode_texpr e =
 			| TEnumIndex e1 -> 27,[loop e1]
 			| TIdent s -> 28,[encode_string s]
 			| TYield e1 -> 29,[loop e1]
+			| TGen e1 -> 30,[loop e1]
 		in
 		encode_obj [
 			"pos", encode_pos e.epos;

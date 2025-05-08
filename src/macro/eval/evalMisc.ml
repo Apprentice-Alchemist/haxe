@@ -28,6 +28,13 @@ open EvalPrinting
 open EvalHash
 open EvalString
 
+open Effect
+open Effect.Deep
+
+type _ Effect.t += Yield : value -> value t
+
+let yield v = perform (Yield v)
+
 let throw_string s p =
 	throw (create_unknown s) p
 
@@ -47,6 +54,16 @@ let call_value v vl =
 	| VFunction(f,_) ->	 call_function f vl
 	| VFieldClosure(v1,f) -> call_function f (v1 :: vl)
 	| VInstance {ikind = ILazyType(_,get)} -> get()
+	| VGenerator f ->
+		begin try begin match !f with 
+			| VStart f ->
+				let ret = f vl in
+				encode_enum_value key_coro_Result 1 [|ret|] None
+			| VCont cont -> continue cont vnull (* returns the value from the effect handler *)
+		end with | effect (Yield v), cont ->
+			f := VCont cont;
+			encode_enum_value key_coro_Result 0 [|v|] None
+		end
 	| _ -> exc_string ("Cannot call " ^ (value_string v))
 
 (* Field setters *)

@@ -189,6 +189,7 @@ let rec func ctx bb tf t p =
 		| TVar _ | TWhile _ | TIf _ ->
 			Error.raise_typing_error "Cannot use this expression as value" e.epos
 		| TYield _ -> die "yield should not reach analyzer" __LOC__
+		| TGen _ -> die "gen should not reach analyzer" __LOC__
 	and value bb e =
 		let bb,e = value' bb e in
 		no_void e.etype e.epos;
@@ -634,6 +635,7 @@ let rec func ctx bb tf t p =
 		| TWhile(_,_,DoWhile) ->
 			die "" __LOC__
 		| TYield _ -> die "yield should not reach analyzer" __LOC__
+		| TGen _ -> die "gen should not reach analyzer" __LOC__
 	and block_el allow_void bb el =
 		let block_element = if allow_void then
 			block_element

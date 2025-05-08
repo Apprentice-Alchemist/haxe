@@ -1583,6 +1583,7 @@ and type_generator ctx e with_type p =
 			end
 		| _ -> spawn_monomorph ctx p
 	in
+	ctx.e.ret <- ctx.t.tvoid;
 	ctx.e.yield_type <- Some yield_type;
 	ctx.e.in_generator <- true;
 	let e = type_expr ctx e WithType.NoValue in
@@ -1591,7 +1592,11 @@ and type_generator ctx e with_type p =
 		| WithType (t, source) -> unify ctx gen_type t p
 		| _ -> ()
 	end;
-	{e with eexpr = TConst TNull; etype = gen_type;}
+	let e = {e with eexpr = TGen e; etype = gen_type;} in
+	(* let a,tp = match gen_type with | TAbstract (a, tp) -> a,tp | _ -> die "" __LOC__ in *)
+	e
+	(* let e = mk (TCast (e, None)) (TFun ([], mk_mono())) p in *)
+	(* Texpr.Builder.resolve_and_make_static_call (Option.get a.a_impl) "fromFun" [e] p *)
 
 and type_call_target ctx e el with_type p_inline =
 	let p = (pos e) in
@@ -1960,7 +1965,7 @@ and type_expr ?(mode=MGet) ctx (e,p) (with_type:WithType.t) =
 		end;
 		let e = type_expr ctx e (WithType.with_type (Option.get ctx.e.yield_type)) in
 		let e = AbstractCast.cast_or_unify ctx (Option.get ctx.e.yield_type) e e.epos in
-		mk (TYield e) ctx.t.tvoid p
+		mk (TYield e) ctx.t.tany p
 ;;
 unify_min_ref := unify_min;
 unify_min_for_type_source_ref := unify_min_for_type_source;

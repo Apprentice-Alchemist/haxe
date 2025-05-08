@@ -226,6 +226,7 @@ and texpr_expr =
 	| TEnumIndex of texpr
 	| TIdent of string
 	| TYield of texpr
+	| TGen of texpr
 
 and tswitch = {
 	switch_subject : texpr;

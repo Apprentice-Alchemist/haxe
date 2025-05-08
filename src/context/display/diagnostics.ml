@@ -80,7 +80,7 @@ let check_other_things com e =
 		| TIf _ | TTry _ | TSwitch _ | TWhile _ | TYield _ ->
 			had_effect := true;
 			Type.iter (loop true) e
-		| TParenthesis e1 | TMeta(_,e1) ->
+		| TParenthesis e1 | TMeta(_,e1) | TGen e1 ->
 			loop in_value e1
 		| TArray _ | TCast (_,None) | TBinop _ | TUnop _
 		| TField _ | TArrayDecl _ | TObjectDecl _ when in_value ->

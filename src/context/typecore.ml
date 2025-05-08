@@ -294,7 +294,7 @@ module TyperManager = struct
 		create ctx ctx.m ctx.c f e PTypeField ctx.type_params
 
 	let is_function_context ctx = match ctx.e.function_mode with
-		| FunFunction ->
+		| FunFunction | FunGenerator ->
 			true
 		| _ ->
 			false

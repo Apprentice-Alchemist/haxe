@@ -1301,6 +1301,7 @@ class script_writer ctx filename asciiOut =
       | TMeta (_, _) -> abort "Unexpected meta" expression.epos
       | TIdent _ -> abort "Unexpected ident" expression.epos
       | TYield _ -> die "yield should not reach generators" __LOC__
+      | TGen _ -> die "gen should not reach generators" __LOC__
 
     (* } *)
     method gen_expression_tree expression_tree =

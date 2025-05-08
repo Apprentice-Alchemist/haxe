@@ -86,6 +86,7 @@ let var_to_json name value vio env =
 		| VLazy f -> level2_value_repr (Lazy.force f)
 		| VNativeString s -> string_repr s
 		| VHandle _ -> "<handle>"
+		| VGenerator _ -> "<generator>"
 	in
 	let fields_string fields =
 		let l = List.map (fun (name, value) -> Printf.sprintf "%s: %s" (rev_hash name) (level2_value_repr value)) fields in
@@ -152,6 +153,7 @@ let var_to_json name value vio env =
 		| VNativeString s ->
 			jv "NativeString" (string_repr s) 0
 		| VHandle _ -> jv "Handle" "<handle>" 0
+		| VGenerator _ -> jv "Generator" "<generator>" 0
 	in
 	value_string value
 
@@ -272,7 +274,7 @@ let output_scope_vars env scope =
 let output_inner_vars v env =
 	let rec loop v = match v with
 		| VNull | VTrue | VFalse | VInt32 _ | VInt64 _ | VUInt64 _ | VFloat _
-		| VFunction _ | VFieldClosure _ | VNativeString _ | VHandle _ -> []
+		| VFunction _ | VFieldClosure _ | VNativeString _ | VHandle _ | VGenerator _ -> []
 		| VEnumValue ve ->
 			begin match (get_static_prototype_raise (get_ctx()) ve.epath).pkind with
 				| PEnum names ->
@@ -435,7 +437,7 @@ module ValueCompletion = struct
 		in
 		let rec loop v = match v with
 			| VNull | VTrue | VFalse | VInt32 _ | VInt64 _ | VUInt64 _ | VFloat _
-			| VFunction _ | VFieldClosure _ | VNativeString _ | VHandle _->
+			| VFunction _ | VFieldClosure _ | VNativeString _ | VHandle _ | VGenerator _ ->
 				[]
 			| VObject o ->
 				let fields = object_fields o in

@@ -670,7 +670,7 @@ module LocalDce = struct
 	let has_side_effect e =
 		let rec loop e =
 			match e.eexpr with
-			| TConst _ | TLocal _ | TTypeExpr _ | TFunction _ | TIdent _ -> ()
+			| TConst _ | TLocal _ | TTypeExpr _ | TFunction _ | TIdent _ | TGen _ -> ()
 			| TCall ({ eexpr = TField(_,FStatic({ cl_path = ([],"Std") },{ cf_name = "string" })) },args) -> Type.iter loop e
 			| TCall ({eexpr = TField(_,FEnum _)},_) -> Type.iter loop e
 			| TCall ({eexpr = TConst (TString ("phi" | "fun"))},_) -> ()

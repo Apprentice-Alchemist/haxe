@@ -19,8 +19,8 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
+import haxe.coro.CoroResult;
 // standard Haxe types
-
 /**
 	The standard `Void` type. Only `null` values can be of the type `Void`.
 
@@ -171,6 +171,38 @@ typedef KeyValueIterable<K, V> = {
 **/
 extern interface ArrayAccess<T> {}
 
-@:coreType abstract Generator<T> {
-	public function iterator(): Iterator<T>;
+private class GeneratorIterator<T> {
+	var fun:() -> CoroResult<T, haxe.Unit>;
+	var value:CoroResult<T, haxe.Unit>;
+
+	public inline function new(fun, value) {
+		this.fun = fun;
+		this.value = value;
+	}
+
+	public inline function hasNext() {
+		return value.match(Yield(_));
+	}
+
+	public inline function next() {
+		var ret = switch value {
+			case Yield(val): val;
+			case Ret(_): throw ".next called after end";
+		}
+		this.value = this.fun();
+		return ret;
+	}
+}
+
+abstract Generator<T>(() -> CoroResult<T, haxe.Unit>) {
+	public inline function iterator():Iterator<T> {
+		return new GeneratorIterator(this, this());
+	}
+
+	public inline function resume(): CoroResult<T, haxe.Unit> {
+		return this();
+	}
+
+	// @:generic static inline function fromFun<T>(f:() -> CoroResult<T, haxe.Unit>):Generator<T>
+	// 	= untyped f;
 }
