@@ -632,7 +632,20 @@ and jit_expr jit return e =
 	| TIdent s ->
 		Error.raise_typing_error ("Unknown identifier: " ^ s) e.epos
 	| TYield e1 -> let f = loop e1 in (fun env -> yield (f env))
-	| TAwait e1 -> let f = loop e1 in (fun env -> await (f env))
+	| TAwait e1 -> let f = loop e1 in (fun env -> let v = (f env) in 
+		let rec loop () = 
+		begin
+			let ctx = EvalEmitter.emit_local_read 0 env in
+			let r = call_value v [ctx] in
+			match r with
+				| VEnumValue {eindex = 0} ->
+					let v = yield r in
+					EvalEmitter.execute_set_local 0 env v;
+					loop ()
+				| VEnumValue {eindex = 1; eargs = [|v|]} ->  v;
+				| _ -> die "" __LOC__
+			end
+		in loop())
 	| TCoro (var, e) -> 
 		let jit_closure = EvalJitContext.create ctx in
 		jit.num_closures <- jit.num_closures + 1;
@@ -648,7 +661,7 @@ and jit_expr jit return e =
 						| Env slot -> execute_set_capture slot
 						| Local slot -> execute_set_local slot
 					in [first_arg]
-			| None -> []
+				| None -> ignore(declare_local_this jit); []
 			in
 			(* Jit the function expression. *)
 			let exec = jit_expr jit true e in

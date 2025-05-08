@@ -212,13 +212,15 @@ enum Poll<T> {
 	Ready(val:T);
 }
 
-abstract Future<T>(() -> CoroResult<haxe.Unit, T>) {
-	public function poll():Poll<T> {
-		switch this() {
+typedef FutureContext = Dynamic;
+
+abstract Future<T>((FutureContext) -> CoroResult<haxe.Unit, T>) {
+	public function poll(ctx:FutureContext):Poll<T> {
+		switch this(ctx) {
 			case Yield(_): return Pending;
 			case Ret(val): return Ready(val);
 		}
 	}
 
-	public static function fromFun<T>(f:() -> CoroResult<haxe.Unit, T>) = cast f;
+	public static function fromFun<T>(f:(FutureContext) -> CoroResult<haxe.Unit, T>) = cast f;
 }

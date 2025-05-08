@@ -1644,10 +1644,8 @@ and type_async ctx e with_type p =
 		| WithType (t, source) -> unify ctx gen_type t p
 		| _ -> ()
 	end;
-	mk (TCoro (None, e)) gen_type p
-	(* let a,tp = match gen_type with | TAbstract (a, tp) -> a,tp | _ -> die "" __LOC__ in *)
-	(* let e = mk (TCast (e, None)) (TFun ([], mk_mono())) p in *)
-	(* Texpr.Builder.resolve_and_make_static_call (Option.get a.a_impl) "fromFun" [e] p *)
+	let var = gen_local ctx (mk_mono()) p in
+	mk (TCoro (Some var, e)) gen_type p
 
 and type_generator ctx e with_type p =
 	let ctx = TyperManager.clone_for_expr ctx ctx.e.curfun FunCoro in
@@ -1668,9 +1666,6 @@ and type_generator ctx e with_type p =
 		| _ -> ()
 	end;
 	mk (TCoro (None, e)) gen_type p
-	(* let a,tp = match gen_type with | TAbstract (a, tp) -> a,tp | _ -> die "" __LOC__ in *)
-	(* let e = mk (TCast (e, None)) (TFun ([], mk_mono())) p in *)
-	(* Texpr.Builder.resolve_and_make_static_call (Option.get a.a_impl) "fromFun" [e] p *)
 
 and type_call_target ctx e el with_type p_inline =
 	let p = (pos e) in
