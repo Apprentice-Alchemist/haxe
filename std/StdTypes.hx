@@ -212,7 +212,7 @@ enum Poll<T> {
 	Ready(val:T);
 }
 
-typedef FutureContext = Dynamic;
+typedef FutureContext = () -> Void;
 
 abstract Future<T>((FutureContext) -> CoroResult<haxe.Unit, T>) {
 	public function poll(ctx:FutureContext):Poll<T> {
