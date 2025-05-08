@@ -1241,7 +1241,7 @@ class hxb_reader
 					| 95 ->
 						TYield (loop ()),None
 					| 96 ->
-						TGen (loop ()),None
+						TCoro (loop ()),None
 					| 97 ->
 						TAwait (loop ()),None
 

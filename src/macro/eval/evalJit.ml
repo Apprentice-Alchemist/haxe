@@ -633,7 +633,7 @@ and jit_expr jit return e =
 		Error.raise_typing_error ("Unknown identifier: " ^ s) e.epos
 	| TYield e1 -> let f = loop e1 in (fun env -> yield (f env))
 	| TAwait e1 -> let f = loop e1 in (fun env -> await (f env))
-	| TGen e -> 
+	| TCoro e -> 
 		let jit_closure = EvalJitContext.create ctx in
 		jit.num_closures <- jit.num_closures + 1;
 		let exec = (*jit_tfunction jit_closure true e.epos tf*)

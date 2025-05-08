@@ -1534,7 +1534,7 @@ module HxbWriter = struct
 				Chunk.write_u8 writer.chunk 95;
 				loop e1;
 				true;
-			| TGen e1 ->
+			| TCoro e1 ->
 				Chunk.write_u8 writer.chunk 96;
 				loop e1;
 				true;

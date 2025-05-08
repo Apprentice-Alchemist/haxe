@@ -1604,7 +1604,7 @@ and type_async ctx e with_type p =
 		| WithType (t, source) -> unify ctx gen_type t p
 		| _ -> ()
 	end;
-	mk (TGen e) gen_type p
+	mk (TCoro e) gen_type p
 	(* let a,tp = match gen_type with | TAbstract (a, tp) -> a,tp | _ -> die "" __LOC__ in *)
 	(* let e = mk (TCast (e, None)) (TFun ([], mk_mono())) p in *)
 	(* Texpr.Builder.resolve_and_make_static_call (Option.get a.a_impl) "fromFun" [e] p *)
@@ -1627,7 +1627,7 @@ and type_generator ctx e with_type p =
 		| WithType (t, source) -> unify ctx gen_type t p
 		| _ -> ()
 	end;
-	mk (TGen e) gen_type p
+	mk (TCoro e) gen_type p
 	(* let a,tp = match gen_type with | TAbstract (a, tp) -> a,tp | _ -> die "" __LOC__ in *)
 	(* let e = mk (TCast (e, None)) (TFun ([], mk_mono())) p in *)
 	(* Texpr.Builder.resolve_and_make_static_call (Option.get a.a_impl) "fromFun" [e] p *)

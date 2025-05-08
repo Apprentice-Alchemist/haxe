@@ -29,7 +29,7 @@ let iter f e =
 	| TUnop (_,_,e)
 	| TMeta(_,e)
 	| TYield e 
-	| TGen e | TAwait e ->
+	| TCoro e | TAwait e ->
 		f e
 	| TArrayDecl el
 	| TNew (_,_,el)
@@ -70,7 +70,7 @@ let check_expr predicate e =
 		| TArray (e1,e2) | TBinop (_,e1,e2) | TWhile (e1,e2,_) ->
 			predicate e1 || predicate e2;
 		| TThrow e | TField (e,_) | TEnumParameter (e,_,_) | TEnumIndex e | TParenthesis e
-		| TCast (e,_) | TUnop (_,_,e) | TMeta(_,e) | TYield e | TAwait e | TGen e ->
+		| TCast (e,_) | TUnop (_,_,e) | TMeta(_,e) | TYield e | TAwait e | TCoro e ->
 			predicate e
 		| TArrayDecl el | TNew (_,_,el) | TBlock el ->
 			List.exists predicate el
@@ -159,8 +159,8 @@ let map_expr f e =
 		 {e with eexpr = TMeta(m,f e1)}
 	| TYield e1 ->
 		{e with eexpr = TYield(f e1)}
-	| TGen e1 ->
-		{e with eexpr = TGen(f e1)}
+	| TCoro e1 ->
+		{e with eexpr = TCoro(f e1)}
 	| TAwait e1 ->
 		{e with eexpr = TAwait(f e1)}
 
@@ -272,8 +272,8 @@ let map_expr_type f ft fv e =
 		{e with eexpr = TMeta(m, f e1); etype = ft e.etype }
 	| TYield e1 ->
 		{e with eexpr = TYield (f e1); etype = ft e.etype}
-	| TGen e1 ->
-		{e with eexpr = TGen (f e1); etype = ft e.etype}
+	| TCoro e1 ->
+		{e with eexpr = TCoro (f e1); etype = ft e.etype}
 	| TAwait e1 ->
 		{e with eexpr = TAwait (f e1); etype = ft e.etype}
 
@@ -483,9 +483,9 @@ let foldmap f acc e =
 	| TYield e1 ->
 		let acc,e1 = f acc e1 in
 		acc, { e with eexpr = TYield e1 }
-	| TGen e1 ->
+	| TCoro e1 ->
 		let acc, e1 = f acc e1 in
-		acc, { e with eexpr = TGen e1 }
+		acc, { e with eexpr = TCoro e1 }
 	| TAwait e1 ->
 		let acc, e1 = f acc e1 in
 		acc, { e with eexpr = TAwait e1 }
@@ -616,7 +616,7 @@ let rec constructor_side_effects e =
 	| TBinop _ | TTry _ | TIf _ | TBlock _ | TVar _
 	| TFunction _ | TArrayDecl _ | TObjectDecl _
 	| TParenthesis _ | TTypeExpr _ | TLocal _ | TMeta _
-	| TConst _ | TContinue | TBreak | TCast _ | TIdent _ | TGen _ ->
+	| TConst _ | TContinue | TBreak | TCast _ | TIdent _ | TCoro _ ->
 		try
 			iter (fun e -> if constructor_side_effects e then raise Exit) e;
 			false;
@@ -819,8 +819,8 @@ let dump_with_pos tabs e =
 		| TYield e ->
 			add "TYield";
 			loop e
-		| TGen e ->
-			add "TGen";
+		| TCoro e ->
+			add "TCoro";
 			loop e;
 		| TAwait e ->
 			add "TAwait";

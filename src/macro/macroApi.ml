@@ -1427,7 +1427,7 @@ and encode_texpr e =
 			| TEnumIndex e1 -> 27,[loop e1]
 			| TIdent s -> 28,[encode_string s]
 			| TYield e1 -> 29,[loop e1]
-			| TGen e1 -> 30,[loop e1]
+			| TCoro e1 -> 30,[loop e1]
 			| TAwait e1 -> 31,[loop e1]
 		in
 		encode_obj [
@@ -1580,7 +1580,7 @@ and decode_texpr v =
 		| 27, [v1] -> TEnumIndex(loop v1)
 		| 28, [v1] -> TIdent(decode_string v1)
 		| 29, [v1] -> TYield(loop v1)
-		| 30, [v1] -> TGen(loop v1)
+		| 30, [v1] -> TCoro(loop v1)
 		| 31, [v1] -> TAwait(loop v1)
 		| i,el -> Printf.printf "%i %i\n" i (List.length el); raise Invalid_expr
 	in

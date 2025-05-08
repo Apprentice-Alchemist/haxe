@@ -1055,7 +1055,7 @@ and gen_expr ?(local=true) ctx e = begin
     | TIdent s ->
         spr ctx s;
     | TYield _ -> ignore(die "yield should not reach generators" __LOC__);
-    | TGen _ -> ignore(die "gen should not reach generators" __LOC__);
+    | TCoro _ -> ignore(die "gen should not reach generators" __LOC__);
     | TAwait _ -> ignore(die "await should not reach generators" __LOC__);
 
     clear_mapping ()
@@ -1299,7 +1299,7 @@ and gen_value ctx e =
                                         )) e.etype e.epos);
         v();
     | TYield _ -> ignore(die "yield should not reach generators" __LOC__);
-    | TGen _ -> ignore(die "gen should not reach generators" __LOC__);
+    | TCoro _ -> ignore(die "gen should not reach generators" __LOC__);
     | TAwait _ -> ignore(die "await should not reach generators" __LOC__);
     clear_mapping ()
 

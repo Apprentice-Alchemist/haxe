@@ -226,7 +226,7 @@ and texpr_expr =
 	| TEnumIndex of texpr
 	| TIdent of string
 	| TYield of texpr
-	| TGen of texpr
+	| TCoro of texpr
 	| TAwait of texpr
 
 and tswitch = {

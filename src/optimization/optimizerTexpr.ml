@@ -7,7 +7,7 @@ open Globals
 let has_side_effect e =
 	let rec loop e =
 		match e.eexpr with
-		| TConst _ | TLocal _ | TTypeExpr _ | TFunction _ | TIdent _ | TGen _ -> ()
+		| TConst _ | TLocal _ | TTypeExpr _ | TFunction _ | TIdent _ | TCoro _ -> ()
 		| TCall({eexpr = TField(e1,fa)},el) when PurityState.is_pure_field_access fa -> loop e1; List.iter loop el
 		| TNew(c,_,el) when (match c.cl_constructor with Some cf when PurityState.is_pure c cf -> true | _ -> false) -> List.iter loop el
 		| TField(_,fa) when PurityState.is_explicitly_impure fa -> raise Exit
