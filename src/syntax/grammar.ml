@@ -239,6 +239,10 @@ and parse_type_decl ctx mode s =
 		match%parser s with
 		| [ (Kwd Function,p1); dollar_ident as name; [%let pl = parse_constraint_params ctx]; (POpen,_); [%let args = psep_trailing Comma (parse_fun_param ctx)]; (PClose,_); [%let t = popt (parse_type_hint ctx)] ] ->
 			let e, p2 = (match%parser s with
+				| [ (Binop OpAssign, p2); [%let e = expr ctx] ] ->
+					ignore(semicolon ctx s);
+					let return = (EMeta((Meta.ImplicitReturn, [], null_pos), (EReturn(Some e), pos e)), pos e) in
+					Some return, pos e
 				| [ [%let e = expr ctx] ] ->
 					ignore(semicolon ctx s);
 					Some e, pos e
@@ -918,6 +922,10 @@ and parse_enum_param ctx = function%parser
 and parse_function_field ctx doc meta al = function%parser
 	| [ (Kwd Function,p1); parse_fun_name as name; [%let pl = parse_constraint_params ctx]; (POpen,_); [%let args = psep_trailing Comma (parse_fun_param ctx)]; (PClose,_); [%let t = popt (parse_type_hint ctx)]; [%s s] ] ->
 		let e, p2 = (match%parser s with
+			| [ (Binop OpAssign, p2); [%let e = expr ctx] ] ->
+				ignore(semicolon ctx s);
+				let return = (EMeta((Meta.ImplicitReturn, [], null_pos), (EReturn(Some e), pos e)), pos e) in
+				Some return, pos e
 			| [ [%let e = expr ctx] ] ->
 				ignore(semicolon ctx s);
 				Some e, pos e
@@ -1339,7 +1347,12 @@ and parse_function ctx p1 inl s =
 			} in
 			EFunction ((match name with None -> FKAnonymous | Some (name,pn) -> FKNamed ((name,pn),inl)),f), punion p1 (pos e)
 		in
-		make (secure_expr ctx s)
+		begin match%parser s with
+		| [ (Binop OpAssign, p2); [%let e = secure_expr ctx] ] ->
+				let return = (EMeta((Meta.ImplicitReturn, [], null_pos), (EReturn(Some e), pos e)), pos e) in
+				make return
+		| [ [%let e = secure_expr ctx] ] -> make e
+		end
 	| [ ] ->
 		(* Generate pseudo function to avoid toplevel-completion (issue #10691). We check against p1 here in order to cover cases
 		   like `function a|b` *)
