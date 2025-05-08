@@ -200,7 +200,34 @@ let load_coro_result ctx =
 			| _ ->
 				()
 		)) m.m_types;
-		die "" __LOC__
+	with Exit ->
+		()
+
+let load_future ctx =
+	let m = TypeloadModule.load_module ctx (["haxe"],"Future") null_pos in
+	try
+		List.iter (fun t -> (
+			match t with
+			| TAbstractDecl ({a_path = (["haxe"],"Future")} as a) ->
+				ctx.t.tfuture <- (fun t -> TAbstract (a,[t]));
+				raise Exit
+			| _ ->
+				()
+		)) m.m_types;
+	with Exit ->
+		()
+
+let load_generator ctx =
+	let m = TypeloadModule.load_module ctx (["haxe"],"Generator") null_pos in
+	try
+		List.iter (fun t -> (
+			match t with
+			| TAbstractDecl ({a_path = (["haxe"],"Generator")} as a) ->
+				ctx.t.tgenerator <- (fun t -> TAbstract (a,[t]));
+				raise Exit
+			| _ ->
+				()
+		)) m.m_types;
 	with Exit ->
 		()
 
@@ -263,6 +290,8 @@ let create com macros =
 	load_array ctx;
 	load_enum_tools ctx;
 	load_coro_result ctx;
+	load_future ctx;
+	load_generator ctx;
 	ignore(TypeloadModule.load_module ctx (["haxe"],"Exception") null_pos);
 	ctx.com.local_wrapper <- load_local_wrapper ctx;
 	ctx.g.complete <- true;
