@@ -77,6 +77,21 @@ class EventLoop {
 	}
 
 	/**
+		Schedule event for execution `ms` milliseconds from now in current loop.
+	**/
+	public function delay(event:()->Void, ms:Int):Void {
+		mutex.acquire();
+		var timer = LuvTimer.init(handle).resolve();
+		timer.start(() -> {
+			event();
+			timer.close(noop);
+			wakeup.send();
+		}, ms, null).resolve();
+		mutex.release();
+		return;
+	}
+
+	/**
 		Prevent execution of a previously scheduled event in current loop.
 	**/
 	public function cancel(eventHandler:EventHandler):Void {

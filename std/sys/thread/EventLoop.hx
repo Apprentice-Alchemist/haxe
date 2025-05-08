@@ -49,6 +49,15 @@ class EventLoop {
 		return event;
 	}
 
+	public function delay(event:()->Void, ms:Int):Void {
+		mutex.acquire();
+		var s = 0.001 * ms;
+		var event = new RegularEvent(event, Sys.time() + s, null);
+		inline insertEventByTime(event);
+		waitLock.release();
+		mutex.release();
+	}
+
 	function insertEventByTime(event:RegularEvent):Void {
 		switch regularEvents {
 			case null:
@@ -216,8 +225,25 @@ class EventLoop {
 		while(current != null) {
 			if(current.nextRunTime <= now) {
 				regularsToRun[eventsToRunIdx++] = current;
-				current.nextRunTime += current.interval;
 				nextEventAt = -2;
+				if (current.interval == null) {
+					if (regularEvents == current) {
+						regularEvents = current.next;
+					}
+					switch current.next {
+						case null:
+						case e:
+							e.previous = current.previous;
+					}
+					switch current.previous {
+						case null:
+						case e:
+							e.next = current.next;
+					}
+					current.next = current.previous = null;
+				} else {
+					current.nextRunTime += current.interval;
+				}
 			} else if(nextEventAt == -1 || current.nextRunTime < nextEventAt) {
 				nextEventAt = current.nextRunTime;
 			}
@@ -277,13 +303,13 @@ abstract EventHandler(RegularEvent) from RegularEvent to RegularEvent {}
 
 private class RegularEvent {
 	public var nextRunTime:Float;
-	public final interval:Float;
+	public final interval:Null<Float>;
 	public final run:()->Void;
 	public var next:Null<RegularEvent>;
 	public var previous:Null<RegularEvent>;
 	public var cancelled:Bool = false;
 
-	public function new(run:()->Void, nextRunTime:Float, interval:Float) {
+	public function new(run:()->Void, nextRunTime:Float, interval:Null<Float>) {
 		this.run = run;
 		this.nextRunTime = nextRunTime;
 		this.interval = interval;
