@@ -226,7 +226,7 @@ and texpr_expr =
 	| TEnumIndex of texpr
 	| TIdent of string
 	| TYield of texpr
-	| TCoro of texpr
+	| TCoro of tvar option * texpr
 	| TAwait of texpr
 
 and tswitch = {
@@ -497,6 +497,7 @@ type basic_types = {
 	mutable titerator : t -> t;
 	mutable tgenerator : t -> t;
 	mutable tfuture : t -> t;
+	mutable tcororesult: t -> t -> t;
 }
 
 type class_field_scope =

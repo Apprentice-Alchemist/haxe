@@ -301,7 +301,7 @@ let rec s_expr_pretty print_var_ids tabs top_level s_type e =
 		s
 	| TYield e ->
 		"yield " ^ (loop e)
-	| TCoro e ->
+	| TCoro (_, e) ->
 		"gen " ^ (loop e)
 	| TAwait e ->
 		"await " ^ (loop e)
@@ -405,7 +405,7 @@ let rec s_expr_ast print_var_ids tabs s_type e =
 		tag "Ident" [s]
 	| TYield e ->
 		tag "Yield" [loop e]
-	| TCoro e ->
+	| TCoro (_, e) ->
 		tag "Gen" [loop e]
 	| TAwait e ->
 		tag "Await" [loop e]

@@ -139,7 +139,7 @@ and typer_expr = {
 	mutable coro_type: coro_type option;
 }
 
-and coro_type = Generator of t | Async
+and coro_type = Generator of t | Async | Coro of t * t option
 
 and typer_field = {
 	curfield : tclass_field;

@@ -68,6 +68,14 @@ let captured_vars scom impl e =
 					v, e
 			) catchs in
 			mk (TTry (wrap used expr,catchs)) e.etype e.epos
+		| TCoro (Some v, e) ->
+			let e1 = wrap used e in
+			let v,e1 = try
+				let vtmp = mk_var v used in
+				vtmp, Type.concat (impl#mk_init v vtmp e1.epos) e1
+			with Not_found ->
+				v, e1
+			in mk (TCoro (Some v, e1)) e.etype e.epos
 		| TFunction f ->
 			(*
 				list variables that are marked as used, but also used in that

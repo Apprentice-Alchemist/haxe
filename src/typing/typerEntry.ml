@@ -189,6 +189,20 @@ let load_local_wrapper ctx =
 			method mk_init av v pos =
 				mk (TVar (av,Some (mk (TArrayDecl [mk (TLocal v) v.v_type pos]) av.v_type pos))) t.tvoid pos
 		end
+let load_coro_result ctx =
+	let m = TypeloadModule.load_module ctx (["haxe"; "coro"],"CoroResult") null_pos in
+	try
+		List.iter (fun t -> (
+			match t with
+			| TEnumDecl ({e_path = (_,"CoroResult")} as e) ->
+				ctx.t.tcororesult <- (fun a b -> TEnum (e,[a; b]));
+				raise Exit
+			| _ ->
+				()
+		)) m.m_types;
+		die "" __LOC__
+	with Exit ->
+		()
 
 let create com macros =
 	let rec ctx = {
@@ -248,6 +262,7 @@ let create com macros =
 	(* load_unit ctx; *)
 	load_array ctx;
 	load_enum_tools ctx;
+	load_coro_result ctx;
 	ignore(TypeloadModule.load_module ctx (["haxe"],"Exception") null_pos);
 	ctx.com.local_wrapper <- load_local_wrapper ctx;
 	ctx.g.complete <- true;

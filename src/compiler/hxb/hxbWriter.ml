@@ -1534,12 +1534,17 @@ module HxbWriter = struct
 				Chunk.write_u8 writer.chunk 95;
 				loop e1;
 				true;
-			| TCoro e1 ->
+			| TCoro (Some v, e1) ->
 				Chunk.write_u8 writer.chunk 96;
+				declare_var v;
 				loop e1;
 				true;
 			| TAwait e1 ->
 				Chunk.write_u8 writer.chunk 97;
+				loop e1;
+				true;
+			| TCoro (None, e1) ->
+				Chunk.write_u8 writer.chunk 98;
 				loop e1;
 				true;
 			(* access 100-119 *)

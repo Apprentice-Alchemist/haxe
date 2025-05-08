@@ -633,18 +633,27 @@ and jit_expr jit return e =
 		Error.raise_typing_error ("Unknown identifier: " ^ s) e.epos
 	| TYield e1 -> let f = loop e1 in (fun env -> yield (f env))
 	| TAwait e1 -> let f = loop e1 in (fun env -> await (f env))
-	| TCoro e -> 
+	| TCoro (var, e) -> 
 		let jit_closure = EvalJitContext.create ctx in
 		jit.num_closures <- jit.num_closures + 1;
-		let exec = (*jit_tfunction jit_closure true e.epos tf*)
+		let vl, exec = (*jit_tfunction jit_closure true e.epos tf*)
 		begin 
 			let pos = e.epos in
 			let jit = jit_closure in
 			push_scope jit pos;
+			let vl = match var with
+				| Some var ->
+					let varacc = declare_local jit var in
+					let first_arg = match varacc with
+						| Env slot -> execute_set_capture slot
+						| Local slot -> execute_set_local slot
+					in [first_arg]
+			| None -> []
+			in
 			(* Jit the function expression. *)
 			let exec = jit_expr jit true e in
 			pop_scope jit;
-			exec
+			vl, exec
 		end
 		in
 		let hasret = jit_closure.has_nonfinal_return in
@@ -665,7 +674,7 @@ and jit_expr jit return e =
 				| false,0 -> create_function_noret
 				| _ -> create_closure refs
 			in
-			let f = create ctx eci exec [] in
+			let f = create ctx eci exec vl in
 			VGenerator (ref (VStart f))
 			)
 		(* emit_closure ctx mapping eci hasret exec [] *)

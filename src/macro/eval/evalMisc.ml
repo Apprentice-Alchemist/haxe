@@ -35,33 +35,6 @@ type _ Effect.t += Yield : value -> value t
 
 let yield v = perform (Yield v)
 
-let await v = match v with
-	| VGenerator f ->
-		let rec loop () =
-			begin try begin match !f with 
-			| VStart f ->
-				let ret = f [] in
-				encode_enum_value key_coro_Result 1 [|ret|] None
-			| VCont cont -> continue cont vnull (* returns the value from the effect handler *)
-		end with | effect (Yield v), cont ->
-			f := VCont cont;
-			ignore(yield v);
-			loop ()
-		end in
-		loop ()
-	| VFunction (f, _) ->
-		let rec loop () =
-			let r = f [] in
-			match r with 
-				| VEnumValue {eindex = 0} ->
-					ignore(yield r);
-					loop ()
-				| VEnumValue {eindex = 1; eargs = [|v|]} ->  v;
-				| _ -> die "" __LOC__
-		in
-		loop()
-	| _ -> exc_string ("Cannot await " ^ value_string v)
-
 let throw_string s p =
 	throw (create_unknown s) p
 
@@ -86,12 +59,25 @@ let call_value v vl =
 			| VStart f ->
 				let ret = f vl in
 				encode_enum_value key_coro_Result 1 [|ret|] None
-			| VCont cont -> continue cont vnull (* returns the value from the effect handler *)
+			| VCont cont ->
+				let v = match vl with [v] -> v | _ -> vnull in
+				continue cont v (* returns the value from the effect handler *)
 		end with | effect (Yield v), cont ->
 			f := VCont cont;
 			encode_enum_value key_coro_Result 0 [|v|] None
 		end
 	| _ -> exc_string ("Cannot call " ^ (value_string v))
+
+let await v = 
+	let rec loop () = 
+		let r = call_value v [] in
+		match r with
+			| VEnumValue {eindex = 0} ->
+				ignore(yield r);
+				loop ()
+			| VEnumValue {eindex = 1; eargs = [|v|]} ->  v;
+			| _ -> die "" __LOC__
+	in loop()
 
 (* Field setters *)
 

@@ -1241,9 +1241,12 @@ class hxb_reader
 					| 95 ->
 						TYield (loop ()),None
 					| 96 ->
-						TCoro (loop ()),None
+						let v = declare_local () in
+						TCoro (Some v, loop ()),None
 					| 97 ->
 						TAwait (loop ()),None
+					| 98 ->
+						TCoro (None, loop ()),None
 
 					(* access 100-119 *)
 					| 100 ->

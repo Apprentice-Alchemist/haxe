@@ -1565,6 +1565,8 @@ and type_meta ?(mode=MGet) ctx m e1 with_type p =
 			type_generator ctx e1 with_type p
 		| (Meta.Custom ":async", _, p) ->
 			type_async ctx e1 with_type p
+		| (Meta.Custom ":coro", _, _) ->
+			type_coro ctx e1 with_type p
 		| (Meta.Custom ":await", _, p) ->
 			begin match ctx.e.coro_type with
 			| Some Async -> ()
@@ -1586,6 +1588,44 @@ and type_meta ?(mode=MGet) ctx m e1 with_type p =
 	ctx.f.meta <- old;
 	e
 
+
+and type_coro ctx e with_type p = 
+	let ctx = TyperManager.clone_for_expr ctx ctx.e.curfun FunCoro in
+	let yield_type, ret_type = match with_type with 
+		| WithType (t, source) ->
+			begin match t with
+				| TFun (_, TEnum ({e_path = (["haxe"; "coro"], "CoroResult")}, [a; b])) -> a, b
+				| _ -> spawn_monomorph ctx p, spawn_monomorph ctx p
+			end
+		| _ -> spawn_monomorph ctx p, spawn_monomorph ctx p
+	in
+
+	let var, e = match fst e with
+		| EFunction (kind, func) -> 
+			let var = begin match func.f_args with
+				| [] -> None
+				| [((name, name_pos), opt, meta, type_hint, init_expr)] ->
+					if opt then display_error ctx.com "Coroutine argument must not be optional" name_pos;
+					if Option.is_some init_expr then display_error ctx.com "Coroutine argument cannot have default expr" name_pos;
+					let t = Typeload.load_type_hint ctx p LoadNormal type_hint in
+					Some (add_local_with_origin ctx TVOArgument name t name_pos)
+				| _ -> die "" __LOC__
+			end in
+			var, Option.get func.f_expr
+		| _ -> die "" __LOC__
+	in
+	ctx.e.ret <- ret_type;
+	ctx.e.coro_type <- Some (Coro (yield_type, Option.map (fun var -> var.v_type) var));
+	let e = type_expr ctx e WithType.NoValue in
+	let fun_ret_type = ctx.t.tcororesult yield_type ret_type in
+	let coro_type = TFun ((match var with Some var -> [(var.v_name, false, var.v_type)] | _ -> []), fun_ret_type) in
+	(* let coro_type = ctx.t.tany in *)
+	begin match with_type with
+		| WithType (t, source) -> unify ctx coro_type t p
+		| _ -> ()
+	end;
+	mk (TCoro (var, e)) coro_type p
+
 and type_async ctx e with_type p = 
 	let ctx = TyperManager.clone_for_expr ctx ctx.e.curfun FunCoro in
 	let ret_type = match with_type with 
@@ -1604,7 +1644,7 @@ and type_async ctx e with_type p =
 		| WithType (t, source) -> unify ctx gen_type t p
 		| _ -> ()
 	end;
-	mk (TCoro e) gen_type p
+	mk (TCoro (None, e)) gen_type p
 	(* let a,tp = match gen_type with | TAbstract (a, tp) -> a,tp | _ -> die "" __LOC__ in *)
 	(* let e = mk (TCast (e, None)) (TFun ([], mk_mono())) p in *)
 	(* Texpr.Builder.resolve_and_make_static_call (Option.get a.a_impl) "fromFun" [e] p *)
@@ -1627,7 +1667,7 @@ and type_generator ctx e with_type p =
 		| WithType (t, source) -> unify ctx gen_type t p
 		| _ -> ()
 	end;
-	mk (TCoro e) gen_type p
+	mk (TCoro (None, e)) gen_type p
 	(* let a,tp = match gen_type with | TAbstract (a, tp) -> a,tp | _ -> die "" __LOC__ in *)
 	(* let e = mk (TCast (e, None)) (TFun ([], mk_mono())) p in *)
 	(* Texpr.Builder.resolve_and_make_static_call (Option.get a.a_impl) "fromFun" [e] p *)
@@ -1994,15 +2034,16 @@ and type_expr ?(mode=MGet) ctx (e,p) (with_type:WithType.t) =
 			Texpr.Builder.make_bool ctx.com.basic false p
 		end
 	| EYield e -> 
-		let t = match ctx.e.coro_type with
-			| Some (Generator t) -> t
-			| _ -> 
+		let t, yield_ret = match ctx.e.coro_type with
+			| Some (Generator t) -> t, None
+			| Some (Coro (yield_type, yield_ret_type)) -> yield_type, yield_ret_type
+			| _ ->
 				display_error ctx.com "Yield outside of generator" p;
-				ctx.com.basic.tany
+				ctx.com.basic.tany, None
 			in
 			let e = type_expr ctx e (WithType.with_type t) in
 			let e = AbstractCast.cast_or_unify ctx t e e.epos in
-			mk (TYield e) ctx.t.tany p
+			mk (TYield e) (match yield_ret with Some t -> t | _ -> ctx.t.tvoid) p
 ;;
 unify_min_ref := unify_min;
 unify_min_for_type_source_ref := unify_min_for_type_source;

@@ -45,8 +45,11 @@ let rec local_usage f e =
 			local_usage f tf.tf_expr;
 		in
 		f (Function cc)
-	| TCoro e1 ->
-		f (Function (fun f -> local_usage f e1))
+	| TCoro (var, e1) ->
+		f (Function (fun f ->
+			Option.may (fun var -> f (Declare var)) var;
+			local_usage f e1
+		))
 	| TBlock l ->
 		f (Block (fun f -> List.iter (local_usage f) l))
 	| TWhile _ ->
