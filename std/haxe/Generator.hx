@@ -33,4 +33,6 @@ abstract Generator<T>(() -> CoroResult<T, Unit>) {
 	public inline function resume():CoroResult<T, Unit> {
 		return this();
 	}
+
+	public static function fromFun<T>(f:() -> CoroResult<T, Unit>):Generator<T> = cast f;
 }

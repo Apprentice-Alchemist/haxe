@@ -19,8 +19,8 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-import haxe.coro.CoroResult;
 // standard Haxe types
+
 /**
 	The standard `Void` type. Only `null` values can be of the type `Void`.
 

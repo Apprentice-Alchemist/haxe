@@ -17,5 +17,5 @@ abstract Future<T>((FutureContext) -> CoroResult<Unit, T>) {
 		}
 	}
 
-	public static function fromFun<T>(f:(FutureContext) -> CoroResult<Unit, T>) = cast f;
+	public static function fromFun<T>(f:(FutureContext) -> CoroResult<Unit, T>):Future<T> = cast f;
 }
