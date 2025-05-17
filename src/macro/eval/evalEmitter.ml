@@ -787,6 +787,48 @@ let create_closure refs ctx eci exec fl vl =
 		try exec env with Return v -> v
 	) ()
 
+type generator_state = 
+	| VGenStart of (env -> value)
+	| VGenCont of env * (value, value) continuation
+
+let create_coro refs ctx eci exec fl = 
+	let state = ref (VGenStart exec) in
+	fun rw ->
+		match !state with
+			| VGenStart exec ->
+				let env = push_environment ctx eci in
+				Array.iter (fun (i,vr) -> env.env_captures.(i) <- vr) refs;
+				begin 
+					try
+						begin match rw with 
+							| RWValue (Some v) -> process_arguments fl [v] env
+							| RWValue None -> process_arguments fl [] env
+							| RWExc v -> throw v null_pos
+						end;
+						let ret = try exec env with Return v -> v in
+						pop_environment ctx env;
+						encode_enum_value key_coro_Result 1 [|ret|] None
+					with | effect (Yield v), cont ->
+						state := VGenCont (env, cont);
+						pop_environment ctx env;
+						encode_enum_value key_coro_Result 0 [|v|] None 
+				end
+			| VGenCont (env, cont) ->
+				let eval = get_eval ctx in
+				let old = eval.env in
+				env.env_parent <- old;
+				eval.env <- Some env;
+				let ret = match rw with
+					| RWValue v -> Effect.Deep.continue cont (Option.default vnull v)
+					| RWExc v -> Effect.Deep.discontinue cont (RunTimeException (v, (call_stack eval), null_pos)) in
+				eval.env <- old;
+				ret
+
+let emit_coro ctx mapping eci exec fl env =
+	let refs = Array.map (fun (i,slot) -> i,emit_capture_read slot env) mapping in
+	let f = create_coro refs ctx eci exec fl in
+	VCoroutine f
+
 let emit_closure ctx mapping eci hasret exec fl env =
 	let refs = Array.map (fun (i,slot) -> i,emit_capture_read slot env) mapping in
 	let create = match hasret,eci.num_captures with

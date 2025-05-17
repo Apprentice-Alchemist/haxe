@@ -146,9 +146,9 @@ type value =
 	| VHandle of vhandle
 	| VInt64 of Signed.Int64.t
 	| VUInt64 of Unsigned.UInt64.t
-	| VGenerator of vgenerator ref
+	| VCoroutine of (resume_with -> value)
 
-and vgenerator = VStart of vfunc | VCont of (value, value) continuation
+and resume_with = RWValue of value option | RWExc of value
 
 and vfunc = value list -> value
 

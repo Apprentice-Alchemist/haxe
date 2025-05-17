@@ -365,8 +365,8 @@ let value_signature v =
 			custom_name 'H'
 		| VLazy f ->
 			loop (Lazy.force f)
-		| VGenerator _ ->
-			custom_name 'G'
+		| VCoroutine _ ->
+			custom_name 'C'
 	and loop_fields fields =
 		List.iter (fun (name,v) ->
 			adds (rev_hash name);

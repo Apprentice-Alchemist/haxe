@@ -54,30 +54,10 @@ let call_value v vl =
 	| VFunction(f,_) ->	 call_function f vl
 	| VFieldClosure(v1,f) -> call_function f (v1 :: vl)
 	| VInstance {ikind = ILazyType(_,get)} -> get()
-	| VGenerator f ->
-		begin try begin match !f with 
-			| VStart f ->
-				let ret = f vl in
-				encode_enum_value key_coro_Result 1 [|ret|] None
-			| VCont cont ->
-				let v = match vl with [v] -> v | _ -> vnull in
-				continue cont v (* returns the value from the effect handler *)
-		end with | effect (Yield v), cont ->
-			f := VCont cont;
-			encode_enum_value key_coro_Result 0 [|v|] None
-		end
+	| VCoroutine f ->
+		let v = match vl with [v] -> Some v | _ -> None in
+		f (RWValue v)
 	| _ -> exc_string ("Cannot call " ^ (value_string v))
-
-let await v = 
-	let rec loop () = 
-		let r = call_value v [] in
-		match r with
-			| VEnumValue {eindex = 0} ->
-				ignore(yield r);
-				loop ()
-			| VEnumValue {eindex = 1; eargs = [|v|]} ->  v;
-			| _ -> die "" __LOC__
-	in loop()
 
 (* Field setters *)
 

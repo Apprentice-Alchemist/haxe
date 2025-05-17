@@ -100,7 +100,7 @@ type env = {
 	(* Map of extra variables added while debugging. Keys are hashed variable names. *)
 	mutable env_extra_locals : value IntMap.t;
 	(* The parent of the current environment, if exists. *)
-	env_parent : env option;
+	mutable env_parent : env option;
 	(** Exeucution stack depth *)
 	env_stack_depth : int;
 	env_eval : eval;

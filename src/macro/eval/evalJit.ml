@@ -669,7 +669,6 @@ and jit_expr jit return e =
 			vl, exec
 		end
 		in
-		let hasret = jit_closure.has_nonfinal_return in
 		let eci = get_env_creation jit_closure false e.epos.pfile (EKLocalFunction jit.num_closures) in
 		let captures = IntHashtbl.fold (fun vid (i,declared) acc -> (i,vid,declared) :: acc) jit_closure.captures [] in
 		let captures = List.sort (fun (i1,_,_) (i2,_,_) -> Stdlib.compare i1 i2) captures in
@@ -680,17 +679,7 @@ and jit_expr jit return e =
 			else Some (i,fst (try IntHashtbl.find jit.captures vid with Not_found -> Error.raise_typing_error (Printf.sprintf "Could not find capture variable %i" vid) e.epos))
 		) captures in
 		let mapping = Array.of_list captures in
-		(fun env ->
-			let refs = Array.map (fun (i,slot) -> i,emit_capture_read slot env) mapping in
-			let create = match hasret,eci.num_captures with
-				| true,0 -> create_function
-				| false,0 -> create_function_noret
-				| _ -> create_closure refs
-			in
-			let f = create ctx eci exec vl in
-			VGenerator (ref (VStart f))
-			)
-		(* emit_closure ctx mapping eci hasret exec [] *)
+		emit_coro ctx mapping eci exec vl
 	in
 	let f = loop e in
 	begin match ctx.debug.debug_socket with

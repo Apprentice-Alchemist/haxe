@@ -171,7 +171,7 @@ and s_value ?(indent_level=0) depth v =
 		with Not_found ->
 			s_proto_kind proto
 		end
-	| VGenerator _ -> create_ascii "<generator>"
+	| VCoroutine _ -> create_ascii "<coroutine>"
 
 and call_value_on vthis v vl =
 	match v with
