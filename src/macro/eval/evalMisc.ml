@@ -28,13 +28,6 @@ open EvalPrinting
 open EvalHash
 open EvalString
 
-open Effect
-open Effect.Deep
-
-type _ Effect.t += Yield : value -> value t
-
-let yield v = perform (Yield v)
-
 let throw_string s p =
 	throw (create_unknown s) p
 

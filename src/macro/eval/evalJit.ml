@@ -403,6 +403,13 @@ and jit_expr jit return e =
 	(* calls *)
 	| TCall(e1,el) ->
 		begin match e1.eexpr with
+		| TIdent "$resumeExc" ->
+			begin match el with 
+				| [c; exc] ->
+					let c = jit_expr jit false c and exc = jit_expr jit false exc in
+					emit_resume_with_exc e.epos c exc
+				| _ -> die "" __LOC__
+				end
 		| TField({eexpr = TConst TSuper;epos=pv},FInstance(c,_,cf)) ->
 			let proto = get_instance_prototype ctx (path_hash c.cl_path) e1.epos in
 			let name = hash cf.cf_name in
@@ -631,21 +638,8 @@ and jit_expr jit return e =
 		emit_mk_pos e.epos
 	| TIdent s ->
 		Error.raise_typing_error ("Unknown identifier: " ^ s) e.epos
-	| TYield e1 -> let f = loop e1 in (fun env -> yield (f env))
-	| TAwait e1 -> let f = loop e1 in (fun env -> let v = (f env) in 
-		let rec loop () = 
-		begin
-			let ctx = EvalEmitter.emit_local_read 0 env in
-			let r = call_value v [ctx] in
-			match r with
-				| VEnumValue {eindex = 0} ->
-					let v = yield r in
-					EvalEmitter.execute_set_local 0 env v;
-					loop ()
-				| VEnumValue {eindex = 1; eargs = [|v|]} ->  v;
-				| _ -> die "" __LOC__
-			end
-		in loop())
+	| TYield e1 -> let f = jit_expr jit false e1 in emit_yield e.epos f
+	| TAwait e1 -> let f = jit_expr jit false e1 in emit_await e.epos f
 	| TCoro (var, e) -> 
 		let jit_closure = EvalJitContext.create ctx in
 		jit.num_closures <- jit.num_closures + 1;
@@ -693,7 +687,7 @@ and jit_expr jit return e =
 			| TCall _ | TNew _
 			| TVar({v_kind = VUser _},_)
 			| TIf _ | TWhile _ | TSwitch _ | TTry _
-			| TReturn _ | TBreak | TContinue | TThrow _ | TCast(_,Some _) ->
+			| TReturn _ | TBreak | TContinue | TThrow _ | TCast(_,Some _) | TYield _ ->
 				wrap()
 			| TUnop((Increment | Decrement),_,e1) | TBinop((OpAssign | OpAssignOp _),e1,_) ->
 				begin match (Texpr.skip e1).eexpr with
