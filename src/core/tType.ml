@@ -495,7 +495,7 @@ type basic_types = {
 	mutable tstring : t;
 	mutable tarray : t -> t;
 	mutable titerator : t -> t;
-	mutable tgenerator : t -> t;
+	mutable tgenerator : (t -> t) Lazy.t;
 	mutable tfuture : t -> t;
 	mutable tcororesult: t -> t -> t;
 }

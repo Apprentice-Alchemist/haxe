@@ -51,12 +51,6 @@ let load_std_types ctx =
 						TLazy r
 				in
 				ctx.t.tnull <- mk_null;
-			| "Generator" ->
-				let mk_generator t = TAbstract (a, [t]) in
-				ctx.t.tgenerator <- mk_generator
-			| "Future" ->
-				let mk_future t = TAbstract (a, [t]) in
-				ctx.t.tfuture <- mk_future
 			| _ -> ())
 		| TTypeDecl td ->
 			begin match snd td.t_path with
@@ -219,17 +213,14 @@ let load_future ctx =
 
 let load_generator ctx =
 	let m = TypeloadModule.load_module ctx (["haxe"],"Generator") null_pos in
-	try
-		List.iter (fun t -> (
+	try Option.get (List.find_map (fun t -> (
 			match t with
 			| TAbstractDecl ({a_path = (["haxe"],"Generator")} as a) ->
-				ctx.t.tgenerator <- (fun t -> TAbstract (a,[t]));
-				raise Exit
+				Some (fun t -> TAbstract(a, [t]))
 			| _ ->
-				()
-		)) m.m_types;
-	with Exit ->
-		()
+				None
+		)) m.m_types)
+	with Option.No_value -> die "Could not locate abstract Generator<T> (was it redefined?)" __LOC__
 
 let create com macros =
 	let rec ctx = {
@@ -291,7 +282,7 @@ let create com macros =
 	load_enum_tools ctx;
 	load_coro_result ctx;
 	load_future ctx;
-	load_generator ctx;
+	ctx.t.tgenerator <- lazy (load_generator ctx);
 	ignore(TypeloadModule.load_module ctx (["haxe"],"Exception") null_pos);
 	ctx.com.local_wrapper <- load_local_wrapper ctx;
 	ctx.g.complete <- true;

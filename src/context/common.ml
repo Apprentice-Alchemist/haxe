@@ -793,7 +793,7 @@ let create timer_ctx compilation_step cs version args display_mode =
 			tnull = (fun _ -> die "Could use locate abstract Null<T> (was it redefined?)" __LOC__);
 			tarray = (fun _ -> die "Could not locate class Array<T> (was it redefined?)" __LOC__);
 			titerator = (fun _ -> die "Could not locate typedef Iterator<T> (was it redefined?)" __LOC__);
-			tgenerator = (fun _ -> die "Could not locate abstract Generator<T> (was it redefined?)" __LOC__);
+			tgenerator = lazy (fun _ -> die "Could not locate abstract Generator<T> (was it redefined?)" __LOC__);
 			tfuture = (fun _ -> die "Could not locate abstract Future<T> (was it redefined?)" __LOC__);
 			tcororesult = (fun _ -> die "Could not locate enum CoroResult<A, B> (was it redefined?)" __LOC__);
 		};
@@ -926,7 +926,7 @@ let clone com is_macro_context =
 			tnull = (fun _ -> die "Could use locate abstract Null<T> (was it redefined?)" __LOC__);
 			tarray = (fun _ -> die "Could not locate class Array<T> (was it redefined?)" __LOC__);
 			titerator = (fun _ -> die "Could not locate typedef Iterator<T> (was it redefined?)" __LOC__);
-			tgenerator = (fun _ -> die "Could not locate abstract Generator<T> (was it redefined?)" __LOC__);
+			tgenerator = lazy (fun _ -> die "Could not locate abstract Generator<T> (was it redefined?)" __LOC__);
 			tfuture = (fun _ -> die "Could not locate abstract Future<T> (was it redefined?)" __LOC__);
 			tcororesult = (fun _ -> die "Could not locate enum CoroResult<A, B> (was it redefined?)" __LOC__);
 		};

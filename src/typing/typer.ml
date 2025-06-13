@@ -1660,7 +1660,7 @@ and type_generator ctx e with_type p =
 	ctx.e.ret <- ctx.t.tvoid;
 	ctx.e.coro_type <- Some (Generator yield_type);
 	let e = type_expr ctx e WithType.NoValue in
-	let gen_type = ctx.t.tgenerator yield_type in
+	let gen_type = (Lazy.force ctx.t.tgenerator) yield_type in
 	begin match with_type with
 		| WithType (t, source) -> unify ctx gen_type t p
 		| _ -> ()
