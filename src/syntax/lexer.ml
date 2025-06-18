@@ -28,7 +28,7 @@ type error_msg =
 	| Unterminated_regexp
 	| Unclosed_comment
 	| Unclosed_code
-	| Invalid_escape of char * (string option)
+	| Invalid_escape of string
 	| Invalid_option
 	| Unterminated_markup
 
@@ -59,7 +59,7 @@ type xml_lexing_context = {
 type format_context = {
 	format_buffer : Buffer.t;
 	mutable format_quote_open : bool;
-	mutable format_quote_pmin : int;
+	mutable format_chunk_start : int;
 }
 
 let error_msg = function
@@ -69,8 +69,7 @@ let error_msg = function
 	| Unterminated_regexp -> "Unterminated regular expression"
 	| Unclosed_comment -> "Unclosed comment"
 	| Unclosed_code -> "Unclosed code string"
-	| Invalid_escape (c,None) -> Printf.sprintf "Invalid escape sequence \\%s" (Char.escaped c)
-	| Invalid_escape (c,Some msg) -> Printf.sprintf "Invalid escape sequence \\%s. %s" (Char.escaped c) msg
+	| Invalid_escape s -> s
 	| Invalid_option -> "Invalid regular expression option"
 	| Unterminated_markup -> "Unterminated markup literal"
 
@@ -122,6 +121,9 @@ let print_file file =
 
 let error ctx e pos =
 	raise (Error (e,{ pmin = pos; pmax = pos; pfile = ctx.file.lfile }))
+
+let error_with_span ctx e pmin pmax =
+	raise (Error (e,{ pmin; pmax; pfile = ctx.file.lfile }))
 
 let keywords =
 	let h = Hashtbl.create 3 in
@@ -390,6 +392,8 @@ let xml_name_start_char = [%sedlex.regexp? '$' | ':' | 'A'..'Z' | '_' | 'a'..'z'
 let xml_name_char = [%sedlex.regexp? xml_name_start_char | '-' | '.' | '0'..'9' | 0xB7 | 0x0300 .. 0x036F | 0x203F .. 0x2040]
 let xml_name = [%sedlex.regexp? Opt(xml_name_start_char, Star xml_name_char)]
 
+let octal_digit = [%sedlex.regexp? '0' .. '7']
+
 let rec skip_header lexbuf =
 	match%sedlex lexbuf with
 	| 0xfeff -> skip_header lexbuf
@@ -416,6 +420,78 @@ let comment ctx lexbuf =
 			loop ()
 		| _ ->
 			die "" __LOC__
+	in
+	loop ()
+
+exception Invalid_escape_sequence of int * int * string
+
+let parse_escape b lexbuf =
+	let fail msg = raise (Invalid_escape_sequence((lexeme_start lexbuf) + 1, (lexeme_end lexbuf) + 1, msg)) in
+	let fail_with_pos pmin pmax msg = raise (Invalid_escape_sequence(pmin + 1, pmax + 1, msg)) in
+	match%sedlex lexbuf with
+	| 'n' -> Buffer.add_char b '\n'
+	| 'r' -> Buffer.add_char b '\r'
+	| 't' -> Buffer.add_char b '\t'
+	| '"' | '\'' | '\\' -> Buffer.add_utf_8_uchar b (lexeme_char lexbuf 0)
+	| octal_digit ->
+		let first_digit = lexeme lexbuf in
+		let first_digit_start = lexeme_start lexbuf in
+		begin match%sedlex lexbuf with
+			| Rep (octal_digit, 2) ->
+				let u = (try (int_of_string ("0o" ^ first_digit ^ (lexeme lexbuf))) with _ -> die "" __LOC__) in
+				if u > 127 then
+					fail_with_pos (first_digit_start) (lexeme_end lexbuf) ("Values greater than \\177 are not allowed. Use \\u{" ^ (Printf.sprintf "%02x" u) ^ "} instead.");
+				Buffer.add_char b (char_of_int u)
+			| _ -> fail ("unterminated octal character escape")
+		end
+	| 'x' ->
+		begin match%sedlex lexbuf with
+		| Rep (hex_digit, 2) ->
+			let hex = lexeme lexbuf in
+			let u = (try (int_of_string ("0x" ^ hex)) with _ -> die "" __LOC__) in
+			if u > 127 then
+				fail ("Values greater than \\x7f are not allowed. Use \\u{" ^ hex ^ "} instead.");
+			Buffer.add_char b (char_of_int u);
+		| _ -> fail "Must be followed by a hexadecimal sequence."
+		end
+	| 'u' ->
+		let fail_no_hex () = fail "Must be followed by a hexadecimal sequence enclosed in curly brackets." in
+		begin match%sedlex lexbuf with
+			| '{' ->
+				begin match%sedlex lexbuf with
+					| Plus (hex_digit) ->
+						let u = try int_of_string ("0x" ^ (lexeme lexbuf)) with _ -> fail "Maximum allowed value for unicode escape sequence is \\u{10FFFF}" in
+						if u > 0x10FFFF then
+							fail "Maximum allowed value for unicode escape sequence is \\u{10FFFF}";
+						if u >= 0xD800 && u < 0xE000 then
+							fail "UTF-16 surrogates are not allowed in strings.";
+						Buffer.add_utf_8_uchar b (Uchar.of_int u);
+						begin match%sedlex lexbuf with
+							| '}' -> ()
+							| _ -> fail_no_hex ()
+						end
+					| _ -> fail_no_hex ()
+				end
+			| Rep (hex_digit, 4) ->
+				let u = int_of_string ("0x" ^ (lexeme lexbuf)) in
+				if u > 0x10FFFF then
+					fail "Maximum allowed value for unicode escape sequence is \\u{10FFFF}";
+				if u >= 0xD800 && u < 0xE000 then
+					fail "UTF-16 surrogates are not allowed in strings.";
+				Buffer.add_utf_8_uchar b (Uchar.of_int u)
+			| _ -> fail_no_hex ()
+		end
+	| any -> fail ("Invalid character in escape sequence: `" ^ (lexeme lexbuf) ^ "`")
+	| _ -> die "" __LOC__
+
+let unescape s =
+	let lexbuf = from_string s in
+	let b = Buffer.create 0 in
+	let rec loop () = match%sedlex lexbuf with
+		| eof -> Buffer.contents b
+		| '\\' -> parse_escape b lexbuf; loop ()
+		| any -> Buffer.add_utf_8_uchar b (lexeme_char lexbuf 0); loop ()
+		| _ -> die "" __LOC__
 	in
 	loop ()
 
@@ -456,8 +532,8 @@ let consume_buffer ctx fmt lexbuf f =
 let unescape_format ctx fmt s =
 	try
 		unescape s
-	with Invalid_escape_sequence(c,i,msg) ->
-		error ctx (Invalid_escape (c,msg)) (fmt.format_quote_pmin + i)
+	with Invalid_escape_sequence(pmin, pmax,msg) ->
+		error_with_span ctx (Invalid_escape msg) (fmt.format_chunk_start + pmin) (fmt.format_chunk_start + pmax)
 
 let rec string2 ctx fmt lexbuf =
 	let rec loop () = match%sedlex lexbuf with
@@ -516,7 +592,8 @@ and code_string ctx fmt lexbuf =
 				loop (open_braces - 1)
 			end else begin
 				consume_buffer ctx fmt lexbuf (fun s -> s);
-				add_format_part fmt "}"
+				add_format_part fmt "}";
+				fmt.format_chunk_start <- (lexeme_start lexbuf)
 			end
 		| '"' ->
 			add ctx "\"";
@@ -528,12 +605,11 @@ and code_string ctx fmt lexbuf =
 			let pmin = lexeme_start lexbuf in
 			consume_buffer ctx fmt lexbuf (fun s -> s);
 			add_format_part fmt "'";
-			let old_quote,old_pmin = fmt.format_quote_open,fmt.format_quote_pmin in
+			let old_quote = fmt.format_quote_open in
 			fmt.format_quote_open <- true;
-			fmt.format_quote_pmin <- pmin;
+			fmt.format_chunk_start <- pmin;
 			(try ignore(string2 ctx fmt lexbuf) with Exit -> error ctx Unterminated_string pmin);
 			fmt.format_quote_open <- old_quote;
-			fmt.format_quote_pmin <- old_pmin;
 			loop open_braces
 		| "/*" ->
 			let pmin = lexeme_start lexbuf in
@@ -736,7 +812,7 @@ let rec token ctx lexbuf =
 		reset ctx;
 		let pmin = lexeme_start lexbuf in
 		let pmax = (try string ctx lexbuf with Exit -> error ctx Unterminated_string pmin) in
-		let str = (try unescape (contents ctx) with Invalid_escape_sequence(c,i,msg) -> error ctx (Invalid_escape (c,msg)) (pmin + i)) in
+		let str = (try unescape (contents ctx) with Invalid_escape_sequence(pmin',pmax', msg) -> error_with_span ctx (Invalid_escape msg) (pmin + pmin') (pmin + pmax')) in
 		mk_tok (Const (String(str,SDoubleQuotes))) pmin pmax;
 	| "'" ->
 		reset ctx;
@@ -744,7 +820,7 @@ let rec token ctx lexbuf =
 		let fmt = {
 			format_buffer = Buffer.create 10;
 			format_quote_open = false;
-			format_quote_pmin = pmin;
+			format_chunk_start = pmin;
 		} in
 		let pmax = (try string2 ctx fmt lexbuf with Exit -> error ctx Unterminated_string pmin) in
 		mk_tok (Const (String(Buffer.contents fmt.format_buffer,SSingleQuotes))) pmin pmax;
