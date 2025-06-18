@@ -1,1 +1,1 @@
-Main.hx:2: character 54 : Invalid escape sequence \s
+Main.hx:2: characters 55-56 : Invalid character in escape sequence: `s`

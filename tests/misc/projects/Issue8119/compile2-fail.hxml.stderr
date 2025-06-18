@@ -1,1 +1,1 @@
-Main2.hx:3: character 4 : Invalid escape sequence \2. Values greater than \177 are not allowed. Use \u0080 instead.
+Main2.hx:3: characters 5-8 : Values greater than \177 are not allowed. Use \u{80} instead.
