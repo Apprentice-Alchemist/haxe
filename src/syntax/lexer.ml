@@ -424,8 +424,47 @@ let comment ctx lexbuf =
 	loop ()
 
 exception Invalid_escape_sequence of int * int * string
+exception Invalid_hex of int
+exception Invalid_octal of int
+exception Overflow
 
-let parse_escape b lexbuf =
+let parse_hex s =
+	let lexbuf = from_string s in
+	let rec loop i =
+		if i > (Int.max_int lsr 4) then raise Overflow else
+		match%sedlex lexbuf with
+		| eof -> i
+		| '0' .. '9' ->
+			let c = lexeme_char lexbuf 0 in
+			let next = (Uchar.to_int c) - (Char.code '0') in
+			loop ((i lsl 4) + next)
+		| 'A' .. 'F' ->
+			let c = lexeme_char lexbuf 0 in
+			let next = (Uchar.to_int c)- (Char.code 'A') + 10 in
+			loop ((i lsl 4) + next)
+		| 'a' .. 'f' ->
+			let c = lexeme_char lexbuf 0 in
+			let next = (Uchar.to_int c)- (Char.code 'a') + 10 in
+			loop ((i lsl 4) + next)
+		| any -> raise (Invalid_hex (lexeme_start lexbuf))
+		| _ -> die "" __LOC__
+	in loop 0
+
+let parse_octal s =
+	let lexbuf = from_string s in
+	let rec loop i =
+		if i > (Int.max_int lsr 3) then raise Overflow else
+		match%sedlex lexbuf with
+		| eof -> i
+		| '0' .. '7' ->
+			let c = lexeme_char lexbuf 0 in
+			let next = (Uchar.to_int c) - (Char.code '0') in
+			loop ((i lsl 3) + next)
+		| any -> raise (Invalid_octal (lexeme_start lexbuf))
+		| _ -> die "" __LOC__
+	in loop 0
+
+let parse_escape b lexbuf backslash_pmin =
 	let fail msg = raise (Invalid_escape_sequence((lexeme_start lexbuf) + 1, (lexeme_end lexbuf) + 1, msg)) in
 	let fail_with_pos pmin pmax msg = raise (Invalid_escape_sequence(pmin + 1, pmax + 1, msg)) in
 	match%sedlex lexbuf with
@@ -437,30 +476,42 @@ let parse_escape b lexbuf =
 		let first_digit = lexeme lexbuf in
 		let first_digit_start = lexeme_start lexbuf in
 		begin match%sedlex lexbuf with
-			| Rep (octal_digit, 2) ->
-				let u = (try (int_of_string ("0o" ^ first_digit ^ (lexeme lexbuf))) with _ -> die "" __LOC__) in
+			| Rep (any, 2) ->
+				let u = try parse_octal (first_digit ^ (lexeme lexbuf))
+					with Invalid_octal char_pos ->
+						let pmin = (first_digit_start + char_pos) in
+						fail_with_pos pmin (pmin + 1) "Invalid character in octal escape sequence"
+					in
 				if u > 127 then
 					fail_with_pos (first_digit_start) (lexeme_end lexbuf) ("Values greater than \\177 are not allowed. Use \\u{" ^ (Printf.sprintf "%02x" u) ^ "} instead.");
 				Buffer.add_char b (char_of_int u)
-			| _ -> fail ("unterminated octal character escape")
+			| _ -> fail_with_pos backslash_pmin (lexeme_end lexbuf) ("Unterminated octal escape sequence")
 		end
 	| 'x' ->
 		begin match%sedlex lexbuf with
-		| Rep (hex_digit, 2) ->
+		| Rep (any, 2) ->
 			let hex = lexeme lexbuf in
-			let u = (try (int_of_string ("0x" ^ hex)) with _ -> die "" __LOC__) in
+			let u = (try parse_hex (lexeme lexbuf) with Invalid_hex char_pos ->
+				let pmin = ((lexeme_start lexbuf) + char_pos) in
+				fail_with_pos pmin (pmin + 1) "Invalid character in numeric escape sequence"
+			) in
 			if u > 127 then
 				fail ("Values greater than \\x7f are not allowed. Use \\u{" ^ hex ^ "} instead.");
 			Buffer.add_char b (char_of_int u);
-		| _ -> fail "Must be followed by a hexadecimal sequence."
+		| Opt any, eof -> fail_with_pos backslash_pmin (lexeme_end lexbuf) "Numeric escape sequence too short"
+		| _ -> fail_with_pos backslash_pmin (lexeme_end lexbuf) "Numeric escape sequence too short"
 		end
 	| 'u' ->
-		let fail_no_hex () = fail "Must be followed by a hexadecimal sequence enclosed in curly brackets." in
 		begin match%sedlex lexbuf with
 			| '{' ->
 				begin match%sedlex lexbuf with
-					| Plus (hex_digit) ->
-						let u = try int_of_string ("0x" ^ (lexeme lexbuf)) with _ -> fail "Maximum allowed value for unicode escape sequence is \\u{10FFFF}" in
+					| Plus (Compl ('}')) ->
+						let u = try parse_hex (lexeme lexbuf) with 
+							| Invalid_hex char_pos ->
+								let pmin = ((lexeme_start lexbuf) + char_pos) in
+								fail_with_pos pmin (pmin + 1) "Invalid character in unicode escape sequence"
+							| Overflow -> fail "Maximum allowed value for unicode escape sequence is \\u{10FFFF}"
+						in
 						if u > 0x10FFFF then
 							fail "Maximum allowed value for unicode escape sequence is \\u{10FFFF}";
 						if u >= 0xD800 && u < 0xE000 then
@@ -468,18 +519,24 @@ let parse_escape b lexbuf =
 						Buffer.add_utf_8_uchar b (Uchar.of_int u);
 						begin match%sedlex lexbuf with
 							| '}' -> ()
-							| _ -> fail_no_hex ()
+							| _ -> fail_with_pos backslash_pmin (lexeme_end lexbuf) "Missing closing `}`"
 						end
-					| _ -> fail_no_hex ()
+					| '}' -> fail_with_pos backslash_pmin (lexeme_end lexbuf) "Unicode escape sequence must contain at least 1 hex digit"
+					| _ -> fail_with_pos backslash_pmin (lexeme_end lexbuf) "Missing closing `}`"
 				end
-			| Rep (hex_digit, 4) ->
-				let u = int_of_string ("0x" ^ (lexeme lexbuf)) in
+			| hex_digit, Rep (any, 0 .. 3) ->
+				if lexeme_length lexbuf < 4 then
+					fail_with_pos backslash_pmin (lexeme_end lexbuf) "Unicode escape sequence is too short";
+				let u = try parse_hex (lexeme lexbuf) with Invalid_hex char_pos ->
+					let pmin = ((lexeme_start lexbuf) + char_pos) in
+					fail_with_pos pmin (pmin + 1) "Invalid character in unicode escape sequence" in
 				if u > 0x10FFFF then
 					fail "Maximum allowed value for unicode escape sequence is \\u{10FFFF}";
 				if u >= 0xD800 && u < 0xE000 then
 					fail "UTF-16 surrogates are not allowed in strings.";
 				Buffer.add_utf_8_uchar b (Uchar.of_int u)
-			| _ -> fail_no_hex ()
+			| any | eof -> fail_with_pos backslash_pmin (lexeme_end lexbuf) "Invalid unicode escape sequence: format is `\\u{...}`"
+			| _ -> die "" __LOC__
 		end
 	| any -> fail ("Invalid character in escape sequence: `" ^ (lexeme lexbuf) ^ "`")
 	| _ -> die "" __LOC__
@@ -489,7 +546,7 @@ let unescape s =
 	let b = Buffer.create 0 in
 	let rec loop () = match%sedlex lexbuf with
 		| eof -> Buffer.contents b
-		| '\\' -> parse_escape b lexbuf; loop ()
+		| '\\' -> parse_escape b lexbuf (lexeme_start lexbuf); loop ()
 		| any -> Buffer.add_utf_8_uchar b (lexeme_char lexbuf 0); loop ()
 		| _ -> die "" __LOC__
 	in
