@@ -1,1 +1,1 @@
-X1.hx:2: character 13 : Must be followed by a hexadecimal sequence.
+X1.hx:2: characters 11-13 : Numeric escape sequence too short

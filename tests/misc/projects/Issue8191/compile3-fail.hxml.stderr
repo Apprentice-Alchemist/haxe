@@ -1,1 +1,1 @@
-U1.hx:2: character 13 : Must be followed by a hexadecimal sequence enclosed in curly brackets.
+U1.hx:2: characters 11-13 : Invalid unicode escape sequence: format is `\u{...}`

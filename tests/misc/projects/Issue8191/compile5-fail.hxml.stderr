@@ -1,1 +1,1 @@
-U3.hx:2: character 14 : Must be followed by a hexadecimal sequence enclosed in curly brackets.
+U3.hx:2: characters 11-15 : Unicode escape sequence must contain at least 1 hex digit
