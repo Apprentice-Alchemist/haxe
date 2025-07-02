@@ -576,7 +576,8 @@ let get_config com =
 			};
 			pf_exceptions = { default_config.pf_exceptions with
 				ec_avoid_wrapping = false
-			}
+			};
+			pf_supports_atomics = true;
 		}
 	| Flash ->
 		{
