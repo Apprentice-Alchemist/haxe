@@ -684,6 +684,7 @@ let get_config com =
 				vs_scope = FunctionScope;
 				vs_flags = [VarHoisting]
 			};
+			pf_supports_atomics = true;
 		}
 	| Hl ->
 		{
