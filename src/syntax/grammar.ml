@@ -1123,15 +1123,37 @@ and parse_class_herit ctx = function%parser
 	| [ (Kwd Implements,p1); [%let t,_p = parse_type_path_or_resume ctx p1] ] -> HImplements t
 
 and block1 ctx s = match%parser s with
-	| [ [%let name, p = dollar_ident] ] -> block2 ctx (name,p,NoQuotes) (Ident name) p s
-	| [ (Const (String(name,qs)),p) ] -> block2 ctx (name,p,DoubleQuotes) (String(name,qs)) p s (* STRINGTODO: qs... hmm *)
-	| [ [%let b = block ctx []] ] -> EBlock b
+	| [ [%let name, p = dollar_ident] ] ->
+		block2 ctx (name,p,NoQuotes) (Ident name) p s
+	| [ (Const (String(name,qs)),p) ] ->
+		block2 ctx (name,p,DoubleQuotes) (String(name,qs)) p s (* STRINGTODO: qs... hmm *)
+	| [ [%let b = block ctx []] ] ->
+		let p2 = match%parser s with
+			| [ (BrClose,p2) ] -> p2
+			| [ ] ->
+				(* Ignore missing } if we are resuming and "guess" the last position. *)
+				syntax_error ctx (Expected ["}"]) s (pos (next_token ctx s))
+		in
+		EBlock b, p2
 
 and block2 ctx name ident p s =
 	match%parser s with
 	| [ (DblDot,_) ] ->
 		let e = secure_expr ctx s in
-		fst (parse_obj_decl ctx name e p s)
+		begin match%parser s with
+			| [ (Comma, _) ] ->
+				parse_obj_decl ctx name e p s
+			| [ (BrClose,p2) ] ->
+				EObjectDecl [name, e], p2
+			| [ ] ->
+				EObjectDecl [name, e], syntax_error ctx (Expected [","; "}"]) s (pos (next_token ctx s))
+		end
+	| [ (Comma, _) ] when let (_, _, qs) = name in qs = NoQuotes ->
+		let e = (EConst ident,p) in
+		parse_obj_decl ctx name e p s
+	| [ (BrClose,p2) ] when let (_, _, qs) = name in qs = NoQuotes ->
+		let e = (EConst ident,p) in
+		EObjectDecl [name, e], p2
 	| [ ] ->
 		let f s =
 			let e = expr_next ctx (EConst ident,p) s in
@@ -1139,7 +1161,13 @@ and block2 ctx name ident p s =
 			e
 		in
 		let el,_ = block_with_pos' ctx [] f p s in
-		EBlock el
+		let p2 = match%parser s with
+				| [ (BrClose,p2) ] -> p2
+				| [ ] ->
+					(* Ignore missing } if we are resuming and "guess" the last position. *)
+					syntax_error ctx (Expected ["}"]) s (pos (next_token ctx s))
+			in
+		EBlock el, p2
 
 and block ctx acc s =
 	fst (block_with_pos ctx acc null_pos s)
@@ -1201,26 +1229,50 @@ and parse_obj_decl ctx name e p0 s =
 	let make_obj_decl el p1 =
 		EObjectDecl (List.rev el),punion p0 p1
 	in
-	let rec loop p_end acc = match%parser s with
-		| [ (Comma,p1) ] ->
-			let next_expr key =
-				let e = secure_expr ctx s in
-				loop (pos e) ((key,e) :: acc)
-			in
-			let next key = match%parser s with
-				| [ (DblDot,_) ] ->
-					next_expr key
-				| [ ] ->
-					syntax_error ctx (Expected [":"]) s (next_expr key)
-			in
+	let rec loop acc p_end = match%parser s with
+		| [ [%let name, p = ident] ] ->
 			begin match%parser s with
-				| [ [%let name, p = ident] ] -> next (name,p,NoQuotes)
-				| [ (Const (String(name,qs)),p) ] -> next (name,p,DoubleQuotes) (* STRINGTODO: use qs? *)
-				| [ ] -> acc,p_end
+			| [ (DblDot,_) ] ->
+				let e = secure_expr ctx s in
+				let acc = (((name, p, NoQuotes), e) :: acc) in
+				begin match%parser s with
+					[ (Comma, _) ] ->
+						loop acc p_end
+					| [ (BrClose,p_end) ] ->
+						acc, p_end
+					| [ ] ->
+						acc, syntax_error ctx (Expected [","; "}"]) s (pos (next_token ctx s))
+				end
+			| [ (Comma, _) ] ->
+				let e = (EConst (Ident name)), p in
+				loop (((name, p, NoQuotes), e) :: acc) p_end
+			| [ (BrClose,p_end) ] ->
+				let e = (EConst (Ident name)), p in
+				(((name, p, NoQuotes), e) :: acc), p_end
+			| [ ] ->
+				acc, syntax_error ctx (Expected [":"; ","; "}"]) s (pos (next_token ctx s))
 			end
-		| [ ] -> acc,p_end
+		| [ (Const (String(name,qs)),p) ] ->
+			begin match%parser s with
+			| [ (DblDot,_) ] ->
+				let e = secure_expr ctx s in
+				(* STRINGTODO: use qs? *)
+				let acc = (((name, p, DoubleQuotes), e) :: acc) in
+				begin match%parser s with
+					[ (Comma, _) ] ->
+						loop acc p_end
+					| [ (BrClose,p_end) ] ->
+						acc, p_end
+					| [ ] ->
+						acc, syntax_error ctx (Expected [","; "}"]) s (pos (next_token ctx s))
+				end
+			| [ ] ->
+				acc, syntax_error ctx (Expected [":"; "}"]) s (pos (next_token ctx s))
+			end
+		| [ (BrClose,p_end) ] -> acc,p_end
+		| [ ] -> acc, syntax_error ctx (Expected ["identifier"; "}"]) s (pos (next_token ctx s))
 	in
-	let el,p_end = loop p0 [name,e] in
+	let el,p_end = loop [name,e] p0 in
 	let e = make_obj_decl el p_end in
 	e
 
@@ -1407,13 +1459,7 @@ and expr (ctx : parser_ctx) s = match%parser s with
 		handle_xml_literal ctx p1
 	| [ (BrOpen,p1) ] ->
 		(match%parser s with
-		| [ [%let b = block1 ctx] ] ->
-			let p2 = match%parser s with
-				| [ (BrClose,p2) ] -> p2
-				| [ ] ->
-					(* Ignore missing } if we are resuming and "guess" the last position. *)
-					syntax_error ctx (Expected ["}"]) s (pos (next_token ctx s))
-			in
+		| [ [%let b, p2 = block1 ctx] ] ->
 			let e = (b,punion p1 p2) in
 			(match b with
 			| EObjectDecl _ -> expr_next ctx e s
