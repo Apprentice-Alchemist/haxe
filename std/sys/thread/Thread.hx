@@ -27,10 +27,10 @@ package sys.thread;
 #end
 
 class Thread {
-
-	static var threads : Array<Thread>;
 	static var mutex : Mutex;
 	static var mainThread : Thread;
+	static var currentThread: Tls<Thread>;
+	static var blockingThreads: Int = 0;
 
 	var impl : ThreadImpl;
 	var messages : Deque<Dynamic>;
@@ -44,7 +44,7 @@ class Thread {
 	/**
 		Tells if we needs to wait for the thread to terminate before we stop the main loop (default:true).
 	**/
-	public var isBlocking : Bool = true;
+	public var isBlocking(default, null) : Bool;
 
 	/**
 		Allows to query or change the name of the thread. On some platforms this might allow debugger to identify threads.
@@ -57,8 +57,10 @@ class Thread {
 	**/
 	public var isNative(default,null) : Bool;
 
-	function new(impl) {
+	function new(impl: ThreadImpl, isNative: Bool, isBlocking: Bool = true) {
 		this.impl = impl;
+		this.isNative = true;
+		this.isBlocking = isBlocking && !isNative;
 		if( impl != null ) this.name = ThreadImpl.getName(impl);
 	}
 
@@ -77,13 +79,6 @@ class Thread {
 		messages.add(msg);
 	}
 
-	public function disposeNative() {
-		if( !isNative ) return;
-		mutex.acquire();
-		threads.remove(this);
-		mutex.release();
-	}
-
 	public static function readMessage( blocking : Bool ) : Null<Dynamic> {
 		var t = current();
 		if( t.messages == null ) {
@@ -97,22 +92,15 @@ class Thread {
 	/**
 		Returns the current thread.
 		If you are calling this function from a native thread that is not the main thread and was not created by `Thread.create`, this will return you
-		a native thread with a `null` EvenLoop and `isNative` set to true. You need to call `disposeNative()` on such value on thread termination.
+		a native thread with a `null` EvenLoop and `isNative` set to true.
 	**/
 	public static function current():Thread {
-		var impl = ThreadImpl.current();
-		if( impl == mainThread.impl )
-			return mainThread;
-		mutex.acquire();
-		for( t in threads )
-			if( t.impl == impl ) {
-				mutex.release();
-				return t;
-			}
-		var t = new Thread(impl);
-		t.isNative = true;
-		threads.push(t);
-		mutex.release();
+		var t = currentThread.value;
+		if (t == null) {
+			var impl = ThreadImpl.current();
+			t = new Thread(impl, true);
+			currentThread.value = t;
+		}
 		return t;
 	}
 
@@ -127,16 +115,18 @@ class Thread {
 		Creates a new thread that will execute the `job` function, then exit after all events are processed.
 		You can specify a custom exception handler `onAbort` or else `Thread.onAbort` will be called.
 	**/
-	public static function create(job:()->Void,?onAbort):Thread {
+	public static function create(job:()->Void,?onAbort, blocking: Bool = true):Thread {
 		mutex.acquire();
-		var t = new Thread(null);
+		var t = new Thread(null, false, blocking);
 		t.events = new haxe.EventLoop();
-		threads.push(t);
+		if (blocking)
+			blockingThreads++;
 		mutex.release();
 		if( onAbort != null )
 			t.onAbort = onAbort;
 		t.impl = ThreadImpl.create(function() {
 			t.impl = ThreadImpl.current();
+			currentThread.value = t;
 			var exception = null;
 			try {
 				job();
@@ -144,10 +134,12 @@ class Thread {
 			} catch( e ) {
 				exception = e;
 			}
-			mutex.acquire();
-			threads.remove(t);
-			mutex.release();
-			@:privateAccess main().events.wakeup();
+			if (blocking) {
+				mutex.acquire();
+				blockingThreads--;
+				mutex.release();
+				@:privateAccess main().events.wakeup();
+			}
 			if( exception != null )
 				t.onAbort(exception);
 		});
@@ -166,21 +158,18 @@ class Thread {
 
 	static function hasBlocking() {
 		// let's check if we have blocking threads running
+		var blocking = false;
 		mutex.acquire();
-		for( t in threads )
-			if( t.isBlocking ) {
-				mutex.release();
-				return true;
-			}
+		blocking = blockingThreads != 0;
 		mutex.release();
-		return false;
+		return blocking;
 	}
 
 	static function __init__() {
 		mutex = new Mutex();
-		threads = [];
-		mainThread = new Thread(ThreadImpl.current());
+		currentThread = new Tls();
+		mainThread = new Thread(ThreadImpl.current(), false);
 		mainThread.events = haxe.EventLoop.main;
+		currentThread.value = mainThread;
 	}
-
 }

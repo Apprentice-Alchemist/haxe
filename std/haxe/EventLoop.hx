@@ -345,7 +345,7 @@ class EventLoop {
 	**/
 	public static function addTask( f : Void -> Void, blocking = true ) {
 		#if target.threaded
-		sys.thread.Thread.create(f).isBlocking = blocking;
+		sys.thread.Thread.create(f, blocking);
 		#else
 		main.add(f).isBlocking = blocking;
 		#end
