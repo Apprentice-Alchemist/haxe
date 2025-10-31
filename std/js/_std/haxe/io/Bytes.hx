@@ -123,7 +123,8 @@ class Bytes {
 	}
 
 	public function getInt64(pos:Int):haxe.Int64 {
-		return Int64.make(getInt32(pos + 4), getInt32(pos));
+		initData();
+		return data.getBigInt64(pos, true);
 	}
 
 	public function setInt64(pos:Int, v:haxe.Int64):Void {

@@ -71,8 +71,7 @@ class BytesBuffer {
 	public function addInt64(v:haxe.Int64):Void {
 		if (pos + 8 > size)
 			grow(8);
-		view.setInt32(pos, v.low, true);
-		view.setInt32(pos + 4, v.high, true);
+		view.setBigInt64(pos, v, true);
 		pos += 8;
 	}
 

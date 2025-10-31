@@ -31,7 +31,7 @@ class FPHelper {
 	// stored in helper
 	#elseif neko
 	static var i64tmp = new sys.thread.Tls<Int64>();
-	#elseif !(java || cpp)
+	#elseif !(java || cpp || js)
 	static var i64tmp = Int64.ofInt(0);
 
 	static inline var LN2 = 0.6931471805599453; // Math.log(2)
@@ -280,13 +280,8 @@ class FPHelper {
 		}
 		return i64;
 		#elseif js
-		var i64 = i64tmp;
 		helper.setFloat64(0, v, true);
-		@:privateAccess {
-			i64.set_low(helper.getInt32(0, true));
-			i64.set_high(helper.getInt32(4, true));
-		}
-		return i64;
+		return helper.getBigInt64(0, true);
 		#else
 		return _doubleToI64(v);
 		#end
