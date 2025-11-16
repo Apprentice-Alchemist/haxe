@@ -60,7 +60,7 @@ extern class Builtins {
 	static function open(file:String, mode:String, ?buffering:Int = -1, ?encoding:String = null, ?errors:String, ?newline:String, ?closefd:Bool,
 		?opener:String->Int->FileDescriptor):IOBase;
 
-	// static function divmod():Void;
+	static function divmod<T>(a: T, b:T):python.Tuple.Tuple2<T, T>;
 	// static function input():Void;
 	// static function staticmethod():Void;
 	// static function enumerate():Void;
@@ -144,7 +144,7 @@ extern class Builtins {
 	static function setattr(o:Dynamic, attr:String, val:Dynamic):Void;
 	// static function buffer():Void;
 	// static function dict():Void;
-	// static function hex():Void;
+	static function hex(val:Dynamic):String;
 	// static function object():Void;
 	// static function slice():Void;
 	// static function coerce():Void;
