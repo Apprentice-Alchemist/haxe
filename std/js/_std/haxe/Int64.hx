@@ -99,7 +99,7 @@ abstract Int64(__Int64) from __Int64 to __Int64 {
 		return Int64Helper.fromFloat(f);
 	}
 
-	private static function clamp(value:BigInt):BigInt {
+	private static inline function clamp(value:BigInt):BigInt {
 		return BigInt.asIntN(64, value);
 	}
 
