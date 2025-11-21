@@ -1,0 +1,242 @@
+package js.lib;
+
+import js.lib.intl.NumberFormat.NumberFormatOptions;
+
+/**
+	The `BigUint64Array` typed array represents an array of twos-complement 64-bit signed integers in
+	the platform byte order. If control over byte order is needed, use `DataView` instead. The
+	contents are initialized to `0n`. Once established, you can reference elements in the array using
+	the object's methods, or using standard array index syntax (that is, using bracket notation).
+
+	Documentation [BigUint64Array](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/BigUint64Array) by [Mozilla Contributors](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/BigUint64Array$history), licensed under [CC-BY-SA 2.5](https://creativecommons.org/licenses/by-sa/2.5/).
+**/
+@:native("BigUint64Array")
+extern class BigUint64Array implements ArrayBufferView implements ArrayAccess<BigInt> {
+	/**
+		Returns a number value of the element size. 8 in the case of an `BigUint64Array`.
+	 */
+	static final BYTES_PER_ELEMENT:Int;
+
+	/**
+		Creates a new `BigUint64Array` from an array-like or iterable object. See also [Array.from()](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/from).
+	 */
+	@:overload(function<U>(source:{}, ?mapFn:(value:U) -> BigInt, ?thisArg:Any):BigUint64Array {})
+	@:pure static function from<U>(source:{}, ?mapFn:(value:U, index:Int) -> BigInt, ?thisArg:Any):BigUint64Array;
+
+	/**
+		Creates a new `BigUint64Array` with a variable number of arguments. See also [Array.of()](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/of).
+	 */
+	@:pure static function of(elements:haxe.extern.Rest<BigInt>):BigUint64Array;
+
+	/**
+		Returns a number value of the element size.
+	 */
+	@:native("BYTES_PER_ELEMENT")
+	final BYTES_PER_ELEMENT_:Int;
+
+	/**
+		Returns the `ArrayBuffer` referenced by the `BigUint64Array` Fixed at construction time and thus read only.
+	 */
+	final buffer:ArrayBuffer;
+
+	/**
+		Returns the length (in bytes) of the `BigUint64Array` from the start of its `ArrayBuffer`. Fixed at construction time and thus read only.
+	 */
+	final byteLength:Int;
+
+	/**
+		Returns the offset (in bytes) of the `BigUint64Array` from the start of its `ArrayBuffer`. Fixed at construction time and thus read only.
+	 */
+	final byteOffset:Int;
+
+	/**
+		Returns the number of elements hold in the `BigUint64Array`. Fixed at construction time and thus read only.
+	 */
+	final length:Int;
+
+	/** @throws DOMError */
+	@:overload(function(length:Int):Void {})
+	@:overload(function(object:{}):Void {})
+	@:pure function new(buffer:ArrayBuffer, ?byteOffset:Int, ?length:Int):Void;
+
+	/**
+		Copies a sequence of array elements within the array.
+		See also [Array.prototype.copyWithin()](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/copyWithin).
+	 */
+	function copyWithin(target:Int, start:Int, ?end:Int):BigUint64Array;
+
+	/**
+		Returns a new Array Iterator object that contains the key/value pairs for each index in the array.
+		See also [Array.prototype.entries()](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/entries).
+	 */
+	@:pure function entries():js.lib.Iterator<KeyValue<Int, BigInt>>;
+
+	/**
+		Tests whether all elements in the array pass the test provided by a function.
+		See also [Array.prototype.every()](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/every).
+	 */
+	@:overload(function(callback:(currentValue:BigInt) -> Bool, ?thisArg:Any):Bool {})
+	@:overload(function(callback:(currentValue:BigInt, index:Int) -> Bool, ?thisArg:Any):Bool {})
+	function every(callback:(currentValue:BigInt, index:Int, array:BigUint64Array) -> Bool, ?thisArg:Any):Bool;
+
+	/**
+		Fills all the elements of an array from a start index to an end index with a static value.
+		See also [Array.prototype.fill()](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/fill).
+	 */
+	function fill(value:BigInt, ?start:Int, ?end:Int):BigUint64Array;
+
+	/**
+		Creates a new array with all of the elements of this array for which the provided filtering function returns true.
+		See also [Array.prototype.filter()](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/filter).
+	 */
+	@:overload(function(callback:(element:BigInt) -> Bool, ?thisArg:Any):BigUint64Array {})
+	@:overload(function(callback:(element:BigInt, index:Int) -> Bool, ?thisArg:Any):BigUint64Array {})
+	function filter(callback:(element:BigInt, index:Int, array:BigUint64Array) -> Bool, ?thisArg:Any):BigUint64Array;
+
+	/**
+		Returns the found value in the array, if an element in the array satisfies the provided testing function or undefined if not found.
+		See also [Array.prototype.find()](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/find).
+	 */
+	@:overload(function(callback:(element:BigInt) -> Bool, ?thisArg:Any):Null<Int> {})
+	@:overload(function(callback:(element:BigInt, index:Int) -> Bool, ?thisArg:Any):Null<Int> {})
+	function find(callback:(element:BigInt, index:Int, array:BigUint64Array) -> Bool, ?thisArg:Any):Null<BigInt>;
+
+	/**
+		Returns the found index in the array, if an element in the array satisfies the provided testing function or -1 if not found.
+		See also [Array.prototype.findIndex()](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/findIndex).
+	 */
+	@:overload(function(callback:(element:Int) -> Bool, ?thisArg:Any):Int {})
+	@:overload(function(callback:(element:Int, index:Int) -> Bool, ?thisArg:Any):Int {})
+	function findIndex(callback:(element:Int, index:Int, array:BigUint64Array) -> Bool, ?thisArg:Any):Int;
+
+	/**
+		Calls a function for each element in the array.
+		See also [Array.prototype.forEach()](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/forEach).
+	 */
+	@:overload(function(callback:(element:BigInt) -> Void, ?thisArg:Any):Void {})
+	@:overload(function(callback:(element:BigInt, index:Int) -> Void, ?thisArg:Any):Void {})
+	function forEach(callback:(element:BigInt, index:Int, array:BigUint64Array) -> Void, ?thisArg:Any):Void;
+
+	/**
+		Determines whether a typed array includes a certain element, returning true or false as appropriate.
+		See also [Array.prototype.includes()](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/includes).
+	 */
+	@:pure function includes(searchElement:BigInt, ?fromIndex:Int):Bool;
+
+	/**
+		Returns the first (least) index of an element within the array equal to the specified value, or -1 if none is found.
+		See also [Array.prototype.indexOf()](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/indexOf).
+	 */
+	@:pure function indexOf(searchElement:BigInt, ?fromIndex:Int):Int;
+
+	/**
+		Joins all elements of an array into a string.
+		See also [Array.prototype.join()](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/join).
+	 */
+	@:pure function join(?separator:String):String;
+
+	/**
+		Returns a new Array Iterator that contains the keys for each index in the array.
+		See also [Array.prototype.keys()](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/keys).
+	 */
+	@:pure function keys():js.lib.Iterator<Int>;
+
+	/**
+		Returns the last (greatest) index of an element within the array equal to the specified value, or -1 if none is found.
+		See also [Array.prototype.lastIndexOf()](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/lastIndexOf).
+	 */
+	@:pure function lastIndexOf(searchElement:Int, ?fromIndex:Int):Int;
+
+	/**
+		Creates a new array with the results of calling a provided function on every element in this array.
+		See also [Array.prototype.map()](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/map).
+	 */
+	@:overload(function(callback:(element:BigInt) -> Int, ?thisArg:Any):BigUint64Array {})
+	@:overload(function(callback:(element:BigInt, index:Int) -> BigInt, ?thisArg:Any):BigUint64Array {})
+	function map(callback:(element:BigInt, index:Int, array:BigUint64Array) -> BigInt, ?thisArg:Any):BigUint64Array;
+
+	/**
+		Apply a function against an accumulator and each value of the array (from left-to-right) as to reduce it to a single value.
+		See also [Array.prototype.reduce()](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/reduce).
+	 */
+	@:overload(function<T>(callback:(previousValue:T, currentValue:BigInt) -> T, initialValue:T):T {})
+	@:overload(function<T>(callback:(previousValue:T, currentValue:BigInt, index:Int) -> T, initialValue:T):T {})
+	@:overload(function(callbackfn:(previousValue:Int, currentValue:BigInt) -> Int):Int {})
+	@:overload(function(callbackfn:(previousValue:Int, currentValue:BigInt, index:Int) -> Int):Int {})
+	@:overload(function(callbackfn:(previousValue:Int, currentValue:BigInt, index:Int, array:BigUint64Array) -> Int):Int {})
+	function reduce<T>(callback:(previousValue:T, currentValue:BigInt, index:Int, array:BigUint64Array) -> T, initialValue:T):T;
+
+	/**
+		Apply a function against an accumulator and each value of the array (from right-to-left) as to reduce it to a single value.
+		See also [Array.prototype.reduceRight()](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/reduceRight).
+	 */
+	@:overload(function<T>(callback:(previousValue:T, currentValue:BigInt) -> T, initialValue:T):T {})
+	@:overload(function<T>(callback:(previousValue:T, currentValue:Int, index:Int) -> T, initialValue:T):T {})
+	@:overload(function(callbackfn:(previousValue:Int, currentValue:BigInt) -> Int):Int {})
+	@:overload(function(callbackfn:(previousValue:Int, currentValue:BigInt, index:Int) -> Int):Int {})
+	@:overload(function(callbackfn:(previousValue:Int, currentValue:BigInt, index:Int, array:BigUint64Array) -> Int):Int {})
+	function reduceRight<T>(callback:(previousValue:T, currentValue:BigInt, index:Int, array:BigUint64Array) -> T, initialValue:T):T;
+
+	/**
+		Reverses the order of the elements of an array — the first becomes the last, and the last becomes the first.
+		See also [Array.prototype.reverse()](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/reverse).
+	 */
+	function reverse():BigUint64Array;
+
+	/**
+		Stores multiple values in the typed array, reading input values from a specified array.
+	 */
+	@:overload(function(array:Int8Array, ?offset:Int):Void {})
+	@:overload(function(array:Uint8Array, ?offset:Int):Void {})
+	@:overload(function(array:Uint8ClampedArray, ?offset:Int):Void {})
+	@:overload(function(array:Int16Array, ?offset:Int):Void {})
+	@:overload(function(array:Uint16Array, ?offset:Int):Void {})
+	@:overload(function(array:Int32Array, ?offset:Int):Void {})
+	@:overload(function(array:Uint32Array, ?offset:Int):Void {})
+	@:overload(function(array:Float32Array, ?offset:Int):Void {})
+	@:overload(function(array:Float64Array, ?offset:Int):Void {})
+	function set(array:Array<Int>, ?offset:Int):Void;
+
+	/**
+		Extracts a section of an array and returns a new array.
+		See also [Array.prototype.slice()](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/slice).
+	 */
+	@:pure function slice(?start:Int, ?end:Int):BigUint64Array;
+
+	/**
+		Returns true if at least one element in this array satisfies the provided testing function.
+		See also [Array.prototype.some()](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/some).
+	 */
+	@:overload(function(callback:(element:BigInt) -> Bool, ?thisArg:Any):Bool {})
+	@:overload(function(callback:(element:BigInt, index:Int) -> Bool, ?thisArg:Any):Bool {})
+	function some(callback:(element:BigInt, index:Int, array:BigUint64Array) -> Bool, ?thisArg:Any):Bool;
+
+	/**
+		Sorts the elements of an array in place and returns the array.
+		See also [Array.prototype.sort()](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/sort).
+	 */
+	function sort(?compareFn:(x:BigInt, y:BigInt) -> Int):BigUint64Array;
+
+	/**
+		Returns a new TypedArray from the given start and end element index.
+	 */
+	@:pure function subarray(?begin:Int, ?end:Int):BigUint64Array;
+
+	/**
+		Returns a new Array Iterator object that contains the values for each index in the array.
+		See also [Array.prototype.values()](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/values).
+	 */
+	@:pure function values():js.lib.Iterator<BigInt>;
+
+	/**
+		Returns a string representing the array and its elements.
+		See also [Array.prototype.toString()](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/toString).
+	 */
+	@:pure function toLocaleString(?locales:String, ?options:NumberFormatOptions):String;
+
+	/**
+		Returns a string representing the array and its elements.
+		See also [Array.prototype.toString()](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/toString).
+	 */
+	@:pure function toString():String;
+}
