@@ -47,6 +47,10 @@ extern class DataView implements ArrayBufferView {
 	function getFloat32(byteOffset:Int, ?littleEndian:Bool):Float;
 	@:pure
 	function getFloat64(byteOffset:Int, ?littleEndian:Bool):Float;
+	@:pure
+	function getBigInt64(byteOffset:Int, ?littleEndian:Bool):BigInt;
+	@:pure
+	function getBigUint64(byteOffset:Int, ?littleEndian:Bool):BigInt;
 	function setInt8(byteOffset:Int, value:Int):Void;
 	function setUint8(byteOffset:Int, value:Int):Void;
 	function setInt16(byteOffset:Int, value:Int, ?littleEndian:Bool):Void;
@@ -55,4 +59,6 @@ extern class DataView implements ArrayBufferView {
 	function setUint32(byteOffset:Int, value:Int, ?littleEndian:Bool):Void;
 	function setFloat32(byteOffset:Int, value:Float, ?littleEndian:Bool):Void;
 	function setFloat64(byteOffset:Int, value:Float, ?littleEndian:Bool):Void;
+	function setBigInt64(byteOffset:Int, value:BigInt, ?littleEndian:Bool):Void;
+	function setBigUint64(byteOffset:Int, value:BigInt, ?littleEndian:Bool):Void;
 }
