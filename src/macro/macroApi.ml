@@ -503,6 +503,7 @@ and encode_platform p =
 		| Hl -> 9, []
 		| Eval -> 10, []
 		| CustomTarget s -> 11, [(encode_string s)]
+		| Llvm -> 12, []
 	in
 	encode_enum IPlatform tag pl
 

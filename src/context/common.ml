@@ -492,6 +492,7 @@ let short_platform_name = function
 	| Python -> "py"
 	| Hl -> "hl"
 	| Eval -> "evl"
+	| Llvm -> "llvm"
 	| CustomTarget n -> "c_" ^ n
 
 open PlatformConfig
@@ -723,6 +724,11 @@ let get_config com =
 				ec_avoid_wrapping = false
 			};
 			pf_supports_atomics = true;
+		}
+	| Llvm ->
+		{
+			default_config with
+			pf_pad_nulls = true;
 		}
 
 let memory_marker = [|Unix.time()|]

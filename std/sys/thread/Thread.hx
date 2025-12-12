@@ -246,7 +246,7 @@ class Thread {
 
 			t.dispose();
 		});
-		if( name != null ) t.name = name;
+		// if( name != null ) t.name = name;
 		return t;
 	}
 

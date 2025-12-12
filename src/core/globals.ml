@@ -50,6 +50,7 @@ type platform =
 	| Python
 	| Hl
 	| Eval
+	| Llvm
 	| CustomTarget of string
 
 type compiler_version = {
@@ -136,6 +137,7 @@ let platform_name = function
 	| Python -> "python"
 	| Hl -> "hl"
 	| Eval -> "eval"
+	| Llvm -> "llvm"
 	| CustomTarget c -> c
 
 let parse_platform = function
