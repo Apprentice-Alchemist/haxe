@@ -181,6 +181,8 @@ let generate com tctx ext actx =
 			Genpy.generate,"python"
 		| Hl ->
 			Genhl.generate,"hl"
+		| Llvm ->
+			Genllvm.generate,"llvm"
 		| Eval ->
 			(fun _ -> MacroContext.interpret tctx [] (* TODO: ? *)),"eval"
 		| Cross

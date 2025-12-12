@@ -63,6 +63,35 @@ abstract BytesDataAbstract(BytesDataImpl) {
 }
 
 typedef BytesData = BytesDataAbstract;
+#elseif llvm
+class BytesDataImpl {
+	public var bytes:llvm.Ptr<llvm.UInt8>;
+	public var length:Int;
+
+	public function new(b, length) {
+		this.bytes = b;
+		this.length = length;
+	}
+}
+
+@:forward(bytes, length)
+abstract BytesDataAbstract(BytesDataImpl) {
+	public inline function new(b, length) {
+		this = new BytesDataImpl(b, length);
+	}
+
+	@:arrayAccess inline function get(i:Int)
+		return cast this.bytes[i];
+
+	@:arrayAccess inline function set(i:Int, v:Int)
+		return this.bytes[i] = cast v;
+
+	@:to inline function toPtr():llvm.Ptr<llvm.UInt8> {
+		return this == null ? null : this.bytes;
+	}
+}
+
+typedef BytesData = BytesDataAbstract;
 #else
 typedef BytesData = Array<Int>;
 #end
