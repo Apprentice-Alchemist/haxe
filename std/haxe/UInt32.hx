@@ -22,7 +22,7 @@
 
 package haxe;
 
-#if ((flash || flash9doc || hl) && !doc_gen)
+#if ((flash || flash9doc || hl || llvm) && !doc_gen)
 /**
 	The unsigned `Int` type is only defined for Flash. It's currently
 	handled the same as a normal Int.
