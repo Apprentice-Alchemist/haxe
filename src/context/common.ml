@@ -386,6 +386,7 @@ let to_gctx com = {
 	std = com.std;
 	timer_ctx = com.timer_ctx;
 	pool = com.sctx.pool;
+	dump_config = com.part_scope.dump_config;
 }
 let enter_stage com stage =
 	(* print_endline (Printf.sprintf "Entering stage %s" (s_compiler_stage stage)); *)
