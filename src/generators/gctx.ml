@@ -35,6 +35,7 @@ type t = {
 	std : tclass; (* TODO: I would prefer to not have this here, have to check default_cast *)
 	timer_ctx : Timer.timer_context;
 	pool : Parallel.ManagedPool.t;
+	dump_config : DumpConfig.t;
 }
 
 let defined com s =
