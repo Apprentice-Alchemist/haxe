@@ -856,6 +856,10 @@ module HxbWriter = struct
 			Chunk.write_u8 writer.chunk 36;
 			write_metadata_entry writer m;
 			write_expr writer e1
+		| EApplyTypeParams (e1, params) ->
+			Chunk.write_u8 writer.chunk 37;
+			write_expr writer e1;
+			Chunk.write_list writer.chunk params (write_type_param_or_const writer)
 
 	(* References *)
 

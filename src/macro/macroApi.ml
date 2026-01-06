@@ -683,6 +683,7 @@ and encode_expr e =
 				27, [encode_meta_entry m;loop e]
 			| EIs (e,t) ->
 				28, [loop e;encode_ctype t]
+			| EApplyTypeParams _ -> die "TODO" __LOC__
 		in
 		encode_obj [
 			"pos", encode_pos p;

@@ -367,6 +367,7 @@ let rec expr_to_value ctx env e =
 		| ETry _ | ESwitch _ | EFunction _ | EFor _ | EDisplay _
 		| ECast(_,Some _) | EIs _ ->
 			raise NoValueExpr
+		| EApplyTypeParams (e, _) -> loop e
 	in
 	loop e
 
