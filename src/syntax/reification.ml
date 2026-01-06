@@ -362,6 +362,8 @@ let reify in_macro =
 			expr "ETernary" [loop e1;loop e2;loop e3]
 		| ECheckType (e1,ct) ->
 			expr "ECheckType" [loop e1; to_type_hint ct p]
+		| EApplyTypeParams (e1, params) ->
+			expr "EApplyTypeParams" [loop e1; to_array to_tparam params p]
 		| EMeta ((m,ml,p),e1) ->
 			match m, ml with
 			| Meta.Dollar ("" | "e"), _ ->
