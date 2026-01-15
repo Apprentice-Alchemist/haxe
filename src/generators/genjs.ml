@@ -257,7 +257,7 @@ let is_dynamic_iterator ctx e =
 		false
 
 let gen_constant ctx p = function
-	| TInt i -> print ctx "%ld" i
+	| TInt i -> print ctx "%ld" (Z.to_int32 i)
 	| TFloat s -> spr ctx s
 	| TString s -> print ctx "\"%s\"" (StringHelper.s_escape s)
 	| TBool b -> spr ctx (if b then "true" else "false")
@@ -387,7 +387,7 @@ let rec gen_call ctx e el in_value =
 			| TObjectDecl (
 				(("fileName",_,_) , { eexpr = (TConst (TString file)) }) ::
 				(("lineNumber",_,_) , { eexpr = (TConst (TInt line)) }) :: _) ->
-					print ctx "\"%s:%i:\"," file (Int32.to_int line)
+					print ctx "\"%s:%i:\"," file (Z.to_int line)
 			| _ ->
 				());
 			gen_value ctx e;

@@ -33,11 +33,11 @@ let rope_path t = match follow t with
 	| TDynamic _ -> "Dynamic"
 	| TFun _ | TAnon _ | TMono _ | TType _ | TLazy _ -> die "" __LOC__
 
-let eone = mk (TConst(TInt (Int32.one))) t_dynamic null_pos
+let eone = mk (TConst(TInt (Z.one))) t_dynamic null_pos
 
 let eval_const = function
 	| TString s -> EvalString.create_unknown s
-	| TInt i32 -> vint32 i32
+	| TInt i32 -> vint32 (Z.to_int32 i32)
 	| TFloat f -> vfloat (float_of_string f)
 	| TBool b -> vbool b
 	| TNull -> vnull
@@ -257,8 +257,8 @@ and jit_expr jit return e =
 			push_scope jit e.epos;
 			let exec = jit_expr jit return e in
 			List.iter (fun e -> match e.eexpr with
-				| TConst (TInt i32) ->
-					let i = Int32.to_int i32 in
+				| TConst (TInt i) ->
+					let i = Z.to_int i in
 					h := IntMap.add i exec !h;
 					if i > !max then max := i;
 					if i < !min then min := i;
@@ -503,8 +503,8 @@ and jit_expr jit return e =
 		emit_new_array
 	| TNew({cl_path=["eval"],"Vector"},_,[e1]) ->
 		begin match e1.eexpr with
-			| TConst (TInt i32) ->
-				emit_new_vector_int (Int32.to_int i32) e1.epos
+			| TConst (TInt i) ->
+				emit_new_vector_int (Z.to_int i) e1.epos
 			| _ ->
 				let exec1 = jit_expr jit false e1 in
 				emit_new_vector exec1 e1.epos

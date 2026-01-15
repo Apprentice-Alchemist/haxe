@@ -702,7 +702,7 @@ let is_constant expr =
 let is_constant_zero expr =
 	try
 		match expr.eexpr with
-			| TConst (TInt i) when i = Int32.zero -> true
+			| TConst (TInt i) when Z.equal i Z.zero -> true
 			| TConst (TFloat s) when float_of_string s = 0.0 -> true
 			| _ -> false
 	with _ ->
@@ -975,7 +975,7 @@ class class_wrapper (cls) =
 								(* Skip `inline var` fields *)
 								not (is_inline_var field)
 								&& match field.cf_kind, field.cf_expr with
-									| Var _, Some { eexpr = TConst (TInt value) } -> value = Int32.min_int
+									| Var _, Some { eexpr = TConst (TInt value) } -> Z.to_int32 value = Int32.min_int
 									| Var _, Some { eexpr = TConst _ } -> false
 									| Var _, Some _ -> true
 									| Method MethDynamic, _ -> true
@@ -1721,10 +1721,10 @@ class code_writer (ctx:php_generator_context) hx_type_path php_name =
 				| TSuper -> self#write "parent"
 				| TInt value ->
 					(* See https://github.com/HaxeFoundation/haxe/issues/5289 *)
-					if value = Int32.min_int then
+					if Z.to_int32 value = Int32.min_int then
 						self#write "((int)-2147483648)"
 					else
-						self#write (Int32.to_string value)
+						self#write (Z.to_string value)
 		(**
 			Writes TArrayDecl to output buffer
 		*)
@@ -3751,7 +3751,7 @@ class class_builder ctx (cls:tclass) =
 					writer#write ";\n"
 				end
 				else match field.cf_expr with
-					| Some ({ eexpr = TConst (TInt value) } as expr) when value = Int32.min_int ->
+					| Some ({ eexpr = TConst (TInt value) } as expr) when Z.to_int32 value = Int32.min_int ->
 						write_assign expr;
 						writer#write ";\n"
 					| _ -> ()
@@ -3785,7 +3785,7 @@ class class_builder ctx (cls:tclass) =
 			match field.cf_expr with
 				| None ->
 					writer#write ";\n"
-				| Some { eexpr = TConst (TInt value) } when value = Int32.min_int ->
+				| Some { eexpr = TConst (TInt value) } when Z.to_int32 value = Int32.min_int ->
 					writer#write ";\n"
 				| Some expr ->
 					match expr.eexpr with

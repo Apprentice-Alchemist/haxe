@@ -948,7 +948,7 @@ let type_macro ctx mode cpath f (el:Ast.expr list) p =
 		List.map2 (fun ((n,_,t),mct) e ->
 			let e, et = (match e.eexpr with
 				(* get back our index and real expression *)
-				| TArray ({ eexpr = TArrayDecl [e] }, { eexpr = TConst (TInt index) }) -> List.nth el (Int32.to_int index), e
+				| TArray ({ eexpr = TArrayDecl [e] }, { eexpr = TConst (TInt index) }) -> List.nth el (Z.to_int index), e
 				(* added by unify_call_args *)
 				| TConst TNull -> (EConst (Ident "null"),e.epos), e
 				| _ -> die "" __LOC__

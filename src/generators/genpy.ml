@@ -223,7 +223,7 @@ module Transformer = struct
 		| Decrement -> OpSub
 		| _ -> die "" __LOC__
 		in
-		let one = mk (TConst(TInt(Int32.of_int(1)))) t p in
+		let one = mk (TConst(TInt(Z.one))) t p in
 
 		let temp_var = to_tvar (next_id()) e1.etype e1.epos in
 		let temp_var_def = mk (TVar(temp_var,Some e1)) e1.etype e1.epos in
@@ -462,7 +462,7 @@ module Transformer = struct
 				mk (TIf(mk_parent eif,e,eo)) e.etype e.epos
 			in
 			let cases = Hashtbl.fold (fun i el acc ->
-				let eint = mk (TConst (TInt (Int32.of_int i))) !t_int e1.epos in
+				let eint = mk (TConst (TInt (Z.of_int i))) !t_int e1.epos in
 				let fs = match List.fold_left (fun eacc ec -> Some (mk_if ec eacc)) edef !el with Some e -> e | None -> die "" __LOC__ in
 				({case_patterns = [eint];case_expr = fs}) :: acc
 			) length_map [] in
@@ -675,7 +675,7 @@ module Transformer = struct
 			transform_var_expr ae None v
 
  		| (false, TVar(v,Some({ eexpr = TUnop((Increment | Decrement as unop),post_fix,({eexpr = TLocal _ | TField({eexpr = TConst TThis},_)} as ve))} as e1))) ->
-			let one = {e1 with eexpr = TConst (TInt (Int32.of_int 1))} in
+			let one = {e1 with eexpr = TConst (TInt (Z.one))} in
 			let op = if unop = Increment then OpAdd else OpSub in
 			let inc = {e1 with eexpr = TBinop(op,ve,one)} in
 			let inc_assign = {e1 with eexpr = TBinop(OpAssign,ve,inc)} in
@@ -831,7 +831,7 @@ module Transformer = struct
 			anon field access with non optional members like iterator, length, split must be handled too, we need to Reflect on them too when it's a runtime method
 		*)
 		| (is_value, TUnop( (Increment | Decrement) as unop, op, e)) ->
-			let one = { ae.a_expr with eexpr = TConst(TInt(Int32.of_int(1)))} in
+			let one = { ae.a_expr with eexpr = TConst(TInt Z.one)} in
 			let is_postfix = match op with
 			| Postfix -> true
 			| Prefix -> false in
@@ -1070,7 +1070,7 @@ module Printer = struct
 		| TBool(true) -> "True"
 		| TBool(false) -> "False"
 		| TString(s) -> print_string s
-		| TInt(i) -> Int32.to_string i
+		| TInt(i) -> Z.to_string i
 		| TFloat s -> s
 		| TSuper -> "super"
 
@@ -1158,7 +1158,7 @@ module Printer = struct
 		let handle_index =
 			match e2.eexpr with
 			| TConst TInt index ->
-				if Int32.to_int index >= 0 then
+				if Z.Compare.(index >= Z.zero) then
 					Printf.sprintf "(%s[%s] if %s < len(%s) else None)" s1 s2 s2 s1
 				else
 					"None"
@@ -1252,8 +1252,7 @@ module Printer = struct
 				let is_const_byte x =
 					match x.eexpr with
 					| TConst TInt x ->
-						let x = Int32.to_int x in
-						x >= 0 && x <= 256
+						Z.Compare.(x >= Z.zero && x <= Z.of_int 256)
 					| _ -> false
 				in
 				(match follow e1.etype, follow e2.etype with
@@ -1280,7 +1279,7 @@ module Printer = struct
 				| _,_ -> Printf.sprintf "(%s %s %s)" (print_expr pctx e1) (snd ops) (print_expr pctx e2))
 			| TBinop(OpMod,e1,e2) when (is_type1 "" "Int")(e1.etype) && (is_type1 "" "Int")(e2.etype) ->
 				(match e1.eexpr, e2.eexpr with
-				| TConst(TInt(x1)), TConst(TInt(x2)) when (Int32.to_int x1) >= 0 && (Int32.to_int x2) >= 0 ->
+				| TConst(TInt(x1)), TConst(TInt(x2)) when Z.Compare.(x1 >= Z.zero && x2 >= Z.zero) ->
 					(* constant optimization *)
 					Printf.sprintf "%s %% %s" (print_expr pctx e1) (print_expr pctx e2)
 				| _ ->

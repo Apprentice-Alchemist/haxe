@@ -97,7 +97,7 @@ let sanitize_expr scom e =
 			| TCast (e,None) | TMeta (_,e) -> loop e left
 			| TConst (TInt i) when not left ->
 				(match op with
-					| OpAdd | OpSub -> (Int32.to_int i) < 0
+					| OpAdd | OpSub -> Z.Compare.(i < Z.zero)
 					| _ -> false
 				)
 			| TConst (TFloat flt) when not left ->
@@ -116,7 +116,7 @@ let sanitize_expr scom e =
 	| TUnop (op,mode,e1) ->
 		let rec loop ee =
 			match ee.eexpr with
-			| TConst (TInt i) when op = Neg && (Int32.to_int i) < 0 -> parent e1
+			| TConst (TInt i) when op = Neg && Z.Compare.(i < Z.zero) -> parent e1
 			| TConst (TFloat flt) when op = Neg && String.get flt 0 = '-' -> parent e1
 			| TBinop _ | TIf _ | TUnop _ -> parent e1
 			| TCast (e,None) | TMeta (_, e) -> loop e

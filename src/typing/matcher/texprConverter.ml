@@ -20,7 +20,7 @@ let constructor_to_texpr ctx con =
 	let open Constructor in
 	let p = pos con in
 	match fst con with
-	| ConEnum(en,ef) -> mk (TConst (TInt (Int32.of_int ef.ef_index))) ctx.t.tint p
+	| ConEnum(en,ef) -> mk (TConst (TInt (Z.of_int ef.ef_index))) ctx.t.tint p
 	| ConConst ct -> make_const_texpr ctx.com.basic ct p
 	| ConArray i -> make_int ctx.com.basic i p
 	| ConTypeExpr mt -> TyperBase.type_module_type ctx mt p

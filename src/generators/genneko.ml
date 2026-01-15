@@ -166,6 +166,7 @@ let gen_constant ctx pe c =
 	let p = pos ctx pe in
 	match c with
 	| TInt i ->
+		let i = Z.to_int32 i in
 		(try
 			let h = Int32.to_int (Int32.shift_right_logical i 24) in
 			if (h land 128 = 0) <> (h land 64 = 0) then raise Exit;
@@ -314,7 +315,7 @@ and gen_expr ctx e =
 	| TIf (cond,e1,e2) ->
 		(* if(e)-1 is parsed as if( e - 1 ) *)
 		let parent e = mk (TParenthesis e) e.etype e.epos in
-		let e1 = (match e1.eexpr with TConst (TInt n) when n < 0l -> parent e1 | TConst (TFloat f) when f.[0] = '-' -> parent e1 | _ -> e1) in
+		let e1 = (match e1.eexpr with TConst (TInt n) when Z.Compare.(n < Z.zero) -> parent e1 | TConst (TFloat f) when f.[0] = '-' -> parent e1 | _ -> e1) in
 		(EIf (gen_expr ctx cond,gen_expr ctx e1,(match e2 with None -> None | Some e -> Some (gen_expr ctx e))),p)
 	| TWhile (econd,e,flag) ->
 		(EWhile (gen_expr ctx econd, gen_expr ctx e, match flag with Ast.NormalWhile -> NormalWhile | Ast.DoWhile -> DoWhile),p)
@@ -405,7 +406,7 @@ let gen_method ctx p c acc =
 		match e.eexpr with
 		| TCall ({ eexpr = TField (_,FStatic ({cl_path=["neko"],"Lib"},{cf_name="load" | "loadLazy" as load})) },[{ eexpr = TConst (TString m) };{ eexpr = TConst (TString f) };{ eexpr = TConst (TInt n) }]) ->
 			let p = pos ctx e.epos in
-			let e = call p (EField (builtin p "loader","loadprim"),p) [(EBinop ("+",(EBinop ("+",str p m,str p "@"),p),str p f),p); (EConst (Int (Int32.to_int n)),p)] in
+			let e = call p (EField (builtin p "loader","loadprim"),p) [(EBinop ("+",(EBinop ("+",str p m,str p "@"),p),str p f),p); (EConst (Int (Z.to_int n)),p)] in
 			let e = (if load = "load" then e else (ETry (e,"@e",call p (ident p "@lazy_error") [ident p "@e"]),p)) in
 			(c.cf_name, e) :: acc
 		| TFunction _ -> ((if c.cf_name = "new" then "__construct__" else c.cf_name), gen_expr ctx e) :: acc

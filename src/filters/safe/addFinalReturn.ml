@@ -5,7 +5,7 @@ let rec add_final_return e =
 	let rec loop e t =
 		let def_return p =
 			let c = (match follow t with
-				| TAbstract ({ a_path = [],"Int" },_) -> TInt 0l
+				| TAbstract ({ a_path = [],"Int" },_) -> TInt Z.zero
 				| TAbstract ({ a_path = [],"Float" },_) -> TFloat "0."
 				| TAbstract ({ a_path = [],"Bool" },_) -> TBool false
 				| _ -> TNull

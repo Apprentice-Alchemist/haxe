@@ -173,7 +173,7 @@ let rec func ctx bb tf t p =
 		| TFunction tf ->
 			let bb_func,bb_func_end = func ctx bb tf e.etype e.epos in
 			let e_fun = mk (TConst (TString "fun")) t_dynamic p in
-			let econst = mk (TConst (TInt (Int32.of_int bb_func.bb_id))) ctx.com.basic.tint e.epos in
+			let econst = mk (TConst (TInt (Z.of_int bb_func.bb_id))) ctx.com.basic.tint e.epos in
 			let ec = mk (TCall(e_fun,[econst])) t_dynamic p in
 			let bb_next = create_node BKNormal bb.bb_type bb.bb_pos in
 			add_cfg_edge bb bb_next CFGGoto;
@@ -775,7 +775,7 @@ and func ctx i =
 			begin match e1.eexpr,e2.eexpr with
 				| TLocal v1,TLocal v2 when v1 == v2 && not (has_var_flag v1 VCaptured) && is_valid_assign_op op ->
 					begin match op,e3.eexpr with
-						| (OpAdd|OpSub) as op,TConst (TInt i32) when Int32.to_int i32 = 1 && ExtType.is_numeric (Abstract.follow_with_abstracts v1.v_type) ->
+						| (OpAdd|OpSub) as op,TConst (TInt i32) when Z.to_int i32 = 1 && ExtType.is_numeric (Abstract.follow_with_abstracts v1.v_type) ->
 							let op = match op with
 								| OpAdd -> Increment
 								| OpSub -> Decrement
@@ -788,7 +788,7 @@ and func ctx i =
 					{e with eexpr = TBinop(OpAssign,e1,{e4 with eexpr = TBinop(op,e2,e3)})}
 			end
 		| TCall({eexpr = TConst (TString "fun")},[{eexpr = TConst (TInt i32)}]) ->
-			func ctx (Int32.to_int i32)
+			func ctx (Z.to_int i32)
 		| TCall({eexpr = TIdent s},_) when is_really_unbound s ->
 			e
 		| _ ->

@@ -231,7 +231,7 @@ module TexprFilter = struct
 			let e = {e with eexpr = TBinop(op,e1,e2)} in
 			loop {e with eexpr = TBinop(OpAssign,e1,e)}
 		| TUnop((Increment | Decrement as op),flag,({eexpr = TLocal _} as e1)) ->
-			let e_one = mk (TConst (TInt (Int32.of_int 1))) com.basic.tint e1.epos in
+			let e_one = mk (TConst (TInt (Z.of_int 1))) com.basic.tint e1.epos in
 			let e = {e with eexpr = TBinop(OpAssignOp (if op = Increment then OpAdd else OpSub),e1,e_one)} in
 			let e = if flag = Prefix then
 				e
@@ -950,7 +950,7 @@ module Fusion = struct
 							false
 					in
 					begin match e2.eexpr with
-						| TBinop(op2,{eexpr = TLocal v2},{eexpr = TConst (TInt i32)}) when v == v2 && Int32.to_int i32 = 1 && ops_match op op2 ->
+						| TBinop(op2,{eexpr = TLocal v2},{eexpr = TConst (TInt i32)}) when v == v2 && Z.equal i32 Z.one && ops_match op op2 ->
 							state#changed;
 							state#dec_reads v2;
 							let e = (f {e1 with eexpr = TUnop(op,Postfix,ev)}) in

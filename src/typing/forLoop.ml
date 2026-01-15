@@ -277,10 +277,10 @@ module IterationKind = struct
 		| TNew ({ cl_path = ([],"IntIterator") },[],[efrom;eto]),_ ->
 			let it = match efrom.eexpr,eto.eexpr with
 				| TConst (TInt a),TConst (TInt b) ->
-					let diff = Int32.to_int (Int32.sub a b) in
+					let diff = Z.to_int (Z.sub a b) in
 					begin match map_unroll_params ctx unroll_params (abs diff) with
 					| Some unroll_params ->
-						IteratorIntUnroll(Int32.to_int a,abs(diff),diff <= 0)
+						IteratorIntUnroll(Z.to_int a,abs(diff),diff <= 0)
 					| None ->
 						IteratorIntConst(efrom,eto,diff <= 0)
 					end
@@ -363,7 +363,7 @@ module IterationKind = struct
 				| TBlock el -> mk (TBlock (aget :: incr :: el)) t_void e2.epos
 				| _ -> mk (TBlock [aget;incr;e2]) t_void p
 			in
-			let ivar = Some (mk (TConst (TInt 0l)) t_int p) in
+			let ivar = Some (mk (TConst (TInt Z.zero)) t_int p) in
 			let elength = f_length arr p in
 			let el = [mk (TWhile (
 					mk (TBinop (OpLt, iexpr, elength)) ctx.t.tbool p,

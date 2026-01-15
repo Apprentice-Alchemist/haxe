@@ -42,7 +42,7 @@ object(self)
 		mk (TField(e,FInstance(c,params,cf))) t e.epos
 
 	method int (i : int) (p : pos) =
-		mk (TConst (TInt (Int32.of_int i))) basic.tint p
+		mk (TConst (TInt (Z.of_int i))) basic.tint p
 
 	method meta0 (m : Meta.strict_meta) (e : texpr) =
 		mk (TMeta((m,[],e.epos),e)) e.etype e.epos

@@ -1363,7 +1363,7 @@ and decode_type_decl t =
 
 and encode_tconst c =
 	let tag, pl = match c with
-		| TInt i -> 0,[vint32 i]
+		| TInt i -> 0,[vint32 (Z.to_int32 i)]
 		| TFloat f -> 1,[encode_string f]
 		| TString s -> 2,[encode_string s]
 		| TBool b -> 3,[vbool b]
@@ -1499,7 +1499,7 @@ and encode_texpr_list el =
 
 let decode_tconst c =
 	match decode_enum c with
-	| 0, [s] -> TInt (decode_i32 s)
+	| 0, [s] -> TInt (Z.of_int32 (decode_i32 s))
 	| 1, [s] -> TFloat (decode_string s)
 	| 2, [s] -> TString (decode_string s)
 	| 3, [s] -> TBool (decode_bool s)
@@ -1818,7 +1818,7 @@ let rec make_const e =
 	match e.eexpr with
 	| TConst c ->
 		(match c with
-		| TInt i -> vint32 i
+		| TInt i -> vint32 (Z.to_int32 i)
 		| TFloat s -> vfloat (float_of_string s)
 		| TString s -> encode_string s
 		| TBool b -> vbool b
