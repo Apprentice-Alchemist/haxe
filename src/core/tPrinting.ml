@@ -211,7 +211,7 @@ let s_expr_kind e =
 	| TIdent _ -> "Ident"
 
 let s_const = function
-	| TInt i -> Int32.to_string i
+	| TInt i -> Z.to_string i
 	| TFloat s -> s
 	| TString s -> Printf.sprintf "\"%s\"" (StringHelper.s_escape s)
 	| TBool b -> if b then "true" else "false"

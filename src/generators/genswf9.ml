@@ -686,11 +686,11 @@ let gen_constant ctx c t p =
 	match c with
 	| TInt i ->
 		let unsigned = classify ctx t = KUInt in
-		if Int32.compare i (-128l) > 0 && Int32.compare i 128l < 0 then begin
-			write ctx (HSmallInt (Int32.to_int i));
+		if Z.compare i (Z.neg (Z.of_int 128)) > 0 && Z.compare i (Z.of_int 128) < 0 then begin
+			write ctx (HSmallInt (Z.to_int i));
 			if unsigned then write ctx HToUInt;
 		end else
-			write ctx (if unsigned then HUIntRef i else HIntRef i)
+			write ctx (if unsigned then HUIntRef (Z.to_int32_unsigned i) else HIntRef (Z.to_int32 i))
 	| TFloat f ->
 		let f = float_of_string f in
 		write ctx (HFloat f);
@@ -763,7 +763,7 @@ let begin_fun ctx args tret el stat p =
 		| _, None -> HVNone
 		| (KInt | KFloat | KUInt | KBool) as kind, Some c ->
 			(match c.eexpr with
-			| TConst (TInt i) -> if kind = KUInt then HVUInt i else HVInt i
+			| TConst (TInt i) -> if kind = KUInt then HVUInt (Z.to_int32_unsigned i) else HVInt (Z.to_int32 i)
 			| TConst (TFloat s) -> HVFloat (float_of_string s)
 			| TConst (TBool b) -> HVBool b
 			| TConst TNull -> abort ("In Flash9, null can't be used as basic type " ^ s_type (print_context()) t) p
@@ -1286,7 +1286,7 @@ let rec gen_expr_content ctx retval e =
 			if t0 <> KInt && t0 <> KUInt then raise Exit;
 			let rec get_int e =
 				match e.eexpr with
-				| TConst (TInt n) -> if n < 0l || n > 512l then raise Exit; Int32.to_int n
+				| TConst (TInt n) -> if Z.Compare.(n < Z.zero || n > Z.of_int 512) then raise Exit; Z.to_int n
 				| TParenthesis e | TBlock [e] | TMeta (_,e) -> get_int e
 				| _ -> raise Not_found
 			in
@@ -1524,30 +1524,30 @@ and gen_call ctx retval e el r =
 	| TIdent "__vmem_set__", [{ eexpr = TConst (TInt code) };e1;e2] ->
 		gen_expr ctx true e2;
 		gen_expr ctx true e1;
-		write ctx (HOp (match code with
-			| 0l -> A3OMemSet8
-			| 1l -> A3OMemSet16
-			| 2l -> A3OMemSet32
-			| 3l -> A3OMemSetFloat
-			| 4l -> A3OMemSetDouble
+		write ctx (HOp (match (Z.to_int code) with
+			| 0 -> A3OMemSet8
+			| 1 -> A3OMemSet16
+			| 2 -> A3OMemSet32
+			| 3 -> A3OMemSetFloat
+			| 4 -> A3OMemSetDouble
 			| _ -> die "" __LOC__
 		))
 	| TIdent "__vmem_get__", [{ eexpr = TConst (TInt code) };e] ->
 		gen_expr ctx true e;
-		write ctx (HOp (match code with
-			| 0l -> A3OMemGet8
-			| 1l -> A3OMemGet16
-			| 2l -> A3OMemGet32
-			| 3l -> A3OMemGetFloat
-			| 4l -> A3OMemGetDouble
+		write ctx (HOp (match (Z.to_int code) with
+			| 0 -> A3OMemGet8
+			| 1 -> A3OMemGet16
+			| 2 -> A3OMemGet32
+			| 3 -> A3OMemGetFloat
+			| 4 -> A3OMemGetDouble
 			| _ -> die "" __LOC__
 		))
 	| TIdent "__vmem_sign__", [{ eexpr = TConst (TInt code) };e] ->
 		gen_expr ctx true e;
-		write ctx (HOp (match code with
-			| 0l -> A3OSign1
-			| 1l -> A3OSign8
-			| 2l -> A3OSign16
+		write ctx (HOp (match (Z.to_int code) with
+			| 0 -> A3OSign1
+			| 1 -> A3OSign8
+			| 2 -> A3OSign16
 			| _ -> die "" __LOC__
 		))
 	| TIdent "__vector__", [] ->
@@ -1698,7 +1698,7 @@ and gen_unop ctx retval op flag e =
 
 and check_binop ctx e1 e2 =
 	let invalid = (match classify ctx e1.etype, classify ctx e2.etype with
-	| KInt, KUInt | KUInt, KInt -> (match e1.eexpr, e2.eexpr with TConst (TInt i) , _ | _ , TConst (TInt i) -> i < 0l | _ -> true)
+	| KInt, KUInt | KUInt, KInt -> (match e1.eexpr, e2.eexpr with TConst (TInt i) , _ | _ , TConst (TInt i) -> Z.Compare.(i < Z.zero) | _ -> true)
 	| _ -> false) in
 	if invalid then abort "Comparison of Int and UInt might lead to unexpected results" (punion e1.epos e2.epos);
 
@@ -1895,7 +1895,7 @@ let generate_construct ctx fdata c =
 	let cargs = if not ctx.need_ctor_skip then fdata.tf_args else List.map (fun (v,c) ->
 		let c = (match c with Some _ -> c | None ->
 			Some (match classify ctx v.v_type with
-			| KInt | KUInt -> mk (TConst (TInt 0l)) ctx.com.basic.tint v.v_pos
+			| KInt | KUInt -> mk (TConst (TInt Z.zero)) ctx.com.basic.tint v.v_pos
 			| KFloat -> mk (TConst (TFloat "0")) ctx.com.basic.tfloat v.v_pos
 			| KBool -> mk (TConst (TBool false)) ctx.com.basic.tbool v.v_pos
 			| KType _ | KDynamic | KNone -> mk (TConst TNull) t_dynamic v.v_pos)
@@ -2829,7 +2829,7 @@ let generate com boot_name =
 					in
 					mk (TField (rest,faccess)) basic.tint rest.epos
 				in
-				let const n = mk (TConst (TInt (Int32.of_int n))) basic.tint rest.epos in
+				let const n = mk (TConst (TInt (Z.of_int n))) basic.tint rest.epos in
 				let check n =
 					mk (TBinop (OpEq, length, const n)) basic.tbool rest.epos
 				in

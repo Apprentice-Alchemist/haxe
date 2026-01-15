@@ -159,14 +159,14 @@ let load_local_wrapper ctx =
 			method mk_ref v ve p =
 				match ve with
 				| None ->
-					let eone = mk (TConst (TInt (Int32.of_int 1))) t.tint p in
+					let eone = mk (TConst (TInt (Z.one))) t.tint p in
 					let t = match v.v_type with TInst (_, [t]) -> t | _ -> die "" __LOC__ in
 					mk (TNew (cnativearray,[t],[eone])) v.v_type p
 				| Some e ->
 					{ (Inline.mk_untyped_call "__array__" p [e]) with etype = v.v_type }
 
 			method mk_ref_access e v =
-				mk (TArray ({ e with etype = v.v_type }, mk (TConst (TInt 0l)) t.tint e.epos)) e.etype e.epos
+				mk (TArray ({ e with etype = v.v_type }, mk (TConst (TInt Z.zero)) t.tint e.epos)) e.etype e.epos
 
 			method mk_init av v pos =
 				let elocal = mk (TLocal v) v.v_type pos in
@@ -180,7 +180,7 @@ let load_local_wrapper ctx =
 			method mk_ref v ve p =
 				mk (TArrayDecl (match ve with None -> [] | Some e -> [e])) v.v_type p
 			method mk_ref_access e v =
-				mk (TArray ({ e with etype = v.v_type }, mk (TConst (TInt 0l)) t.tint e.epos)) e.etype e.epos
+				mk (TArray ({ e with etype = v.v_type }, mk (TConst (TInt Z.zero)) t.tint e.epos)) e.etype e.epos
 			method mk_init av v pos =
 				mk (TVar (av,Some (mk (TArrayDecl [mk (TLocal v) v.v_type pos]) av.v_type pos))) t.tvoid pos
 		end

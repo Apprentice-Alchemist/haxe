@@ -38,4 +38,5 @@ depends: [
   "saturn"
   "thread-local-storage"
   "dynamic_gc"
+  "zarith"
 ]

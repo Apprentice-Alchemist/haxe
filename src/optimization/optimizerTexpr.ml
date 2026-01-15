@@ -86,12 +86,12 @@ let optimize_binop scom e op e1 e2 =
 		if (match classify_float f with FP_nan | FP_infinite -> false | _ -> float_of_string fstr = f) then { e with eexpr = TConst (TFloat fstr) } else e
 	in
 	(match e1.eexpr, e2.eexpr with
-	| TConst (TInt 0l) , _ when op = OpAdd && is_numeric e2.etype -> e2
-	| TConst (TInt 1l) , _ when op = OpMult -> e2
+	| TConst (TInt i) , _ when i = Z.zero && op = OpAdd && is_numeric e2.etype -> e2
+	| TConst (TInt i) , _ when i = Z.one && op = OpMult -> e2
 	| TConst (TFloat v) , _ when op = OpAdd && float_of_string v = 0. && is_float e2.etype -> e2
 	| TConst (TFloat v) , _ when op = OpMult && float_of_string v = 1. && is_float e2.etype -> e2
-	| _ , TConst (TInt 0l) when (match op with OpAdd -> is_numeric e1.etype | OpSub | OpShr | OpShl -> true | _ -> false) -> e1 (* bits operations might cause overflow *)
-	| _ , TConst (TInt 1l) when op = OpMult -> e1
+	| _ , TConst (TInt i) when i = Z.zero && (match op with OpAdd -> is_numeric e1.etype | OpSub | OpShr | OpShl -> true | _ -> false) -> e1 (* bits operations might cause overflow *)
+	| _ , TConst (TInt i) when i = Z.one && op = OpMult -> e1
 	| _ , TConst (TFloat v) when (match op with OpAdd | OpSub -> float_of_string v = 0. && is_float e1.etype | _ -> false) -> e1 (* bits operations might cause overflow *)
 	| _ , TConst (TFloat v) when op = OpMult && float_of_string v = 1. && is_float e1.etype -> e1
 	| TConst TNull, TConst TNull ->
@@ -110,45 +110,54 @@ let optimize_binop scom e op e1 e2 =
 		| OpNotEq -> { e with eexpr = TConst (TBool true) }
 		| _ -> e)
 	| TConst (TInt a), TConst (TInt b) ->
-		let opt f = try { e with eexpr = TConst (TInt (f a b)) } with Exit -> e in
+		let min_i32 = Z.of_int32 (Int32.min_int) in
+		let max_i32 = Z.of_int32 (Int32.max_int) in
+		let bit_width = Z.of_int 32 in
+		let u32_max = Z.((~$2 ** 32) - Z.one) in
+		let clamp i =
+			Z.(Z.Compare.(if i > max_i32 then i - u32_max - ~$1 else if i < min_i32 then i + u32_max + ~$1 else i))
+		in
+		let opt f = try { e with eexpr = TConst (TInt (f a b |> clamp)) } with Exit -> e in
 		let check_overflow f =
 			opt (fun a b ->
-				let v = f (Int64.of_int32 a) (Int64.of_int32 b) in
-				let iv = Int64.to_int32 v in
-				if Int64.compare (Int64.of_int32 iv) v <> 0 then raise Exit;
-				iv
+				let v = f a b in
+				if Z.Compare.(v > max_i32 || v < min_i32) then raise Exit;
+				v
 			)
 		in
 		let ebool t =
-			{ e with eexpr = TConst (TBool (t (Int32.compare a b) 0)) }
+			{ e with eexpr = TConst (TBool (t a b)) }
 		in
 		(match op with
-		| OpAdd -> check_overflow Int64.add
-		| OpSub -> check_overflow Int64.sub
-		| OpMult -> check_overflow Int64.mul
-		| OpDiv -> check_float ( /. ) (Int32.to_float a) (Int32.to_float b)
-		| OpAnd -> opt Int32.logand
-		| OpOr -> opt Int32.logor
-		| OpXor -> opt Int32.logxor
-		| OpShl when is_numeric e.etype -> opt (fun a b -> Int32.shift_left a (Int32.to_int (Int32.logand b i32_31)))
-		| OpShr when is_numeric e.etype -> opt (fun a b -> Int32.shift_right a (Int32.to_int (Int32.logand b i32_31)))
-		| OpUShr when is_numeric e.etype -> opt (fun a b -> Int32.shift_right_logical a (Int32.to_int (Int32.logand b i32_31)))
-		| OpEq -> ebool (=)
-		| OpNotEq -> ebool (<>)
-		| OpGt -> ebool (>)
-		| OpGte -> ebool (>=)
-		| OpLt -> ebool (<)
-		| OpLte -> ebool (<=)
+		| OpAdd -> check_overflow Z.add
+		| OpSub -> check_overflow Z.sub
+		| OpMult -> check_overflow Z.mul
+		| OpDiv -> check_float ( /. ) (Z.to_float a) (Z.to_float b)
+		| OpAnd -> opt Z.logand
+		| OpOr -> opt Z.logor
+		| OpXor -> opt Z.logxor
+		| OpShl when is_numeric e.etype -> opt (fun a b -> Z.shift_left a (Z.to_int Z.(b mod bit_width)))
+		| OpShr when is_numeric e.etype -> opt (fun a b -> Z.shift_right a (Z.to_int Z.(b mod bit_width)))
+		| OpUShr when is_numeric e.etype -> opt (fun a b ->
+			if Z.Compare.(b <= Z.zero) then a
+			else Z.shift_right (Z.logand a u32_max) (Z.to_int (Z.(b mod bit_width)))
+		)
+		| OpEq -> ebool Z.Compare.(=)
+		| OpNotEq -> ebool Z.Compare.(<>)
+		| OpGt -> ebool Z.Compare.(>)
+		| OpGte -> ebool Z.Compare.(>=)
+		| OpLt -> ebool Z.Compare.(<)
+		| OpLte -> ebool Z.Compare.(<=)
 		| _ -> e)
 	| TConst ((TFloat _ | TInt _) as ca), TConst ((TFloat _ | TInt _) as cb) ->
 		let fa = (match ca with
 			| TFloat a -> float_of_string a
-			| TInt a -> Int32.to_float a
+			| TInt a -> Z.to_float a
 			| _ -> die "" __LOC__
 		) in
 		let fb = (match cb with
 			| TFloat b -> float_of_string b
-			| TInt b -> Int32.to_float b
+			| TInt b -> Z.to_float b
 			| _ -> die "" __LOC__
 		) in
 		let fop op = check_float op fa fb in
@@ -184,7 +193,7 @@ let optimize_binop scom e op e1 e2 =
 			{ e with eexpr = TConst (TBool (if op = OpEq then b else not b)) }
 		in
 		(match a, b with
-		| TInt a, TFloat b | TFloat b, TInt a -> ebool (Int32.to_float a = float_of_string b)
+		| TInt a, TFloat b | TFloat b, TInt a -> ebool (Z.to_float a = float_of_string b)
 		| TNull, (TInt _ | TFloat _ | TBool _) | (TInt _ | TFloat _ | TBool _), TNull when scom.SafeCom.platform_config.pf_static -> e
 		| _ -> ebool (a = b))
 	| TConst (TBool a), _ ->
@@ -245,8 +254,8 @@ let optimize_unop e op flag esub =
 				| _ -> e
 			in
 			transform e esub
-		| Neg, TConst (TInt i) -> { e with eexpr = TConst (TInt (Int32.neg i)) }
-		| NegBits, TConst (TInt i) -> { e with eexpr = TConst (TInt (Int32.lognot i)) }
+		| Neg, TConst (TInt i) -> { e with eexpr = TConst (TInt (Z.neg i)) }
+		| NegBits, TConst (TInt i) -> { e with eexpr = TConst (TInt (Z.lognot i)) }
 		| Neg, TConst (TFloat f) ->
 			let v = 0. -. float_of_string f in
 			let vstr = Numeric.float_repres v in

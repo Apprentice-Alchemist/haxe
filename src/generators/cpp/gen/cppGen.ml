@@ -175,7 +175,7 @@ let is_renderable_constant value =
 
 let default_value_string ctx value =
   match value.eexpr with
-  | TConst (TInt i) -> Printf.sprintf "%ld" i
+  | TConst (TInt i) -> Z.to_string i
   | TConst (TFloat float_as_string) ->
       "((Float)" ^ Texpr.replace_separators float_as_string "" ^ ")"
   | TConst (TString s) -> strq ctx s

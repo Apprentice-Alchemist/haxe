@@ -469,12 +469,12 @@ module ConstPropagationImpl = struct
 				end;
 			| TEnumIndex e1 ->
 				begin match eval bb e1 with
-					| EnumValue(i,_) -> Const (TInt (Int32.of_int i),actx.com.basic.tint)
+					| EnumValue(i,_) -> Const (TInt (Z.of_int i),actx.com.basic.tint)
 					| _ -> raise Exit
 				end;
 			| TCall ({ eexpr = TField (_,FStatic({cl_path=[],"Type"} as c,({cf_name="enumIndex"} as cf)))},[e1]) when actx.com.platform = Eval ->
 				begin match follow e1.etype,eval bb e1 with
-					| TEnum _,EnumValue(i,_) -> Const (TInt (Int32.of_int i),actx.com.basic.tint)
+					| TEnum _,EnumValue(i,_) -> Const (TInt (Z.of_int i),actx.com.basic.tint)
 					| _,e1 ->
 						begin match Inline.api_inline2 actx.com.basic actx.com.platform c cf.cf_name [wrap e1] e.epos with
 							| None -> raise Exit
@@ -492,14 +492,14 @@ module ConstPropagationImpl = struct
 				eval bb e1
 			| _ ->
 				let e1 = match actx.com.platform,e.eexpr with
-					| Js,TArray(e1,{eexpr = TConst(TInt i)}) when Int32.to_int i = 1 && Define.defined actx.com.defines Define.JsEnumsAsArrays -> e1
+					| Js,TArray(e1,{eexpr = TConst(TInt i)}) when Z.equal i Z.one && Define.defined actx.com.defines Define.JsEnumsAsArrays -> e1
 					| Js,TField(e1,FDynamic "_hx_index") when not (Define.defined actx.com.defines Define.JsEnumsAsArrays) -> e1
 					| Cpp,TCall({eexpr = TField(e1,FDynamic "__Index")},[]) -> e1
 					| Neko,TField(e1,FDynamic "index") -> e1
 					| _ -> raise Exit
 				in
 				begin match follow e1.etype,eval bb e1 with
-					| TEnum _,EnumValue(i,_) -> Const (TInt (Int32.of_int i),actx.com.basic.tint)
+					| TEnum _,EnumValue(i,_) -> Const (TInt (Z.of_int i),actx.com.basic.tint)
 					| _ -> raise Exit
 				end
 		in
