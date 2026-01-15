@@ -1736,7 +1736,7 @@ and type_expr ?(mode=MGet) ctx (e,p) (with_type:WithType.t) =
 	match e with
 	| EField ((EConst (String(s,_)),ps),"code",EFNormal) ->
 		if UTF8.length s <> 1 then raise_typing_error "String must be a single UTF8 char" ps;
-		mk (TConst (TInt (Int32.of_int (UCharExt.code (UTF8.get s 0))))) ctx.t.tint p
+		mk (TConst (TInt (Z.of_int (UCharExt.code (UTF8.get s 0))))) ctx.t.tint p
 	| EField(_,n,_) when starts_with n '$' ->
 		raise_typing_error "Field names starting with $ are not allowed" p
 	| EConst (Ident s) ->
@@ -1757,7 +1757,7 @@ and type_expr ?(mode=MGet) ctx (e,p) (with_type:WithType.t) =
 	| EConst (Int (s, Some suffix)) ->
 		(match suffix with
 		| "i32" ->
-			(try mk (TConst (TInt (Int32.of_string s))) ctx.com.basic.tint p
+			(try mk (TConst (TInt (Z.of_int32 (Int32.of_string s)))) ctx.com.basic.tint p
 			with _ -> raise_typing_error ("Cannot represent " ^ s ^ " with a 32 bit integer") p)
 		| "i64" ->
 			if String.length s > 18 && String.sub s 0 2 = "0x" then raise_typing_error "Invalid hexadecimal integer" p;

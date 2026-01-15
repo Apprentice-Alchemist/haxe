@@ -295,6 +295,16 @@ module Chunk = struct
 			write_leb128 io rest
 		end
 
+	let rec write_big_leb128 io v =
+		let b = Z.(v land ~$0x7F) |> Z.to_int in
+		let rest = Z.(v asr 7) in
+		if (rest = Z.zero && (b land 0x40 = 0)) || (rest = Z.minus_one && (b land 0x40 = 0x40)) then
+			write_u8 io b
+		else begin
+			write_u8 io (b lor 0x80);
+			write_big_leb128 io rest
+		end
+
 	let write_bytes_length_prefixed io b =
 		write_uleb128 io (Bytes.length b);
 		write_bytes io b
@@ -1355,9 +1365,9 @@ module HxbWriter = struct
 				| TBool true when (ExtType.is_bool (follow_lazy_and_mono e'.etype)) ->
 					Chunk.write_u8 writer.chunk 4;
 					false;
-				| TInt i32 when (ExtType.is_int (follow_lazy_and_mono e'.etype)) ->
+				| TInt i when (ExtType.is_int (follow_lazy_and_mono e'.etype)) ->
 					Chunk.write_u8 writer.chunk 5;
-					Chunk.write_i32 writer.chunk i32;
+					Chunk.write_big_leb128 writer.chunk i;
 					false;
 				| TFloat f when (ExtType.is_float (follow_lazy_and_mono e'.etype)) ->
 					Chunk.write_u8 writer.chunk 6;
@@ -1373,9 +1383,9 @@ module HxbWriter = struct
 				| TBool true ->
 					Chunk.write_u8 writer.chunk 14;
 					true;
-				| TInt i32 ->
+				| TInt i ->
 					Chunk.write_u8 writer.chunk 15;
-					Chunk.write_i32 writer.chunk i32;
+					Chunk.write_big_leb128 writer.chunk i;
 					true;
 				| TFloat f ->
 					Chunk.write_u8 writer.chunk 16;

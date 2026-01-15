@@ -440,12 +440,12 @@ let inline_constructors (scom : SafeCom.t) original_e =
 				let v = alloc_var VGenerated "inlarr" e.etype e.epos in
 				let ev = mk (TLocal v) v.v_type e.epos in
 				let el = List.mapi (fun i e ->
-					let ef = mk (TArray(ev,(mk (TConst(TInt (Int32.of_int i))) e.etype e.epos))) elemtype e.epos in
+					let ef = mk (TArray(ev,(mk (TConst(TInt (Z.of_int i))) e.etype e.epos))) elemtype e.epos in
 					mk (TBinop(OpAssign,ef,e)) elemtype e.epos
 				) el in
 				let io_expr = make_expr_for_list el scom.basic.tvoid e.epos in
 				let io = mk_io (IOKArray(len)) io_id io_expr in
-				ignore(alloc_const_io_field io "length" (mk (TConst(TInt (Int32.of_int len))) scom.basic.tint e.epos));
+				ignore(alloc_const_io_field io "length" (mk (TConst(TInt (Z.of_int len))) scom.basic.tint e.epos));
 				for i = 0 to len-1 do ignore(alloc_io_field io (int_field_name i) elemtype v.v_pos) done;
 				let iv = add v IVKLocal in
 				set_iv_alias iv io;
@@ -486,7 +486,7 @@ let inline_constructors (scom : SafeCom.t) original_e =
 		| TField(ethis, fa) ->
 			handle_field_case_no_methods e ethis (field_name fa) (fun _ -> true)
 		| TArray(ethis,{eexpr = TConst (TInt i)}) ->
-			let i = Int32.to_int i in
+			let i = Z.to_int i in
 			let validate_io io = match io.io_kind with IOKArray(l) when i >= 0 && i < l -> true | _ -> false in
 			handle_field_case_no_methods e ethis (int_field_name i) validate_io
 		| TLocal(v) when is_marked v.v_id ->
@@ -685,7 +685,7 @@ let inline_constructors (scom : SafeCom.t) original_e =
 			let (tel, thiso) = final_map ethis in
 			begin match thiso with
 			| Some io ->
-				let i = Int32.to_int i in
+				let i = Z.to_int i in
 				let fname = int_field_name i in
 				begin match get_io_field io fname with
 				| {iv_state = IVSAliasing io} ->

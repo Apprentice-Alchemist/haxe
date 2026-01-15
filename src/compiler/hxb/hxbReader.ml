@@ -140,6 +140,22 @@ let read_leb128 ch =
 		acc) in
 	res
 
+let read_big_leb128 ch =
+	let rec read acc shift =
+		let b = read_byte ch in
+		let acc = Z.((~$(Stdlib.(b land 0x7F)) lsl shift) lor acc) in
+		if b >= 0x80 then
+			read acc (shift + 7)
+		else
+			(b, acc, shift + 7)
+	in
+	let last, acc, shift = read Z.zero 0 in
+	let res = (if (last land 0x40) <> 0 then
+		Z.(acc - (~$2 ** shift))
+	else
+		acc) in
+	res
+
 let dump_stats name stats =
 	print_endline (Printf.sprintf "hxb_reader stats for %s" name);
 	print_endline (Printf.sprintf "  modules partially restored: %i" (!(stats.modules_partially_restored) - !(stats.modules_fully_restored)));
@@ -1096,12 +1112,12 @@ class hxb_reader
 					| 2 -> TConst TSuper,None
 					| 3 -> TConst (TBool false),(Some api#basic_types.tbool)
 					| 4 -> TConst (TBool true),(Some api#basic_types.tbool)
-					| 5 -> TConst (TInt self#read_i32),(Some api#basic_types.tint)
+					| 5 -> TConst (TInt (read_big_leb128 ch)),(Some api#basic_types.tint)
 					| 6 -> TConst (TFloat self#read_string),(Some api#basic_types.tfloat)
 					| 7 -> TConst (TString self#read_string),(Some api#basic_types.tstring)
 					| 13 -> TConst (TBool false),None
 					| 14 -> TConst (TBool true),None
-					| 15 -> TConst (TInt self#read_i32),None
+					| 15 -> TConst (TInt (read_big_leb128 ch)),None
 					| 16 -> TConst (TFloat self#read_string),None
 					| 17 -> TConst (TString self#read_string),None
 

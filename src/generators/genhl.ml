@@ -1130,11 +1130,11 @@ let rec eval_to ctx e (t:ttype) =
 	match e.eexpr, t with
 	| TConst (TInt i), HF64 ->
 		let r = alloc_tmp ctx t in
-		op ctx (OFloat (r,alloc_float ctx (Int32.to_float i)));
+		op ctx (OFloat (r,alloc_float ctx (Z.to_float i)));
 		r
 	| TConst (TInt i), HF32 when compare_version ctx.hl_ver "1.15.0" >= 0 ->
 		let r = alloc_tmp ctx t in
-		op ctx (OFloat (r, alloc_float ctx (Int32.to_float i)));
+		op ctx (OFloat (r, alloc_float ctx (Z.to_float i)));
 		r
 	| TConst (TFloat f), HF32 when compare_version ctx.hl_ver "1.15.0" >= 0 ->
 		let r = alloc_tmp ctx t in
@@ -1724,7 +1724,7 @@ and eval_expr ctx e =
 		(match c with
 		| TInt i ->
 			let r = alloc_tmp ctx HI32 in
-			op ctx (OInt (r,alloc_i32 ctx i));
+			op ctx (OInt (r,alloc_i32 ctx (Z.to_int32 i)));
 			r
 		| TFloat f ->
 			let r = alloc_tmp ctx HF64 in
@@ -2177,7 +2177,7 @@ and eval_expr ctx e =
 			r
 		| "$prefetch", [value; mode] ->
 			let mode = (match get_const mode with
-				| TInt m -> Int32.to_int m
+				| TInt m -> Z.to_int m
 				| _ -> abort "Constant mode required" e.epos
 			) in
 			(match get_access ctx value with
@@ -2190,22 +2190,22 @@ and eval_expr ctx e =
 			r
 		| "$asm", [mode; value] ->
 			let mode = (match get_const mode with
-				| TInt m -> Int32.to_int m
+				| TInt m -> Z.to_int m
 				| _ -> abort "Constant mode required" e.epos
 			) in
 			let value = (match get_const value with
-				| TInt m -> Int32.to_int m
+				| TInt m -> Z.to_int m
 				| _ -> abort "Constant value required" e.epos
 			) in
 			op ctx (OAsm (mode, value, 0));
 			alloc_tmp ctx HVoid
 		| "$asm", [mode; value; reg] ->
 			let mode = (match get_const mode with
-				| TInt m -> Int32.to_int m
+				| TInt m -> Z.to_int m
 				| _ -> abort "Constant mode required" e.epos
 			) in
 			let value = (match get_const value with
-				| TInt m -> Int32.to_int m
+				| TInt m -> Z.to_int m
 				| _ -> abort "Constant value required" e.epos
 			) in
 			op ctx (OAsm (mode, value, (eval_expr ctx reg) + 1));
@@ -2897,9 +2897,7 @@ and eval_expr ctx e =
 			let get_int e =
 				match e.eexpr with
 				| TConst (TInt i) ->
-					let v = Int32.to_int i in
-					if Int32.of_int v <> i then raise Exit;
-					v
+					(try Z.to_int i with Z.Overflow -> raise Exit)
 				| _ ->
 					raise Exit
 			in
@@ -3370,12 +3368,12 @@ and make_fun ?gen_content ctx name fidx f cthis cparent =
 			(match get_group vt with
 			| GInt ->
 				(match c.eexpr with
-				| TConst (TInt i) -> op ctx (OInt (t,alloc_i32 ctx i))
+				| TConst (TInt i) -> op ctx (OInt (t, Z.to_int32 i |> alloc_i32 ctx))
 				| TConst (TFloat s) -> op ctx (OInt (t,alloc_i32 ctx  (Int32.of_float (float_of_string s))))
 				| _ -> die "" __LOC__)
 			| GFloat ->
 				(match c.eexpr with
-				| TConst (TInt i) -> op ctx (OFloat (t,alloc_float ctx (Int32.to_float i)))
+				| TConst (TInt i) -> op ctx (OFloat (t, Z.to_float i |> alloc_float ctx))
 				| TConst (TFloat s) -> op ctx (OFloat (t,alloc_float ctx  (float_of_string s)))
 				| _ -> die "" __LOC__)
 			| GBool ->
@@ -3399,7 +3397,7 @@ and make_fun ?gen_content ctx name fidx f cthis cparent =
 			| TConst (TNull | TThis | TSuper) -> die "" __LOC__
 			| TConst (TInt i) when (match to_type ctx (Abstract.follow_with_abstracts v.v_type) with HUI8 | HUI16 | HI32 | HI64 | HDyn -> true | _ -> false) ->
 				let tmp = alloc_tmp ctx HI32 in
-				op ctx (OInt (tmp, alloc_i32 ctx i));
+				op ctx (OInt (tmp, Z.to_int32 i |> alloc_i32 ctx));
 				op ctx (OToDyn (r, tmp));
 			| TConst (TFloat s) when (match to_type ctx (Abstract.follow_with_abstracts v.v_type) with HUI8 | HUI16 | HI32 | HI64 -> true | _ -> false) ->
 				let tmp = alloc_tmp ctx HI32 in
@@ -3407,7 +3405,7 @@ and make_fun ?gen_content ctx name fidx f cthis cparent =
 				op ctx (OToDyn (r, tmp));
 			| TConst (TInt i) ->
 				let tmp = alloc_tmp ctx HF64 in
-				op ctx (OFloat (tmp, alloc_float ctx (Int32.to_float i)));
+				op ctx (OFloat (tmp, alloc_float ctx (Z.to_float i)));
 				op ctx (OToDyn (r, tmp));
 			| TConst (TFloat s) ->
 				let tmp = alloc_tmp ctx HF64 in

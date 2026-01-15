@@ -750,7 +750,7 @@ module TypeBinding = struct
 			else begin match e.eexpr,follow cf.cf_type with
 				| TConst (TInt i),TAbstract({a_path=[],"Float"},_) ->
 					(* turn int constant to float constant if expected type is float *)
-					{e with eexpr = TConst (TFloat (Int32.to_string i)); etype = cf.cf_type}
+					{e with eexpr = TConst (TFloat (Z.to_string i)); etype = cf.cf_type}
 				| _ ->
 					mk_cast e cf.cf_type e.epos
 			end

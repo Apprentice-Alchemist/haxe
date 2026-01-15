@@ -36,7 +36,7 @@ let rec process_meta_argument ?(toplevel=true) ctx expr = match expr.eexpr with
 	| TField(e,f) ->
 		(efield(process_meta_argument ~toplevel:false ctx e,field_name f),expr.epos)
 	| TConst(TInt i) ->
-		(EConst(Int (Int32.to_string i, None)), expr.epos)
+		(EConst(Int (Z.to_string i, None)), expr.epos)
 	| TConst(TFloat f) ->
 		(EConst(Float (f, None)), expr.epos)
 	| TConst(TString s) ->

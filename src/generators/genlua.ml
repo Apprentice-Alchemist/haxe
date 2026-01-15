@@ -365,7 +365,7 @@ let rec extract_expr e = match e.eexpr with
     | _ -> e
 
 let gen_constant ctx p = function
-    | TInt i -> print ctx "%ld" i
+    | TInt i -> print ctx "%a" Z.sprint i
     | TFloat s -> spr ctx (replace_float_separators s)
     | TString s -> begin
             add_feature ctx "use.string";

@@ -306,7 +306,7 @@ and generate_tvar ctx v =
 
 and generate_tconstant ctx ct =
 	let name,args = match ct with
-		| TInt i32 -> "TInt",Some (jstring (Int32.to_string i32))
+		| TInt s -> "TInt",Some (jstring (Z.to_string s))
 		| TFloat s -> "TFloat",Some (jstring s)
 		| TString s -> "TString",Some (jstring s)
 		| TBool b -> "TBool",Some (jbool b)

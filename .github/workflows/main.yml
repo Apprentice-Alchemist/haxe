@@ -352,6 +352,15 @@ jobs:
           cmake --build build
           sudo cmake --install build
           cd ..
+          curl -L https://ftpmirror.gnu.org/gnu/gmp/gmp-6.3.0.tar.xz -o gmp-6.3.0.tar.xz
+          sha256sum -c .github/data/gmp-checksum
+          tar x -f gmp-6.3.0.tar.xz
+          cd gmp-6.3.0
+          autoreconf -i -s
+          CC='clang -arch ${{ matrix.arch }}' ./configure --build arm64-apple-darwin --host ${{ matrix.arch }}-apple-darwin --with-pic
+          make
+          sudo make install
+          cd ..
 
       - name: Install Opam
         run: |
@@ -379,7 +388,7 @@ jobs:
         run: |
           set -ex
           eval $(opam env)
-          opam exec -- make -s STATICLINK=1 "LIB_PARAMS=\"/usr/local/lib/libz.a\" \"/usr/local/lib/libpcre2-8.a\" \"/usr/local/lib/libmbedtls.a\" \"/usr/local/lib/libmbedcrypto.a\" \"/usr/local/lib/libmbedx509.a\"" haxe
+          opam exec -- make -s STATICLINK=1 "LIB_PARAMS=\"/usr/local/lib/libz.a\" \"/usr/local/lib/libpcre2-8.a\" \"/usr/local/lib/libmbedtls.a\" \"/usr/local/lib/libmbedcrypto.a\" \"/usr/local/lib/libmbedx509.a\" \"/usr/local/lib/libgmp.a\"" haxe
           opam exec -- make -s haxelib
           opam exec -- make -s package_unix package_installer_mac
           ls -l out

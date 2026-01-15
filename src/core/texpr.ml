@@ -491,7 +491,7 @@ module Builder = struct
 		mk (TThrow e) t_dynamic p
 
 	let make_int basic i p =
-		mk (TConst (TInt (Int32.of_int i))) basic.tint p
+		mk (TConst (TInt (Z.of_int i))) basic.tint p
 
 	let make_float basic f p =
 		mk (TConst (TFloat f)) basic.tfloat p
@@ -545,7 +545,7 @@ module Builder = struct
 		mk (TBinop (op,a,b)) t p
 
 	let index basic e index t p =
-		mk (TArray (e,mk (TConst (TInt (Int32.of_int index))) basic.tint p)) t p
+		mk (TArray (e,mk (TConst (TInt (Z.of_int index))) basic.tint p)) t p
 
 	let resolve_and_make_static_call c name args p =
 		ignore(c.cl_build());
@@ -598,7 +598,7 @@ let type_constant basic c p =
 	| Int (s,_) ->
 		if String.length s > 10 && String.sub s 0 2 = "0x" then raise_typing_error "Invalid hexadecimal integer" p;
 		if String.length s > 34 && String.sub s 0 2 = "0b" then raise_typing_error "Invalid binary integer" p;
-		(try mk (TConst (TInt (Int32.of_string s))) basic.tint p
+		(try mk (TConst (TInt (Z.of_int32 (Int32.of_string s)))) basic.tint p
 		with _ -> mk (TConst (TFloat s)) basic.tfloat p)
 	| Float (f,_) -> mk (TConst (TFloat f)) basic.tfloat p
 	| String(s,qs) -> mk (TConst (TString s)) basic.tstring p (* STRINGTODO: qs? *)

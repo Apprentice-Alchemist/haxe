@@ -668,7 +668,7 @@ class script_writer ctx filename asciiOut basic =
 
     method constText c =
       match c with
-      | TInt i -> this#op IaConstInt ^ Printf.sprintf "%ld " i
+      | TInt i -> this#op IaConstInt ^ (Z.to_string i)
       | TFloat f ->
           this#op IaConstFloat ^ this#stringText (Texpr.replace_separators f "")
       | TString s -> this#op IaConstString ^ this#stringText s
@@ -1250,7 +1250,7 @@ class script_writer ctx filename asciiOut basic =
           ] ->
           this#write
             (this#op IaPosInfo ^ this#stringText file
-           ^ Printf.sprintf "%ld" line ^ " " ^ this#stringText class_name ^ " "
+           ^ Printf.sprintf "%ld" (Z.to_int32 line) ^ " " ^ this#stringText class_name ^ " "
            ^ this#stringText meth)
       | TObjectDecl values ->
           this#write (this#op IaObjDef ^ string_of_int (List.length values));

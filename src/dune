@@ -24,6 +24,7 @@
 		xml-light extlib sha terminal_size
 		luv
 		domainslib saturn thread-local-storage dynamic_gc
+		zarith
 	)
 	(modules (:standard \ haxe prebuild))
 	(preprocess (per_module

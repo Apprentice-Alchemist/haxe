@@ -937,7 +937,7 @@ let type_unop ctx op flag e with_type p =
 		find_overload_or_make e
 	| Increment | Decrement ->
 		let binop = if op = Increment then OpAdd else OpSub in
-		let e_one = mk (TConst (TInt Int32.one)) ctx.t.tint p in
+		let e_one = mk (TConst (TInt Z.one)) ctx.t.tint p in
 		let maybe_tempvar_postfix vr e_lhs =
 			if flag = Postfix && with_type <> WithType.no_value then begin
 				let e_lhs = vr#get_expr "lhs" e_lhs in
@@ -1017,7 +1017,7 @@ let type_unop ctx op flag e with_type p =
 					let ev_get = mk (TLocal v_get) v_get.v_type p in
 					let evar_get = mk (TVar(v_get,Some e_get)) ctx.com.basic.tvoid p in
 					(* op *)
-					let e_one = mk (TConst (TInt (Int32.of_int 1))) ctx.com.basic.tint p in
+					let e_one = mk (TConst (TInt (Z.one))) ctx.com.basic.tint p in
 					let e_op = mk (TBinop((if op = Increment then OpAdd else OpSub),ev_get,e_one)) ev_get.etype p in
 					(* set *)
 					let e_set = mk_array_set_call ctx (AbstractCast.find_array_write_access_raise ctx a tl ekey e_op p) c ebase p in

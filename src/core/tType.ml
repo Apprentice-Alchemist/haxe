@@ -128,7 +128,7 @@ and typed_type_param = {
 and type_params = typed_type_param list
 
 and tconstant =
-	| TInt of int32
+	| TInt of Z.t
 	| TFloat of string
 	| TString of string
 	| TBool of bool

@@ -556,7 +556,7 @@ let expression ctx request_type function_args function_type expression_tree forI
 
   let rec const_int_of expr =
     match expr.eexpr with
-    | TConst TInt x -> x
+    | TConst TInt x -> Z.to_int32 x
     | TConst TBool x -> Int32.of_int (if x then 1 else 0)
     | TParenthesis e -> const_int_of e
     | _ -> raise Not_found
@@ -606,7 +606,7 @@ let expression ctx request_type function_args function_type expression_tree forI
       | TConst TNull when is_objc_type expr.etype -> (retyper_ctx, CppNil, TCppNull)
       | TConst x ->
         (match x with
-        | TInt i -> (retyper_ctx, CppInt i, TCppScalar "int")
+        | TInt i -> (retyper_ctx, CppInt (Z.to_int32 i), TCppScalar "int")
         | TBool b -> (retyper_ctx, CppBool b, TCppScalar "bool")
         | TFloat f -> (retyper_ctx, CppFloat (Texpr.replace_separators f ""), TCppScalar "Float")
         | TString s -> (retyper_ctx, CppString s, TCppString)
@@ -1502,7 +1502,7 @@ let expression ctx request_type function_args function_type expression_tree forI
             (("className", _, _), { eexpr = TConst (TString class_name) });
             (("methodName", _, _), { eexpr = TConst (TString meth) });
           ] ->
-          (retyper_ctx, CppPosition (file, line, class_name, meth), TCppDynamic)
+          (retyper_ctx, CppPosition (file, (Z.to_int32 line), class_name, meth), TCppDynamic)
       | TObjectDecl el -> (
           let el_exprs = List.map (fun ((_, _, _), e) -> e) el in
           let el_names = List.map (fun ((v, _, _), _) -> v) el in
@@ -1845,7 +1845,7 @@ let rec tcpp_class_from_tclass ctx ids slots class_def class_params =
             | TAbstract ({ a_path = ([], "Void") }, _) ->
               { eexpr = TReturn None; etype = ret; epos = null_pos }
             | _ ->
-              let zero_val = Some { eexpr = TConst (TInt Int32.zero); etype = ret; epos = null_pos } in
+              let zero_val = Some { eexpr = TConst (TInt Z.zero); etype = ret; epos = null_pos } in
               { eexpr = TReturn zero_val; etype = ret; epos = null_pos } in
           
           {

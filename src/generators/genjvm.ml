@@ -1025,7 +1025,7 @@ class texpr_to_jvm
 		else if List.for_all is_const_int_pattern cases then begin
 			let cases = List.map (fun case ->
 				let il = List.map (fun e -> match e.eexpr with
-					| TConst (TInt i32) -> i32
+					| TConst (TInt i) -> Z.to_int32 i
 					| _ -> die "" __LOC__
 				) case.case_patterns in
 				(il,(fun () -> self#texpr ret case.case_expr))
@@ -1185,7 +1185,7 @@ class texpr_to_jvm
 		| _,{eexpr = TConst TNull} when not (is_unboxed sig1) ->
 			self#texpr rvalue_any e1;
 			CmpSpecial ((if is_eq_op then jm#get_code#if_nonnull else jm#get_code#if_null) sig1)
-		| {eexpr = TConst (TInt i32);etype = t2},e1 when Int32.to_int i32 = 0 && sig2 = TInt ->
+		| {eexpr = TConst (TInt i32);etype = t2},e1 when Z.equal i32 Z.zero && sig2 = TInt ->
 			let op = match op with
 				| CmpGt -> CmpGe
 				| CmpLt -> CmpLe
@@ -1197,7 +1197,7 @@ class texpr_to_jvm
 			self#texpr rvalue_any e1;
 			self#cast t2;
 			CmpNormal(op,TInt)
-		| e1,{eexpr = TConst (TInt i32); etype = t2;} when Int32.to_int i32 = 0 && sig1 = TInt->
+		| e1,{eexpr = TConst (TInt i32); etype = t2;} when  Z.equal i32 Z.zero && sig1 = TInt->
 			let op = flip_cmp_op op in
 			self#texpr rvalue_any e1;
 			self#cast t2;
@@ -1490,14 +1490,14 @@ class texpr_to_jvm
 		| OpAssignOp op,_ ->
 			let jsig1 = jsignature_of_type gctx e1.etype in
 			begin match op,(Texpr.skip e1).eexpr,(Texpr.skip e2).eexpr with
-			| OpAdd,TLocal v,TConst (TInt i32) when is_really_int v.v_type && in_range false Int8Range (Int32.to_int i32) && self#var_slot_is_in_int8_range v->
+			| OpAdd,TLocal v,TConst (TInt i32) when is_really_int v.v_type && in_range false Int8Range (Z.to_int i32) && self#var_slot_is_in_int8_range v->
 				let slot,load,_ = self#get_local v in
-				let i = Int32.to_int i32 in
+				let i = Z.to_int i32 in
 				code#iinc slot i;
 				if need_val ret then load();
-			| OpSub,TLocal v,TConst (TInt i32) when is_really_int v.v_type && in_range false Int8Range (-Int32.to_int i32) && self#var_slot_is_in_int8_range v ->
+			| OpSub,TLocal v,TConst (TInt i32) when is_really_int v.v_type && in_range false Int8Range (-Z.to_int i32) && self#var_slot_is_in_int8_range v ->
 				let slot,load,_ = self#get_local v in
-				let i = -Int32.to_int i32 in
+				let i = -Z.to_int i32 in
 				code#iinc slot i;
 				if need_val ret then load();
 			| _ ->
@@ -1684,9 +1684,9 @@ class texpr_to_jvm
 		| TField(_,FStatic({cl_path = (["haxe"],"Int64$Int64_Impl_")},{cf_name = "make"})) ->
 			begin match el with
 			| [{eexpr = TConst (TInt i1)};{eexpr = TConst (TInt i2)}] ->
-				let high = Int64.of_int32 i1 in
+				let high = Z.to_int64 i1 in
 				let high = Int64.shift_left high 32 in
-				let low = Int64.of_int32 i2 in
+				let low = Z.to_int64 i2 in
 				let low = Int64.logand low (Int64.of_string "0xFFFFFFFF") in
 				let i = Int64.logor high low in
 				jm#get_code#lconst i;
@@ -1951,9 +1951,9 @@ class texpr_to_jvm
 	method const ret t ct = match ct with
 		| Type.TInt i32 ->
 			begin match ret with
-			| RValue (Some (TLong | TObject((["java";"lang"],"Long"),_)),_) -> code#lconst (Int64.of_int32 i32)
-			| RValue (Some (TDouble | TObject((["java";"lang"],"Double"),_)),_) -> code#dconst (Int32.to_float i32)
-			| _ -> code#iconst i32
+			| RValue (Some (TLong | TObject((["java";"lang"],"Long"),_)),_) -> code#lconst (Z.to_int64 i32)
+			| RValue (Some (TDouble | TObject((["java";"lang"],"Double"),_)),_) -> code#dconst (Z.to_float i32)
+			| _ -> code#iconst (Z.to_int32 i32)
 			end
 		| TFloat f ->
 			begin match ret with
@@ -2690,8 +2690,8 @@ class tclass_to_jvm gctx c = object(self)
 				match e.eexpr with
 				| TConst ct ->
 					begin match ct with
-					| TInt i32 when not (is_nullable cf.cf_type) ->
-						let offset = jc#get_pool#add (ConstInt i32) in
+					| TInt i when not (is_nullable cf.cf_type) ->
+						let offset = jc#get_pool#add (ConstInt (Z.to_int32 i)) in
 						jm#add_attribute (AttributeConstantValue offset);
 					| TString s ->
 						let offset = jc#get_pool#add_const_string s in

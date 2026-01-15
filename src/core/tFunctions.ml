@@ -804,7 +804,7 @@ let rec module_type_of_type = function
 		raise Exit
 
 let tconst_to_const = function
-	| TInt i -> Int (Int32.to_string i, None)
+	| TInt i -> Int (Z.to_string i, None)
 	| TFloat s -> Float (s, None)
 	| TString s -> String(s,SDoubleQuotes)
 	| TBool b -> Ident (if b then "true" else "false")
