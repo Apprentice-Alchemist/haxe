@@ -337,7 +337,7 @@ let parse_args com =
 			raise (Helper.HelpMessage (usage_string all_args usage))
 		| Arg.Bad msg ->
 			(* Strip error prefix added by ocaml's arg parser *)
-			let msg = if ExtLib.String.starts_with msg "Haxe: " then (String.sub msg 6 ((String.length msg) - 6)) else msg in
+			let msg = if ExtLib.String.starts_with msg ~prefix:"Haxe: " then (String.sub msg 6 ((String.length msg) - 6)) else msg in
 			let first_line = List.nth (Str.split (Str.regexp "\n") msg) 0 in
 			let new_msg = (Printf.sprintf "%s" first_line) in
 			let r = Str.regexp "unknown option [`']?\\([-A-Za-z]+\\)[`']?" in

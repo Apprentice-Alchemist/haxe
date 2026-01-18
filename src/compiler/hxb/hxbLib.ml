@@ -15,7 +15,7 @@ class hxb_library timer_ctx file_path hxb_times = object(self)
 
 	method private do_load =
 		List.iter (function
-		| ({ Zip.is_directory = false; Zip.filename = filename } as entry) when String.ends_with filename ".hxb" ->
+		| ({ Zip.is_directory = false; Zip.filename = filename } as entry) when String.ends_with filename ~suffix:".hxb" ->
 			let pack = String.nsplit filename "/" in
 			begin match List.rev pack with
 				| [] -> ()

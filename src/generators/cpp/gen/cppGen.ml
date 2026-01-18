@@ -256,9 +256,9 @@ let get_code meta key =
   let code = get_meta_string meta key |> Option.default "" in
   let magic_var = "${GENCPP_SOURCE_DIRECTORY}" in
   let code =
-    if ExtString.String.exists code magic_var then
+    if ExtString.String.exists code ~sub:magic_var then
       let source_directory = get_meta_string_full_dirname meta key in
-      let _, code = ExtString.String.replace code magic_var source_directory in
+      let _, code = ExtString.String.replace ~str:code ~sub:magic_var ~by:source_directory in
       code
     else code
   in

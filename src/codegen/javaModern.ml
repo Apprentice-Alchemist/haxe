@@ -1030,7 +1030,7 @@ class java_library_modern com  name file_path = object(self)
 
 	method private do_load =
 		List.iter (function
-		| ({ Zip.is_directory = false; Zip.filename = filename } as entry) when String.ends_with filename ".class" ->
+		| ({ Zip.is_directory = false; Zip.filename = filename } as entry) when String.ends_with filename ~suffix:".class" ->
 			let pack = String.nsplit filename "/" in
 			begin match List.rev pack with
 				| [] -> ()
