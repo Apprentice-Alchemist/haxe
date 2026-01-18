@@ -2810,8 +2810,7 @@ module StdThread = struct
 	)
 
 	let exit = vfun0 (fun () ->
-		Thread.exit();
-		vnull
+		raise Thread.Exit
 	)
 
 	let id = vifun0 (fun vthis ->
