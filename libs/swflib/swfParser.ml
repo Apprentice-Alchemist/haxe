@@ -20,6 +20,8 @@ open Swf
 open ActionScript
 open IO
 
+let write_bits b nbits x = write_bits b ~nbits x
+
 (* ************************************************************************ *)
 (* TOOLS *)
 
@@ -667,15 +669,15 @@ let write_cxa ch c =
 	| Some c , None ->
 		write_bits b 2 2;
 		write_bits b 4 nbits;
-		List.iter (write_bits b ~nbits) [c.r;c.g;c.b;c.a];
+		List.iter (write_bits b nbits) [c.r;c.g;c.b;c.a];
 	| None , Some c ->
 		write_bits b 2 1;
 		write_bits b 4 nbits;
-		List.iter (write_bits b ~nbits) [c.r;c.g;c.b;c.a];
+		List.iter (write_bits b nbits) [c.r;c.g;c.b;c.a];
 	| Some c1 , Some c2 ->
 		write_bits b 2 3;
 		write_bits b 4 nbits;
-		List.iter (write_bits b ~nbits) [c2.r;c2.g;c2.b;c2.a;c1.r;c1.g;c1.b;c1.a]
+		List.iter (write_bits b nbits) [c2.r;c2.g;c2.b;c2.a;c1.r;c1.g;c1.b;c1.a]
 	);
 	flush_bits b
 
@@ -1623,9 +1625,9 @@ let write_shape_style_change_record ch b nlbits nfbits s =
 		write_bits b n dx;
 		write_bits b n dy;
 	) s.scsr_move;
-	opt (write_bits b ~nbits:!nfbits) s.scsr_fs0;
-	opt (write_bits b ~nbits:!nfbits) s.scsr_fs1;
-	opt (write_bits b ~nbits:!nlbits) s.scsr_ls;
+	opt (write_bits b !nfbits) s.scsr_fs0;
+	opt (write_bits b !nfbits) s.scsr_fs1;
+	opt (write_bits b !nlbits) s.scsr_ls;
 	match s.scsr_new_styles with
 	| None -> ()
 	| Some s ->
