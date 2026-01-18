@@ -21,7 +21,7 @@ remove: [make "uninstall" "INSTALL_DIR=%{prefix}%"]
 depends: [
   "ocaml" {>= "5.0"}  # required by domainslib for multicore support
   "ocamlfind" {build}
-  "dune" {>= "3.17"}
+  "dune" {>= "3.21"}
   "sedlex" {>= "2.0"}
   "xml-light"
   "extlib" {>= "1.7.8"}
