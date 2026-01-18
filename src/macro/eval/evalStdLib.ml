@@ -1893,7 +1893,7 @@ module StdNativeProcess = struct
 		let bytes = decode_bytes bytes in
 		let pos = decode_int pos in
 		let len = decode_int len in
-		f this (Bytes.unsafe_to_string bytes) pos len
+		f this bytes pos len
 
 	let process_catch f vthis =
 		try f (this vthis)

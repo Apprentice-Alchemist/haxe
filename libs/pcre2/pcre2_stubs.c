@@ -136,7 +136,7 @@ static int pcre2_callout_handler(pcre2_callout_block* cb, struct cod* cod)
     const uint32_t subgroups2_1 = subgroups2 - 1;
 
     const size_t *ovec_src = cb->offset_vector + subgroups2_1;
-    caml_int_ptr ovec_dst = &Field(Field(v_substrings, 1), 0) + subgroups2_1;
+    caml_int_ptr ovec_dst = (caml_int_ptr)&Field(Field(v_substrings, 1), 0) + subgroups2_1;
     long subj_start = cod->subj_start;
 
     copy_ovector(subj_start, ovec_src, ovec_dst, subgroups2);
@@ -553,8 +553,8 @@ CAMLprim value pcre2_match_stub0(
       value v_cof = Field(v_maybe_cof, 0);
       value v_substrings;
       PCRE2_UCHAR* subj = caml_stat_alloc(sizeof(char) * len);
-      int workspace_len;
-      int *workspace;
+      int workspace_len = 0;
+      int *workspace = NULL;
       struct cod cod = { 0, (value *) NULL, (value *) NULL, (value) NULL };
       pcre2_match_context* new_mcontext = pcre2_match_context_copy(mcontext);
 

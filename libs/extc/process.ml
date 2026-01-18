@@ -20,9 +20,9 @@
 type process
 
 external run : string -> string array option -> process = "process_run"
-external read_stdout : process -> string -> int -> int -> int = "process_stdout_read"
-external read_stderr : process -> string -> int -> int -> int = "process_stderr_read"
-external write_stdin : process -> string -> int -> int -> int = "process_stdin_write"
+external read_stdout : process -> bytes -> int -> int -> int = "process_stdout_read"
+external read_stderr : process -> bytes -> int -> int -> int = "process_stderr_read"
+external write_stdin : process -> bytes -> int -> int -> int = "process_stdin_write"
 external close_stdin : process -> unit = "process_stdin_close"
 external exit : process -> int = "process_exit"
 external pid : process -> int = "process_pid"

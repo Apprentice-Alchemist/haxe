@@ -422,7 +422,7 @@ CAMLprim value ml_mbedtls_pk_parse_key(value ctx, value key, value password, val
 	}
 	#if MBEDTLS_VERSION_MAJOR >= 3
 	mbedtls_ctr_drbg_context *ctr_drbg = CtrDrbg_val(rng);
-	CAMLreturn(mbedtls_pk_parse_key(PkContext_val(ctx), Bytes_val(key), caml_string_length(key) + 1, pwd, pwdlen, mbedtls_ctr_drbg_random, NULL));
+	CAMLreturn(mbedtls_pk_parse_key(PkContext_val(ctx), Bytes_val(key), caml_string_length(key) + 1, pwd, pwdlen, mbedtls_ctr_drbg_random, &ctr_drbg));
 	#else
 	CAMLreturn(mbedtls_pk_parse_key(PkContext_val(ctx), Bytes_val(key), caml_string_length(key) + 1, pwd, pwdlen));
 	#endif
@@ -576,9 +576,7 @@ CAMLprim value hx_cert_load_defaults(value certificate) {
 		}
 		CertCloseStore(store, 0);
 	}
-	#endif
-
-	#ifdef __APPLE__
+	#elif defined(__APPLE__)
 	CFArrayRef certs;
 	if (SecTrustCopyAnchorCertificates(&certs) == errSecSuccess) {
 		CFIndex count = CFArrayGetCount(certs);
@@ -597,6 +595,8 @@ CAMLprim value hx_cert_load_defaults(value certificate) {
 		}
 		CFRelease(certs);
 	}
+	#else
+	(void)chain;
 	#endif
 
 	CAMLreturn(Val_int(r));

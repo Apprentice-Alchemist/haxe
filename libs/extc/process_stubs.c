@@ -355,16 +355,16 @@ CAMLprim value process_run( value cmd, value vargs ) {
 		CloseHandle(sinf.hStdInput);
 	}
 #	else
-	char **argv;
+	const char **argv;
 	if (isRaw) {
-		argv = (char**)alloc_private(sizeof(char*)*4);
+		argv = (const char**)alloc_private(sizeof(char*)*4);
 		argv[0] = "/bin/sh";
 		argv[1] = "-c";
 		argv[2] = val_string(cmd);
 		argv[3] = NULL;
 	} else {
-		argv = (char**)alloc_private(sizeof(char*)*(val_array_size(vargs)+2));
-		argv[0] = val_string(cmd);
+		argv = (const char**)alloc_private(sizeof(char*)*(val_array_size(vargs)+2));
+		argv[0] = String_val(cmd);
 		for(i=0;i<val_array_size(vargs);i++) {
 			value v = val_array_ptr(vargs)[i];
 			argv[i+1] = val_string(v);
@@ -393,7 +393,7 @@ CAMLprim value process_run( value cmd, value vargs ) {
 		dup2(input[0],0);
 		dup2(output[1],1);
 		dup2(error[1],2);
-		execvp(argv[0],argv);
+		execvp(argv[0], (char **)argv);
 		fprintf(stderr,"Command not found : %s\n",val_string(cmd));
 		exit(1);
 	}
@@ -430,14 +430,14 @@ CAMLprim value process_stdout_read( value vp, value str, value pos, value len ) 
 #	ifdef _WIN32
 	{
 		DWORD nbytes;
-		if( !ReadFile(p->oread,val_string(str)+val_int(pos),val_int(len),&nbytes,NULL) )
+		if( !ReadFile(p->oread,Bytes_val(str)+Int_val(pos),Int_val(len),&nbytes,NULL) )
 			neko_error();
 		CAMLreturn(alloc_int(nbytes));
 	}
 #	else
 	int nbytes;
 	POSIX_LABEL(stdout_read_again);
-	nbytes = read(p->oread,val_string(str)+val_int(pos),val_int(len));
+	nbytes = read(p->oread,Bytes_val(str)+Int_val(pos),Int_val(len));
 	if( nbytes < 0 ) {
 		HANDLE_EINTR(stdout_read_again);
 		neko_error();
@@ -461,14 +461,14 @@ CAMLprim value process_stderr_read( value vp, value str, value pos, value len ) 
 #	ifdef _WIN32
 	{
 		DWORD nbytes;
-		if( !ReadFile(p->eread,val_string(str)+val_int(pos),val_int(len),&nbytes,NULL) )
+		if( !ReadFile(p->eread,Bytes_val(str)+Int_val(pos),Int_val(len),&nbytes,NULL) )
 			neko_error();
 		CAMLreturn(alloc_int(nbytes));
 	}
 #	else
 	int nbytes;
 	POSIX_LABEL(stderr_read_again);
-	nbytes = read(p->eread,val_string(str)+val_int(pos),val_int(len));
+	nbytes = read(p->eread,Bytes_val(str)+Int_val(pos),Int_val(len));
 	if( nbytes < 0 ) {
 		HANDLE_EINTR(stderr_read_again);
 		neko_error();
@@ -492,14 +492,14 @@ CAMLprim value process_stdin_write( value vp, value str, value pos, value len ) 
 #	ifdef _WIN32
 	{
 		DWORD nbytes;
-		if( !WriteFile(p->iwrite,val_string(str)+val_int(pos),val_int(len),&nbytes,NULL) )
+		if( !WriteFile(p->iwrite,Bytes_val(str)+Int_val(pos),Int_val(len),&nbytes,NULL) )
 			neko_error();
 		CAMLreturn(alloc_int(nbytes));
 	}
 #	else
 	int nbytes;
 	POSIX_LABEL(stdin_write_again);
-	nbytes = write(p->iwrite,val_string(str)+val_int(pos),val_int(len));
+	nbytes = write(p->iwrite,Bytes_val(str)+Int_val(pos),Int_val(len));
 	if( nbytes == -1 ) {
 		HANDLE_EINTR(stdin_write_again);
 		neko_error();
