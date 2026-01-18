@@ -164,7 +164,7 @@ let spr ctx s =
 
 let print ctx =
     ctx.separator <- false;
-    Printf.kprintf (fun s -> begin
+    Printf.ksprintf (fun s -> begin
         handle_newlines ctx.smap s;
         Buffer.add_string ctx.buf s
     end)
@@ -174,7 +174,7 @@ let newline ctx = print ctx "\n%s" ctx.tabs
 (* print with newline *)
 let println ctx =
     ctx.separator <- false;
-    Printf.kprintf (fun s -> begin
+    Printf.ksprintf (fun s -> begin
             Buffer.add_string ctx.buf s;
             newline ctx
         end)

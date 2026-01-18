@@ -1762,7 +1762,7 @@ module Generator = struct
 		Buffer.add_string ctx.buf "\n"
 
 	let print ctx =
-		Printf.kprintf (fun s -> begin
+		Printf.ksprintf (fun s -> begin
 			Buffer.add_string ctx.buf s
 		end)
 

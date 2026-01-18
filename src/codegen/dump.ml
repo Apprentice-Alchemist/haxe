@@ -38,7 +38,7 @@ let dump_types com pretty =
 	let f mt =
 		let path = Type.t_path mt in
 		let buf,close = create_dumpfile_from_path com path in
-		let print fmt = Printf.kprintf (fun s -> Buffer.add_string buf s) fmt in
+		let print fmt = Printf.ksprintf (fun s -> Buffer.add_string buf s) fmt in
 		let s_metas ml tabs =
 			let args el =
 				match el with
@@ -188,7 +188,7 @@ let dump_dependencies ?(target_override=None) com =
 	in
 	let dump_dependencies_path = [com.dump_config.dump_path;target_name;"dependencies"] in
 	let buf,close = create_dumpfile [] dump_dependencies_path in
-	let print fmt = Printf.kprintf (fun s -> Buffer.add_string buf s) fmt in
+	let print fmt = Printf.ksprintf (fun s -> Buffer.add_string buf s) fmt in
 	let dep = Hashtbl.create 0 in
 	List.iter (fun m ->
 		print "%s:\n" (Path.UniqueKey.lazy_path m.m_extra.m_file);
@@ -211,7 +211,7 @@ let dump_dependencies ?(target_override=None) com =
 	close();
 	let dump_dependants_path = [com.dump_config.dump_path;target_name;"dependants"] in
 	let buf,close = create_dumpfile [] dump_dependants_path in
-	let print fmt = Printf.kprintf (fun s -> Buffer.add_string buf s) fmt in
+	let print fmt = Printf.ksprintf (fun s -> Buffer.add_string buf s) fmt in
 	Hashtbl.iter (fun n ml ->
 		print "%s:\n" n;
 		List.iter (fun m ->

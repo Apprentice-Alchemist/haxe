@@ -160,7 +160,7 @@ let spr ctx s =
 
 let print ctx =
 	ctx.separator <- false;
-	Printf.kprintf (fun s -> begin
+	Printf.ksprintf (fun s -> begin
 		handle_newlines ctx.smap s;
 		Rbuffer.add_string ctx.buf s
 	end)
