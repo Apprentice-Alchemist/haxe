@@ -196,7 +196,7 @@ end
 (**
 	Check if specified string is a reserved word in PHP
 *)
-let is_keyword str = Hashtbl.mem php_keywords_tbl (ExtString.String.lowercase str)
+let is_keyword str = Hashtbl.mem php_keywords_tbl (String.lowercase_ascii str)
 
 (**
 	Check if specified type is php.NativeArray
@@ -3684,7 +3684,7 @@ class class_builder ctx (cls:tclass) =
 				List.iter
 					(fun field ->
 						if not !required then
-							required := (ExtString.String.lowercase field.cf_name = ExtString.String.lowercase self#get_name)
+							required := (String.lowercase_ascii field.cf_name = String.lowercase_ascii self#get_name)
 					)
 					(cls.cl_ordered_statics @ cls.cl_ordered_fields);
 				!required

@@ -103,7 +103,7 @@ let resolve_module_file com m remap p =
 	in
 	let rfile = com.class_paths#find_file compose_path in
 	begin match rfile.class_path#file_kind with
-		| FFile -> (match ExtString.String.lowercase (snd m) with
+		| FFile -> (match String.lowercase_ascii (snd m) with
 			| "con" | "aux" | "prn" | "nul" | "com1" | "com2" | "com3" | "lpt1" | "lpt2" | "lpt3" when Sys.os_type = "Win32" ->
 				(* these names are reserved by the OS - old DOS legacy, such files cannot be easily created but are reported as visible *)
 				if (try (Unix.stat rfile.file).Unix.st_size with _ -> 0) > 0 then () else raise Not_found

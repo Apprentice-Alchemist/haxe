@@ -578,7 +578,7 @@ module PathConverter = struct
 		List.map (function
 			| "" -> ""
 			| str when String.get str 0 >= 'A' && String.get str 0 <= 'Z' ->
-				String.lowercase str
+				String.lowercase_ascii str
 			| str -> str
 		) pack
 
