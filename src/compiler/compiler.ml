@@ -569,7 +569,7 @@ module HighLevel = struct
 			let ret = Unix.close_process_full (pin,pout,perr) in
 			if ret <> Unix.WEXITED 0 then fail (match lines, err with
 				| [], [] -> "Failed to call haxelib (command not found ?)"
-				| [], [s] when ExtString.String.ends_with (ExtString.String.strip s) "Module not found: path" -> "The haxelib command has been strip'ed, please install it again"
+				| [], [s] when ExtString.String.ends_with (ExtString.String.strip s) ~suffix:"Module not found: path" -> "The haxelib command has been strip'ed, please install it again"
 				| _ -> String.concat "\n" (lines@err));
 			lines
 		in

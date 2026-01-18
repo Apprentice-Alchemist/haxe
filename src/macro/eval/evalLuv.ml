@@ -786,12 +786,12 @@ let buffer_fields = [
 		let buffer = decode_buffer v1
 		and offset = decode_int v2
 		and length = decode_int v3 in
-		encode_buffer (Buffer.sub buffer offset length)
+		encode_buffer (Buffer.sub buffer ~offset ~length)
 	);
 	"blit", vfun2 (fun v1 v2 ->
-		let buffer = decode_buffer v1
+		let source = decode_buffer v1
 		and destination = decode_buffer v2 in
-		Buffer.blit buffer destination;
+		Buffer.blit ~source ~destination;
 		vnull
 	);
 	"fill", vfun2 (fun v1 v2 ->
@@ -815,22 +815,22 @@ let buffer_fields = [
 	"blitToBytes", vfun3 (fun v1 v2 v3 ->
 		let buffer = decode_buffer v1
 		and destination = decode_bytes v2
-		and offset = decode_int v3 in
-		Buffer.blit_to_bytes buffer destination offset;
+		and destination_offset = decode_int v3 in
+		Buffer.blit_to_bytes buffer destination ~destination_offset;
 		vnull
 	);
 	"blitFromBytes", vfun3 (fun v1 v2 v3 ->
 		let buffer = decode_buffer v1
 		and source = decode_bytes v2
-		and offset = decode_int v3 in
-		Buffer.blit_from_bytes buffer source offset;
+		and source_offset = decode_int v3 in
+		Buffer.blit_from_bytes buffer source ~source_offset;
 		vnull
 	);
 	"blitFromString", vfun3 (fun v1 v2 v3 ->
 		let buffer = decode_buffer v1
 		and source = decode_native_string v2
-		and offset = decode_int v3 in
-		Buffer.blit_from_string buffer source offset;
+		and source_offset = decode_int v3 in
+		Buffer.blit_from_string buffer source ~source_offset;
 		vnull
 	);
 ]
@@ -1163,7 +1163,7 @@ let stream_fields = [
 	"accept", vfun2 (fun v1 v2 ->
 		let server = decode_stream v1
 		and client = decode_stream v2 in
-		encode_unit_result (Stream.accept server client)
+		encode_unit_result (Stream.accept ~server ~client)
 	);
 	"readStart", vfun3 (fun v1 v2 v3 ->
 		let stream = decode_stream v1
