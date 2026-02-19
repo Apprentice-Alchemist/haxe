@@ -1658,7 +1658,21 @@ and parse_field ctx e1 efk p s =
 			(* turn an integer followed by a dot into a float *)
 			match e1 with
 			| (EConst (Int (v, None)),p2) when p2.pmax = p.pmin -> expr_next ctx (EConst (Float (v ^ ".", None)),punion p p2) s
-			| _ -> serror()
+			| (EApplyTypeParams _, p2) -> serror()
+			| _ ->
+				match%parser s with
+				| [ (Binop OpLt,plt); [%s s] ] ->
+					let l, p2 = begin match%parser s with
+					| [ [%let l = psep_nonempty Comma (parse_type_path_or_const ctx plt)]; (Binop OpGt, pgt) ] -> l, pgt
+					| [ ] ->
+						let pos = match%parser s with
+						| [ (Binop OpGt,p) ] -> Some p (* junk > so we don't get weird follow-up errors *)
+						| [ ] -> None
+						in
+						syntax_error ctx (Expected ["type parameter"]) ~pos s ([], p);
+					end in
+					expr_next ctx (EApplyTypeParams (e1, l), punion (pos e1) p2) s
+				| [] -> serror()
 		end
 	)
 
