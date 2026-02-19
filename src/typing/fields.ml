@@ -105,12 +105,12 @@ let check_no_closure_meta ctx cf fa mode p =
 	| _ ->
 		()
 
-let field_access ctx mode f fh e pfield =
+let field_access ctx ?(tl = None) mode f fh e pfield =
 	let pfull = punion e.epos pfield in
 	let is_set = match mode with MSet _ -> true | _ -> false in
 	check_no_closure_meta ctx f fh mode pfield;
 	let bypass_accessor () = if ctx.e.bypass_accessor > 0 then (ctx.e.bypass_accessor <- ctx.e.bypass_accessor - 1; true) else false in
-	let make_access inline = FieldAccess.create e f fh (inline && ctx.allow_inline) pfull ~field_pos:pfield in
+	let make_access inline = FieldAccess.create e f fh (inline && ctx.allow_inline) pfull ~field_pos:pfield ~params:tl in
 	match f.cf_kind with
 	| Method m ->
 		let normal () = AKField(make_access false) in
@@ -163,6 +163,7 @@ let field_access ctx mode f fh e pfield =
 			AKUsingField sea
 		end;
 	| Var v ->
+		if tl <> None then raise_typing_error "Cannot apply type parameters" pfull;
 		let is_prop_access access =
 			match access with
 				| AccCall | AccPrivateCall -> ctx.e.bypass_accessor = 0
@@ -285,10 +286,10 @@ open TypeFieldConfig
 
 (* Resolves field [i] on typed expression [e] using the given [mode]. *)
 (* Note: if mode = MCall, with_type (if known) refers to the return type *)
-let type_field cfg ctx e i p mode (with_type : WithType.t) =
+let type_field cfg ctx e i p mode ?(tl = None) (with_type : WithType.t) =
 	let pfield = if e.epos = p then p else patch_string_pos p i in
 	let is_set = match mode with MSet _ -> true | _ -> false in
-	let field_access e f fmode = field_access ctx mode f fmode e pfield in
+	let field_access e f fmode = field_access ctx mode f fmode e pfield ~tl in
 	let class_field_with_access e c tl =
 		let c2, t, f = class_field ctx c tl i p in
 		let fmode = match c2 with None -> FHAnon | Some (c,tl) -> FHInstance (c,tl) in

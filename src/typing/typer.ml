@@ -201,22 +201,24 @@ let resolve_against_expected_enum ctx i =
 	| Some mt ->
 		loop mt
 
-let rec type_ident_raise ctx i p mode with_type =
+let rec type_ident_raise ctx i p mode ?(tl = None) with_type =
+	let no_apply_type_param () = if tl <> None then raise_typing_error "Cannot apply type parameters" p in
 	let resolve res =
 		ImportHandling.mark_import_position ctx res.r_pos;
 		match res.r_kind with
 		| RTypeImport(_,mt) ->
+			no_apply_type_param ();
 			AKExpr (type_module_type ctx mt p)
 		| RClassFieldImport(_,c,cf) ->
 			let e = type_module_type ctx (TClassDecl c) p in
-			field_access ctx mode cf (FHStatic c) e p
+			field_access ctx mode cf (FHStatic c) e p ~tl
 		| RAbstractFieldImport(_,a,c,cf) ->
 			let et = type_module_type ctx (TClassDecl c) p in
 			let inline = match cf.cf_kind with
 				| Var {v_read = AccInline} -> true
 				|  _ -> false
 			in
-			let fa = FieldAccess.create et cf (FHAbstract(a,extract_param_types a.a_params,c)) inline p in
+			let fa = FieldAccess.create et cf (FHAbstract(a,extract_param_types a.a_params,c)) inline p ~params: tl in
 			AKField fa
 		| REnumConstructorImport(_,en,ef) ->
 			enum_field_access ctx en ef mode p res.r_pos
@@ -225,18 +227,21 @@ let rec type_ident_raise ctx i p mode with_type =
 	in
 	match i with
 	| "true" ->
+		no_apply_type_param ();
 		let acc = AKExpr (mk (TConst (TBool true)) ctx.t.tbool p) in
 		if mode = MGet then
 			acc
 		else
 			AKNo(acc,p)
 	| "false" ->
+		no_apply_type_param ();
 		let acc = AKExpr (mk (TConst (TBool false)) ctx.t.tbool p) in
 		if mode = MGet then
 			acc
 		else
 			AKNo(acc,p)
 	| "this" ->
+		no_apply_type_param ();
 		let acc = AKExpr(get_this ctx p) in
 		begin match mode with
 		| MSet _ ->
@@ -260,6 +265,7 @@ let rec type_ident_raise ctx i p mode with_type =
 			acc
 		end;
 	| "abstract" ->
+		no_apply_type_param ();
 		begin match mode, ctx.c.curclass.cl_kind with
 			| MSet _, KAbstractImpl ab -> raise_typing_error "Property 'abstract' is read-only" p;
 			| (MGet, KAbstractImpl ab)
@@ -272,6 +278,7 @@ let rec type_ident_raise ctx i p mode with_type =
 				raise_typing_error "Property 'abstract' is reserved and only available in abstracts" p
 		end
 	| "super" ->
+		no_apply_type_param ();
 		let t = (match ctx.c.curclass.cl_super with
 			| None -> raise_typing_error "Current class does not have a superclass" p
 			| Some (c,params) -> TInst(c,params)
@@ -283,6 +290,7 @@ let rec type_ident_raise ctx i p mode with_type =
 		| FunMemberClassLocal | FunMemberAbstractLocal -> raise_typing_error "Cannot access super inside a local function" p);
 		AKExpr (mk (TConst TSuper) t p)
 	| "null" ->
+		no_apply_type_param ();
 		let acc =
 			let tnull () = ctx.t.tnull (spawn_monomorph ctx p) in
 			let t = match with_type with
@@ -309,7 +317,18 @@ let rec type_ident_raise ctx i p mode with_type =
 		(match v.v_extra with
 		| Some ve ->
 			let (params,e) = (ve.v_params,ve.v_expr) in
-			let t = apply_params params (Monomorph.spawn_constrained_monos (fun t -> t) params) v.v_type in
+			let tl = match tl with
+				| Some tl ->
+					Typeload.load_params ctx {
+						build_host = TPBHAnonFun v.v_name;
+						build_kind = None;
+						build_extern = false;
+						build_params = params
+					} tl p
+				| None ->
+					Monomorph.spawn_constrained_monos (fun t -> t) params
+			in
+			let t = apply_params params tl v.v_type in
 			(match e with
 			| Some ({ eexpr = TFunction f } as e) when ctx.com.display.dms_inline ->
 				begin match mode with
@@ -332,7 +351,7 @@ let rec type_ident_raise ctx i p mode with_type =
 		(* member variable lookup *)
 		if ctx.e.curfun = FunStatic then raise Not_found;
 		let c , t , f = class_field ctx ctx.c.curclass (extract_param_types ctx.c.curclass.cl_params) i p in
-		field_access ctx mode f (match c with None -> FHAnon | Some (c,tl) -> FHInstance (c,tl)) (get_this ctx p) p
+		field_access ctx mode f (match c with None -> FHAnon | Some (c,tl) -> FHInstance (c,tl)) (get_this ctx p) p ~tl
 	with Not_found -> try
 		(* static variable lookup *)
 		let f = PMap.find i ctx.c.curclass.cl_statics in
@@ -350,7 +369,7 @@ let rec type_ident_raise ctx i p mode with_type =
 				let e = type_module_type ctx (TClassDecl ctx.c.curclass) p in
 				e,FHStatic ctx.c.curclass
 		in
-		field_access ctx mode f fa e p
+		field_access ctx mode f fa e p ~tl
 	with Not_found -> try
 		resolve (resolve_against_expected_enum ctx i)
 	with Not_found -> try
@@ -359,10 +378,11 @@ let rec type_ident_raise ctx i p mode with_type =
 	with Not_found ->
 		resolve (ctx.m.import_resolution#resolve i)
 
-and type_ident ctx i p mode with_type =
+and type_ident ctx i p mode ?(tl = None) with_type =
 	try
-		type_ident_raise ctx i p mode with_type
+		type_ident_raise ctx i p mode ~tl with_type
 	with Not_found -> try
+		if tl <> None then raise_typing_error "Cannot apply type parameters" p;
 		(* lookup type *)
 		if is_lower_ident i p then raise Not_found;
 		let e = try
@@ -415,7 +435,7 @@ and type_ident ctx i p mode with_type =
 				end
 			end
 
-and handle_efield ctx e p0 mode with_type =
+and handle_efield ctx ?(tl = None) e p0 mode with_type =
 	let open TyperDotPath in
 
 	let dot_path first pnext =
@@ -482,14 +502,14 @@ and handle_efield ctx e p0 mode with_type =
 		| EConst (Ident i) ->
 			(* it's a dot-path, so it might be either fully-qualified access (pack.Class.field)
 			   or normal field access of a local/global/field identifier, proceed figuring this out *)
-			dot_path (mk_dot_path_part i p) dot_path_acc mode with_type
+			dot_path (mk_dot_path_part i p) dot_path_acc mode with_type ~tl
 		| EField ((eobj,pobj),s,EFSafe) ->
 			(* safe navigation field access - definitely NOT a fully-qualified access,
 			   create safe navigation chain from the object expression *)
 			let acc_obj = type_access ctx eobj pobj MGet WithType.value in
 			let eobj = acc_get ctx acc_obj in
 			let eobj, tempvar = get_safe_nav_base ctx eobj in
-			let access = field_chain ctx ((mk_dot_path_part s p) :: dot_path_acc) (AKExpr eobj) mode with_type in
+			let access = field_chain ctx ((mk_dot_path_part s p) :: dot_path_acc) (AKExpr eobj) mode with_type ~tl in
 			AKSafeNav {
 				sn_pos = p;
 				sn_base = eobj;
@@ -502,18 +522,20 @@ and handle_efield ctx e p0 mode with_type =
 			(match (type_access ctx e p MGet WithType.value) with
 			| AKSafeNav sn ->
 				(* further field access continues the safe navigation chain (after a non-field access inside the chain) *)
-				AKSafeNav { sn with sn_access = field_chain ctx dot_path_acc sn.sn_access mode with_type }
+				AKSafeNav { sn with sn_access = field_chain ctx dot_path_acc sn.sn_access mode with_type ~tl }
 			| e ->
-				field_chain ctx dot_path_acc e mode with_type)
+				field_chain ctx dot_path_acc e mode with_type ~tl)
 	in
 	loop [] (e,p0)
 
-and type_access ctx e p mode with_type =
+and type_access ctx e p mode ?(tl = None) with_type =
 	match e with
 	| EConst (Ident s) ->
-		type_ident ctx s p mode with_type
+		type_ident ctx s p mode ~tl with_type
 	| EField (e1,"new",efk) ->
 		if efk = EFSafe then raise_typing_error "?.new is not supported" p;
+		if tl <> None then raise_typing_error "cannot apply type params to .new" p;
+		let e1, tl = match fst e1 with EApplyTypeParams (e1, tl) -> e1, Some tl | _ -> e1, None in
 		let e1 = type_expr ctx e1 WithType.value in
 		begin match e1.eexpr with
 			| TTypeExpr (TClassDecl c) ->
@@ -522,7 +544,24 @@ and type_access ctx e p mode with_type =
 				| MCall _ -> raise_typing_error ("Cannot call constructor like this, use 'new " ^ (s_type_path c.cl_path) ^ "()' instead") p;
 				| MGet -> ()
 				end;
-				let monos = Monomorph.spawn_constrained_monos (fun t -> t) (match c.cl_kind with KAbstractImpl a -> a.a_params | _ -> c.cl_params) in
+				let monos = match tl with	
+					| Some tl ->
+						Typeload.load_params ctx {
+							build_host = TPBHClass (c.cl_path);
+							build_kind = (match c.cl_kind with
+							| KGeneric ->
+								Some (BuildGeneric c)
+							| KGenericBuild cfl ->
+								Some BuildGenericBuild
+							| KMacroType ->
+								Some BuildMacroType
+							| _ ->
+								Some BuildNormal);
+							build_extern = TFunctions.has_class_flag c CExtern;
+							build_params = c.cl_params
+						} tl p
+					| None -> Monomorph.spawn_constrained_monos (fun t -> t) (match c.cl_kind with KAbstractImpl a -> a.a_params | _ -> c.cl_params)
+				in
 				let fa = FieldAccess.get_constructor_access c monos p in
 				let cf = fa.fa_field in
 				no_abstract_constructor c p;
@@ -551,14 +590,21 @@ and type_access ctx e p mode with_type =
 			| _ -> raise_typing_error "Binding new is only allowed on class types" p
 		end;
 	| EField _ ->
-		handle_efield ctx e p mode with_type
+		handle_efield ctx e p mode with_type ~tl
 	| EArray (e1,e2) ->
+		if tl <> None then raise_typing_error "Cannot apply type parameters" p;
 		type_array_access ctx e1 e2 p mode
 	| ECall (e, el) ->
+		if tl <> None then raise_typing_error "Cannot apply type parameters" p;
 		type_call_access ctx e el mode with_type None p
 	| EDisplay (e,dk) ->
 		AKExpr (TyperDisplay.handle_edisplay ctx e dk mode with_type)
+	| EApplyTypeParams (e, e_tl) ->
+		if tl <> None then raise_typing_error "Cannot apply type parameters" p;
+		(match mode with MCall _ | MGet -> () | _ -> raise_typing_error "Cannot apply type parameters when writing to a field" p);
+		type_access ctx (fst e) (snd e) mode ~tl: (Some e_tl) with_type
 	| _ ->
+		if tl <> None then raise_typing_error "Cannot apply type parameters" p;
 		AKExpr (type_expr ~mode ctx (e,p) with_type)
 
 and type_array_access ctx e1 e2 p mode =
@@ -1989,7 +2035,7 @@ and type_expr ?(mode=MGet) ctx (e,p) (with_type:WithType.t) =
 			display_error ctx.com "Unsupported type for `is` operator" p_t;
 			Texpr.Builder.make_bool ctx.com.basic false p
 		end
-	| EApplyTypeParams (e, _) -> type_expr ctx e with_type
+	| EApplyTypeParams (_, _) -> acc_get ctx (type_access ctx e p mode with_type)
 ;;
 unify_min_ref := unify_min;
 unify_min_for_type_source_ref := unify_min_for_type_source;

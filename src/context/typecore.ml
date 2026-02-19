@@ -326,6 +326,8 @@ type field_access = {
 	fa_pos    : pos;
 	(* The position of the field name accessed on `fa_on`. *)
 	fa_field_pos : pos option;
+	(* Type params to be applied *)
+	fa_params: type_param_or_const list option;
 }
 
 type static_extension_access = {

@@ -476,7 +476,7 @@ let type_generic_function ctx fa fcc with_type p =
 			unify_existing_field cf2.cf_type cf2.cf_pos;
 			cf2
 		in
-		{fa with fa_field = cf2}
+		{fa with fa_field = cf2; fa_params = None}
 		(*
 			java.Lib.array() relies on the ability to shadow @:generic function for certain types
 			see https://github.com/HaxeFoundation/haxe/issues/8393#issuecomment-508685760
@@ -540,14 +540,14 @@ let type_generic_function ctx fa fcc with_type p =
 					finalize_field c cf2;
 					cf2
 				in
-				{fa with fa_host = FHStatic c;fa_field = cf2;fa_on = Builder.make_static_this c p}
+				{fa with fa_host = FHStatic c;fa_field = cf2;fa_on = Builder.make_static_this c p; fa_params = None}
 			end else begin
 				set_type_parameter_dependencies c.cl_module monos;
 				let cf2 = mk_cf2 name in
 				c.cl_statics <- PMap.add cf2.cf_name cf2 c.cl_statics;
 				c.cl_ordered_statics <- cf2 :: c.cl_ordered_statics;
 				finalize_field c cf2;
-				{fa with fa_field = cf2}
+				{fa with fa_field = cf2; fa_params = None}
 			end
 		end else begin
 			set_type_parameter_dependencies c.cl_module monos;
@@ -556,7 +556,7 @@ let type_generic_function ctx fa fcc with_type p =
 			c.cl_fields <- PMap.add cf2.cf_name cf2 c.cl_fields;
 			c.cl_ordered_fields <- cf2 :: c.cl_ordered_fields;
 			finalize_field c cf2;
-			{fa with fa_field = cf2}
+			{fa with fa_field = cf2; fa_params = None}
 		end
 	in
 	let dispatch = new CallUnification.call_dispatcher ctx (MCall []) with_type p in
