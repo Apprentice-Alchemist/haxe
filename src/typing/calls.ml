@@ -506,7 +506,7 @@ let array_access ctx e1 e2 mode p =
 	given chain of fields as the `path` argument and an `access_mode->access_kind` getter for some starting expression as `e`,
 	return a new `access_mode->access_kind` getter for the whole field access chain.
 *)
-let field_chain ctx path access mode with_type =
+let field_chain ctx path access mode ?(tl = None) with_type =
 	let rec loop access path = match path with
 		| [] ->
 			access
@@ -519,7 +519,7 @@ let field_chain ctx path access mode with_type =
 				else
 					mode, with_type
 			in
-			let access = type_field_default_cfg ctx e part.name part.pos mode with_type in
+			let access = type_field_default_cfg ctx e part.name part.pos mode with_type ~tl in
 			loop access path
 	in
 	loop access path

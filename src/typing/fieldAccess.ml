@@ -22,13 +22,14 @@ type 'a accessor_resolution =
 	(* Accessor resolution was attempted on a non-property. *)
 	| AccessorInvalid
 
-let create e cf fh inline ?field_pos p = {
+let create e cf fh inline ?field_pos ?(params = None) p = {
 	fa_on     = e;
 	fa_field  = cf;
 	fa_host   = fh;
 	fa_inline = inline;
 	fa_pos    = p;
 	fa_field_pos = field_pos;
+	fa_params = params
 }
 
 (* Creates the `tfield_access` corresponding to this field access, using the provided field. *)

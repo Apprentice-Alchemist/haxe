@@ -87,7 +87,7 @@ module AbstractFromConfig = struct
 end
 
 let type_call_target_ref : (typer -> expr -> expr list -> WithType.t -> pos option -> access_kind) ref = ref (fun _ _ _ _ -> die "" __LOC__)
-let type_access_ref : (typer -> expr_def -> pos -> access_mode -> WithType.t -> access_kind) ref = ref (fun _ _ _ _ _ -> assert false)
+let type_access_ref : (typer -> expr_def -> pos -> access_mode -> ?tl: type_param_or_const list option -> WithType.t -> access_kind) ref = ref (fun _ _ _ _ ?tl _ -> assert false)
 
 class value_reference (ctx : typer) =
 
