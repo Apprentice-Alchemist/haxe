@@ -345,7 +345,15 @@ let unify_field_call ctx fa el_typed el p inline =
 		{fcc with fc_data = fst fcc.fc_data}
 	in
 	let attempt_call cf in_overload =
-		let monos = Monomorph.spawn_constrained_monos map cf.cf_params in
+		let monos = match fa.fa_params with 
+			| Some tl ->
+				Typeload.load_params ctx {
+					build_host = TPBHMethod (fa.fa_host, cf);
+					build_kind = None;
+					build_extern = false;
+					build_params = cf.cf_params
+				} tl p
+			| None -> Monomorph.spawn_constrained_monos map cf.cf_params in
 		let t = map (apply_params cf.cf_params monos cf.cf_type) in
 		let make args ret coro =
 			let args_typed,args = unify_typed_args tmap args el_typed p in
@@ -417,7 +425,7 @@ let unify_field_call ctx fa el_typed el p inline =
 						candidate :: candidates,failures
 					end else
 						[candidate],[]
-				with Error ({ err_message = Call_error _ } as err) ->
+				with Error (err) ->
 					List.iter (fun (m,t,constr) ->
 						if t != m.tm_type then m.tm_type <- t;
 						if constr != m.tm_down_constraints then m.tm_down_constraints <- constr;

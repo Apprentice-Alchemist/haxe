@@ -296,8 +296,25 @@ let rec maybe_build_instance ctx t0 get_params p =
 	in
 	loop t0
 
-let rec load_params ctx info params p =
-	let is_rest = info.build_kind = BuildGenericBuild && (match info.build_params with [{ttp_name="Rest"}] -> true | _ -> false) in
+type type_param_build_host = TPBHClass of path | TPBHMethod of field_host * tclass_field | TPBHAnonFun of string
+
+let s_type_param_build_host = function
+	| TPBHClass p -> s_type_path p
+	| TPBHMethod (FHStatic c, field) -> s_type_path c.cl_path ^ field.cf_name
+	| TPBHMethod (FHInstance (c, _), field) -> s_type_path c.cl_path ^ field.cf_name
+	| TPBHMethod (FHAbstract (a, _, _), field) -> s_type_path a.a_path ^ field.cf_name
+	| TPBHMethod (FHAnon, field) -> field.cf_name
+	| TPBHAnonFun name -> name
+
+type params_info = {
+	build_params: type_params;
+	build_kind: build_kind option;
+	build_extern: bool;
+	build_host: type_param_build_host;
+}
+
+let rec load_params ctx (info: params_info) params p =
+	let is_rest = info.build_kind = Some BuildGenericBuild && (match info.build_params with [{ttp_name="Rest"}] -> true | _ -> false) in
 	let is_java_rest = ctx.com.platform = Jvm && info.build_extern in
 	let is_rest = is_rest || is_java_rest in
 	let load_param t ttp =
@@ -323,7 +340,7 @@ let rec load_params ctx info params p =
 				| None when is_rest ->
 					raise_typing_error "Cannot use default with rest type parameters" p
 				| None ->
-					raise_typing_error ("Too many type parameters for " ^ s_type_path info.build_path) p
+					raise_typing_error ("Too many type parameters for " ^ s_type_param_build_host info.build_host) p
 			)
 		| TPType t ->
 			load_complex_type ctx true LoadNormal t,pos t
@@ -343,9 +360,9 @@ let rec load_params ctx info params p =
 				end else if expects_expression then
 					raise_typing_error "Type parameter is expected to be a constant value" p
 			in
-			let is_rest = is_rest || name = "Rest" && info.build_kind = BuildGenericBuild in
+			let is_rest = is_rest || name = "Rest" && info.build_kind = Some BuildGenericBuild in
 			let t = match ttp.ttp_constraints with
-				| None when (match info.build_kind with BuildGeneric _ -> false | _ -> true) ->
+				| None when (match info.build_kind with Some BuildGeneric _ -> false | _ -> true) ->
 					check_const ttp.ttp_class;
 					t
 				| _ ->
@@ -356,7 +373,7 @@ let rec load_params ctx info params p =
 			t :: loop tl1 tl2 is_rest
 		| [],[] ->
 			[]
-		| [],[{ttp_name="Rest"}] when info.build_kind = BuildGenericBuild ->
+		| [],[{ttp_name="Rest"}] when info.build_kind = Some BuildGenericBuild ->
 			[]
 		| [],({ttp_type=t;ttp_default=def}) :: tl ->
 			if is_java_rest then
@@ -366,7 +383,7 @@ let rec load_params ctx info params p =
 					if ignore_error ctx.com then
 						t :: loop [] tl is_rest
 					else
-						raise_typing_error ("Not enough type parameters for " ^ s_type_path info.build_path) p
+						raise_typing_error ("Not enough type parameters for " ^ s_type_param_build_host info.build_host) p
 				| Some t ->
 					t :: loop [] tl is_rest
 			end
@@ -377,7 +394,7 @@ let rec load_params ctx info params p =
 			else if ignore_error ctx.com then
 				[]
 			else
-				raise_typing_error ("Too many type parameters for " ^ s_type_path info.build_path) pt
+				raise_typing_error ("Too many type parameters for " ^ s_type_param_build_host info.build_host) pt
 	in
 	let params = loop params info.build_params false in
 	if not is_rest then begin
@@ -418,17 +435,23 @@ and load_instance' ctx ptp get_params mode =
 				display_error ctx.com ("Too many type parameters for " ^ s_type_path info.build_path) pt;
 				info.build_apply []
 		end else begin
+			let param_info = {
+				build_params = info.build_params;
+				build_kind = Some info.build_kind;
+				build_extern = info.build_extern;
+				build_host = TPBHClass info.build_path;
+			} in
 			(* TODO: this is currently duplicated, but it seems suspcious anyway... *)
 			let is_rest = info.build_kind = BuildGenericBuild && (match info.build_params with [{ttp_name="Rest"}] -> true | _ -> false) in
 			let tl = if t.tparams = [] && not is_rest then begin match get_params with
 				| ParamNormal ->
-					load_params ctx info t.tparams ptp.pos_full
+					load_params ctx param_info t.tparams ptp.pos_full
 				| ParamSpawnMonos ->
 					Monomorph.spawn_constrained_monos (fun t -> t) info.build_params
 				| ParamCustom f ->
 					f info None
 			end else
-				load_params ctx info t.tparams ptp.pos_full
+				load_params ctx param_info t.tparams ptp.pos_full
 			in
 			let t = info.build_apply tl in
 			maybe_build_instance ctx t get_params ptp.pos_full
