@@ -800,7 +800,7 @@ module Fusion = struct
 			let is_compiler_generated = match v.v_kind with VUser _ | VInlined | VInlinedConstructorVariable _ -> false | _ -> true in
 			let has_type_params = match v.v_extra with Some ve when ve.v_params <> [] -> true | _ -> false in
 			let rec is_impure_extern e = match e.eexpr with
-				| TField(ef,(FStatic(cl,cf) | FInstance(cl,_,cf))) when has_class_flag cl CExtern ->
+				| TField(ef,(FStatic(cl,cf,_) | FInstance(cl,_,cf,_))) when has_class_flag cl CExtern ->
 					not (
 						Meta.has Meta.CoreApi cl.cl_meta ||
 						PurityState.is_pure cl cf
@@ -1110,7 +1110,7 @@ module Cleanup = struct
 					| _ ->
 						{e with eexpr = TWhile(e1,e2,NormalWhile)}
 				end
-			| TField(e1,(FAnon {cf_name = s} | FDynamic s)) ->
+			| TField(e1,(FAnon ({cf_name = s},_) | FDynamic s)) ->
 				let e1 = loop e1 in
 				let fa = quick_field_dynamic e1.etype s in
 				{e with eexpr = TField(e1,fa)}
@@ -1208,7 +1208,7 @@ module Purity = struct
 				loop e2;
 			| TUnop((Increment | Decrement),_,e1) ->
 				check_write e1;
-			| TCall({eexpr = TField(_,FStatic(c,cf))},el) ->
+			| TCall({eexpr = TField(_,FStatic(c,cf,_))},el) ->
 				List.iter loop el;
 				check_field c cf;
 			| TNew(c,_,el) ->

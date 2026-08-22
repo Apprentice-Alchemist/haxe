@@ -26,7 +26,7 @@ let maybe_add_entrypoint com =
 			let ec = (match et with TClassDecl c -> c | _ -> die "" __LOC__) in
 			let ef = PMap.find method_name ec.cl_statics in
 			let et = Texpr.Builder.make_typeexpr et null_pos in
-			let e = mk (TCall (mk (TField (et,FStatic (ec,ef))) ef.cf_type null_pos,[])) com.basic.tvoid null_pos in
+			let e = mk (TCall (mk (TField (et,FStatic (ec,ef, []))) ef.cf_type null_pos,[])) com.basic.tvoid null_pos in
 			let e = mk (TBlock [main;e]) com.basic.tvoid main.epos in
 			com.main.main_expr <- Some e
 		with Not_found ->
@@ -64,7 +64,7 @@ let get_main ctx main_module types =
 		let ft = Type.field_type f in
 		let fmode, r =
 			match follow ft with
-			| TFun ([],r) -> FStatic (c,f), r
+			| TFun ([],r) -> FStatic (c,f, []), r
 			| _ -> raise_typing_error ("Invalid -main : " ^ s_type_path path ^ " has invalid main function") c.cl_pos
 		in
 		if not (ExtType.is_void (follow r)) then raise_typing_error (Printf.sprintf "Return type of main function should be Void (found %s)" (s_type (print_context()) r)) f.cf_name_pos;
@@ -165,7 +165,7 @@ let sort_types com (modules : module_lut) =
 				end
 			in
 			loop c
-		| TField(e1,FStatic(c,cf)) ->
+		| TField(e1,FStatic(c,cf,_)) ->
 			walk_expr p e1;
 			walk_static_field p c cf;
 		| _ ->

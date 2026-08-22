@@ -234,7 +234,7 @@ and gen_expr ctx e =
 		(EBinop ("=",field p (gen_expr ctx e1) (field_name f),gen_expr ctx e2),p)
 	| TBinop (op,e1,e2) ->
 		gen_binop ctx p op e1 e2
-	| TField (e2,FClosure (_,f)) ->
+	| TField (e2,FClosure (_,f,_)) ->
 		let emit n =
 			if n > 5 then Error.abort "Cannot create closure with more than 5 arguments" e.epos;
 			let tmp = ident p "@tmp" in
@@ -403,7 +403,7 @@ let gen_method ctx p c acc =
 		((c.cf_name, null p) :: acc)
 	| Some e ->
 		match e.eexpr with
-		| TCall ({ eexpr = TField (_,FStatic ({cl_path=["neko"],"Lib"},{cf_name="load" | "loadLazy" as load})) },[{ eexpr = TConst (TString m) };{ eexpr = TConst (TString f) };{ eexpr = TConst (TInt n) }]) ->
+		| TCall ({ eexpr = TField (_,FStatic ({cl_path=["neko"],"Lib"},{cf_name="load" | "loadLazy" as load},_)) },[{ eexpr = TConst (TString m) };{ eexpr = TConst (TString f) };{ eexpr = TConst (TInt n) }]) ->
 			let p = pos ctx e.epos in
 			let e = call p (EField (builtin p "loader","loadprim"),p) [(EBinop ("+",(EBinop ("+",str p m,str p "@"),p),str p f),p); (EConst (Int (Int32.to_int n)),p)] in
 			let e = (if load = "load" then e else (ETry (e,"@e",call p (ident p "@lazy_error") [ident p "@e"]),p)) in

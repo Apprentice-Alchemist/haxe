@@ -69,16 +69,16 @@ let rec op_assign ctx jit e1 e2 = match e1.eexpr with
 		let exec1 = jit_expr jit false ef in
 		let exec2 = jit_expr jit false e2 in
 		begin match fa with
-			| FInstance({cl_path=(["haxe";"io"],"Bytes")},_,{cf_name="length"}) ->
+			| FInstance({cl_path=(["haxe";"io"],"Bytes")},_,{cf_name="length"},_) ->
 				emit_bytes_length_write exec1 exec2
-			| FStatic({cl_path=path},_) | FEnum({e_path=path},_) ->
+			| FStatic({cl_path=path},_,_) | FEnum({e_path=path},_) ->
 				let proto = get_static_prototype jit.ctx (path_hash path) ef.epos in
 				emit_proto_field_write proto (get_proto_field_index proto name) exec2
-			| FInstance(c,_,_) when not (has_class_flag c CInterface) ->
+			| FInstance(c,_,_,_) when not (has_class_flag c CInterface) ->
 				let proto = get_instance_prototype jit.ctx (path_hash c.cl_path) ef.epos in
 				let i = get_instance_field_index proto name ef.epos in
 				emit_instance_field_write exec1 ef.epos i exec2
-			| FAnon cf ->
+			| FAnon (cf,_) ->
 				begin match follow ef.etype with
 					| TAnon an ->
 						let l = PMap.foldi (fun k _ acc -> (hash k,()) :: acc) an.a_fields [] in
@@ -118,10 +118,10 @@ and op_assign_op jit op e1 e2 prefix = match e1.eexpr with
 		let exec1 = jit_expr jit false ef in
 		let exec2 = jit_expr jit false e2 in
 		begin match fa with
-			| FStatic({cl_path=path},_) ->
+			| FStatic({cl_path=path},_,_) ->
 				let proto = get_static_prototype jit.ctx (path_hash path) ef.epos in
 				emit_proto_field_read_write proto (get_proto_field_index proto name) exec2 op prefix
-			| FInstance(c,_,_) when not (has_class_flag c CInterface) ->
+			| FInstance(c,_,_,_) when not (has_class_flag c CInterface) ->
 				let proto = get_instance_prototype jit.ctx (path_hash c.cl_path) ef.epos in
 				let i = get_instance_field_index proto name ef.epos in
 				emit_instance_field_read_write exec1 ef.epos i exec2 op prefix
@@ -403,7 +403,7 @@ and jit_expr jit return e =
 	(* calls *)
 	| TCall(e1,el) ->
 		begin match e1.eexpr with
-		| TField({eexpr = TConst TSuper;epos=pv},FInstance(c,_,cf)) ->
+		| TField({eexpr = TConst TSuper;epos=pv},FInstance(c,_,cf,_)) ->
 			let proto = get_instance_prototype ctx (path_hash c.cl_path) e1.epos in
 			let name = hash cf.cf_name in
 			let i = get_proto_field_index proto name in
@@ -444,12 +444,12 @@ and jit_expr jit return e =
 				emit_method_call exec name execs e.epos
 			in
 			begin match fa with
-				| FStatic({cl_path=[],"StringTools"},{cf_name="fastCodeAt"}) ->
+				| FStatic({cl_path=[],"StringTools"},{cf_name="fastCodeAt"},_) ->
 					begin match execs with
 						| [exec1;exec2] -> emit_string_cca exec1 exec2 e.epos
 						| _ -> die "" __LOC__
 					end
-				| FStatic({cl_path=[],"StringTools"},{cf_name="unsafeCodeAt"}) ->
+				| FStatic({cl_path=[],"StringTools"},{cf_name="unsafeCodeAt"},_) ->
 					begin match execs with
 						| [exec1;exec2] -> emit_string_cca_unsafe exec1 exec2 e.epos
 						| _ -> die "" __LOC__
@@ -458,11 +458,11 @@ and jit_expr jit return e =
 					let key = path_hash path in
 					let pos = Some e.epos in
 					emit_enum_construction key ef.ef_index (Array.of_list execs) pos
-				| FStatic({cl_path=path},cf) when is_proper_method cf ->
+				| FStatic({cl_path=path},cf,_) when is_proper_method cf ->
 					let proto = get_static_prototype ctx (path_hash path) ef.epos in
 					let v = lazy_proto_field proto in
 					emit_proto_field_call v execs e.epos
-				| FInstance(c,_,cf) when is_proper_method cf ->
+				| FInstance(c,_,cf,_) when is_proper_method cf ->
 					if not (is_final c cf) then
 						default()
 					else if not (has_class_flag c CInterface) then
@@ -528,14 +528,14 @@ and jit_expr jit return e =
 	| TField(e1,fa) ->
 		let name = hash (field_name fa) in
 		begin match fa with
-			| FInstance({cl_path=([],"Array")},_,{cf_name="length"}) -> emit_array_length_read (jit_expr jit false e1) e1.epos
-			| FInstance({cl_path=(["eval"],"Vector")},_,{cf_name="length"}) -> emit_vector_length_read (jit_expr jit false e1) e1.epos
-			| FInstance({cl_path=(["haxe";"io"],"Bytes")},_,{cf_name="length"}) -> emit_bytes_length_read (jit_expr jit false e1) e1.epos
-			| FStatic({cl_path=path},_) | FEnum({e_path=path},_)
-			| FInstance({cl_path=path},_,{cf_kind = Method (MethNormal | MethInline)}) ->
+			| FInstance({cl_path=([],"Array")},_,{cf_name="length"},_) -> emit_array_length_read (jit_expr jit false e1) e1.epos
+			| FInstance({cl_path=(["eval"],"Vector")},_,{cf_name="length"},_) -> emit_vector_length_read (jit_expr jit false e1) e1.epos
+			| FInstance({cl_path=(["haxe";"io"],"Bytes")},_,{cf_name="length"},_) -> emit_bytes_length_read (jit_expr jit false e1) e1.epos
+			| FStatic({cl_path=path},_,_) | FEnum({e_path=path},_)
+			| FInstance({cl_path=path},_,{cf_kind = Method (MethNormal | MethInline)},_) ->
 				let proto = get_static_prototype ctx (path_hash path) e1.epos in
 				emit_proto_field_read proto (get_proto_field_index proto name)
-			| FInstance(c,_,_) when not (has_class_flag c CInterface) ->
+			| FInstance(c,_,_,_) when not (has_class_flag c CInterface) ->
 				let proto = get_instance_prototype ctx (path_hash c.cl_path) e1.epos in
 				let i = get_instance_field_index proto name e1.epos in
 				begin match e1.eexpr with

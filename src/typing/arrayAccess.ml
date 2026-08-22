@@ -85,7 +85,7 @@ and get_forwarded_length t =
 	match follow t with
 	| TInst(c,tl) as t ->
 		(match quick_field t "length" with
-			| FInstance(c,tl,cf) ->
+			| FInstance(c,tl,cf,_) ->
 				(match follow (apply_params c.cl_params tl cf.cf_type) with
 					| TAbstract({a_path = [],"Int"},[]) -> ALField
 					| _ -> raise Not_found
@@ -111,7 +111,7 @@ let get_array_access ctx t p =
 		(try
 			(* first try: do we have an @:arrayAccess getter field? *)
 			let todo = mk (TConst TNull) ctx.t.tint p in
-			let cf,_,r,_ = AbstractCast.find_array_read_access_raise ctx a tl todo p in
+			let cf,_,r,_,_ = AbstractCast.find_array_read_access_raise ctx a tl todo p in
 			{ aa_type = r; aa_get = AGCall(c,cf,tl); aa_length }
 		with Not_found ->
 			(* second try: do we have @:arrayAccess on a core-type abstract? *)

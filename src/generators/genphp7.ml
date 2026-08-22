@@ -384,7 +384,7 @@ let needs_dereferencing for_assignment expr =
 			| TConst TNull -> true
 			| TIf _ -> true
 			(* some of `php.Syntax` methods *)
-			| TCall ({ eexpr = TField (_, FStatic ({ cl_path = syntax_type_path }, { cf_name = name })) }, _) ->
+			| TCall ({ eexpr = TField (_, FStatic ({ cl_path = syntax_type_path }, { cf_name = name },_)) }, _) ->
 				(match name with
 					| "codeDeref" | "coalesce" | "assocDecl" | "arrayDecl" -> for_assignment
 					| _ -> false
@@ -437,9 +437,9 @@ let rec needs_parenthesis_to_call expr =
 		| TNew _
 		| TObjectDecl _
 		| TArrayDecl _
-		| TField (_, FClosure (_,_))
-		| TField (_, FStatic (_, { cf_kind = Var _ }))
-		| TField (_, FInstance (_, _, { cf_kind = Var _ })) -> true
+		| TField (_, FClosure (_,_,_))
+		| TField (_, FStatic (_, { cf_kind = Var _ },_))
+		| TField (_, FInstance (_, _, { cf_kind = Var _ },_)) -> true
 		(* | TField (_, FAnon { cf_kind = Var _ }) -> true *) (* Sometimes we get anon access to non-anonymous objects *)
 		| _ -> false
 
@@ -466,7 +466,7 @@ let is_assignment_binop op =
 *)
 let is_php_global expr =
 	match expr.eexpr with
-		| TField (_, FStatic (c, _)) when (has_class_flag c CExtern) -> c.cl_path = ([],"") || Meta.has Meta.PhpGlobal c.cl_meta
+		| TField (_, FStatic (c, _,_)) when (has_class_flag c CExtern) -> c.cl_path = ([],"") || Meta.has Meta.PhpGlobal c.cl_meta
 		| _ -> false
 
 (**
@@ -474,7 +474,7 @@ let is_php_global expr =
 *)
 let is_php_class_const expr =
 	match expr.eexpr with
-		| TField (_, FStatic (c, { cf_meta = meta; cf_kind = Var _ })) when (has_class_flag c CExtern) ->
+		| TField (_, FStatic (c, { cf_meta = meta; cf_kind = Var _ },_)) when (has_class_flag c CExtern) ->
 			Meta.has Meta.PhpClassConst meta
 		| _ -> false
 
@@ -748,7 +748,7 @@ let is_access expr =
 *)
 let is_array_arr faccess =
 	match faccess with
-		| FInstance ({ cl_path = [],"Array" }, _, { cf_name = "arr" }) -> true
+		| FInstance ({ cl_path = [],"Array" }, _, { cf_name = "arr" },_) -> true
 		| _ -> false
 
 (**
@@ -858,7 +858,7 @@ let field_name field =
 *)
 let is_std_is expr =
 	match expr.eexpr with
-		| TField (_, FStatic ({ cl_path = path }, { cf_name = ("is" | "isOfType") })) -> path = boot_type_path || path = std_type_path
+		| TField (_, FStatic ({ cl_path = path }, { cf_name = ("is" | "isOfType") },_)) -> path = boot_type_path || path = std_type_path
 		| _ -> false
 
 (**
@@ -868,7 +868,7 @@ let is_native_struct_array_cast expr =
 	match expr.eexpr with
 		| TCall ({ eexpr = TField (_, field) }, _) ->
 			(match field with
-				| FStatic ({ cl_path = (["php"; "_NativeStructArray"], "NativeStructArray_Impl_") }, { cf_name = "__fromObject" }) -> true
+				| FStatic ({ cl_path = (["php"; "_NativeStructArray"], "NativeStructArray_Impl_") }, { cf_name = "__fromObject" }, _) -> true
 				| _ -> false
 			)
 		| _ -> false
@@ -1552,7 +1552,7 @@ class code_writer (ctx:php_generator_context) hx_type_path php_name =
 				{ expr with eexpr = TCall (
 					{ expr with eexpr = TField (
 						{ expr with eexpr = TTypeExpr (TClassDecl ctx.pgc_boot) },
-						FStatic (ctx.pgc_boot, PMap.find "deref" ctx.pgc_boot.cl_statics)
+						FStatic (ctx.pgc_boot, PMap.find "deref" ctx.pgc_boot.cl_statics, [])
 					) },
 					[ expr ]
 				) }
@@ -1690,7 +1690,7 @@ class code_writer (ctx:php_generator_context) hx_type_path php_name =
 				| TIf (condition, if_expr, else_expr) -> self#write_expr_if condition if_expr else_expr
 				| TWhile (condition, expr, do_while) ->
 					(match (reveal_expr_with_parenthesis condition).eexpr with
-						| TField (_, FStatic ({ cl_path = path }, { cf_name = "foreachCondition" })) when path = syntax_type_path  ->
+						| TField (_, FStatic ({ cl_path = path }, { cf_name = "foreachCondition" },_)) when path = syntax_type_path  ->
 							self#write_expr_syntax_foreach expr
 						| _ ->
 							self#write_expr_while condition expr do_while
@@ -2113,7 +2113,7 @@ class code_writer (ctx:php_generator_context) hx_type_path php_name =
 					| TConst TNull -> self#write "'null'"
 					| TBinop _ | TUnop _ -> self#write_expr (parenthesis expr)
 					| TParenthesis { eexpr = (TBinop _ | TUnop _) }
-					| TCall ({ eexpr = TField (_, FStatic ({ cl_path = ([],"Std") }, { cf_name = "string" })) }, [_]) ->
+					| TCall ({ eexpr = TField (_, FStatic ({ cl_path = ([],"Std") }, { cf_name = "string" },_)) }, [_]) ->
 						self#write_expr expr
 					| _ ->
 						self#write "(";
@@ -2231,17 +2231,17 @@ class code_writer (ctx:php_generator_context) hx_type_path php_name =
 		*)
 		method write_expr_field expr access =
 			match access with
-				| FInstance ({ cl_path = [], "String"}, _, { cf_name = "length"; cf_kind = Var _ }) ->
+				| FInstance ({ cl_path = [], "String"}, _, { cf_name = "length"; cf_kind = Var _ },_) ->
 					self#write "mb_strlen(";
 					self#write_expr expr;
 					self#write ")"
-				| FInstance (_, _, field) -> self#write_expr_for_field_access expr "->" (field_name field)
-				| FStatic (_, ({ cf_kind = Var _ } as field)) ->
+				| FInstance (_, _, field,_) -> self#write_expr_for_field_access expr "->" (field_name field)
+				| FStatic (_, ({ cf_kind = Var _ } as field),_) ->
 					(match (reveal_expr expr).eexpr with
 						| TTypeExpr _ -> self#write_expr_for_field_access expr "::" ("$" ^ (field_name field))
 						| _ -> self#write_expr_for_field_access expr "->" (field_name field)
 					)
-				| FStatic (_, ({ cf_kind = Method MethDynamic } as field)) ->
+				| FStatic (_, ({ cf_kind = Method MethDynamic } as field),_) ->
 					(match self#parent_expr with
 						| Some { eexpr = TCall ({ eexpr = TField (e, a) }, _) } when a == access ->
 							self#write "(";
@@ -2250,12 +2250,12 @@ class code_writer (ctx:php_generator_context) hx_type_path php_name =
 						| _ ->
 							self#write_expr_for_field_access expr "::" ("$" ^ (field_name field))
 					)
-				| FStatic (_, ({ cf_kind = Method _ } as field)) -> self#write_expr_field_static expr field
-				| FAnon field ->
+				| FStatic (_, ({ cf_kind = Method _ } as field),_) -> self#write_expr_field_static expr field
+				| FAnon (field,_) ->
 					let written_as_probable_string = self#write_expr_field_if_string expr (field_name field) in
 					if not written_as_probable_string then self#write_expr_for_field_access expr "->" (field_name field)
 				| FDynamic field_name -> self#write_expr_field_dynamic expr field_name
-				| FClosure (tcls, field) -> self#write_expr_field_closure tcls field expr
+				| FClosure (tcls, field,_) -> self#write_expr_field_closure tcls field expr
 				| FEnum (_, field) ->
 					self#write_expr_field_enum expr field
 		(**
@@ -2314,8 +2314,8 @@ class code_writer (ctx:php_generator_context) hx_type_path php_name =
 		*)
 		method write_expr_call_string expr access args =
 			match access with
-				| FInstance (_, _, ({ cf_kind = Method _ } as field))
-				| FClosure (_, ({ cf_kind = Method _ } as field)) ->
+				| FInstance (_, _, ({ cf_kind = Method _ } as field),_)
+				| FClosure (_, ({ cf_kind = Method _ } as field),_) ->
 					self#write ((self#use hxstring_type_path) ^ "::" ^ (field_name field) ^ "(");
 					write_args self#write self#write_expr (fix_call_args ctx.pgc_common.basic field.cf_type (expr :: args));
 					self#write ")"
@@ -2339,7 +2339,7 @@ class code_writer (ctx:php_generator_context) hx_type_path php_name =
 					| _ -> "->"
 			in
 			match self#parent_expr with
-				| Some { eexpr = TCall ({ eexpr = TField (e, FStatic (_, f)) }, _) } when e == expr && f == field ->
+				| Some { eexpr = TCall ({ eexpr = TField (e, FStatic (_, f,_)) }, _) } when e == expr && f == field ->
 					write_expr ();
 					self#write (operator ^ (field_name field))
 				| _ ->
@@ -2420,7 +2420,7 @@ class code_writer (ctx:php_generator_context) hx_type_path php_name =
 		*)
 		method write_expr_call_syntax_extern expr args =
 			let name = match expr.eexpr with
-				| TField (_, FStatic (_, field)) -> field_name field
+				| TField (_, FStatic (_, field,_)) -> field_name field
 				| _ -> fail self#pos __LOC__
 			in
 			match name with
@@ -2712,7 +2712,7 @@ class code_writer (ctx:php_generator_context) hx_type_path php_name =
 		*)
 		method write_expr_php_global target_expr =
 			match target_expr.eexpr with
-				| TField (_, FStatic (_, field)) ->
+				| TField (_, FStatic (_, field,_)) ->
 					let name = field_name field in
 					if namespace <> [] && not (is_keyword name) then self#write "\\";
 					self#write name
@@ -2722,7 +2722,7 @@ class code_writer (ctx:php_generator_context) hx_type_path php_name =
 		*)
 		method write_expr_php_class_const target_expr =
 			match target_expr.eexpr with
-				| TField (_, FStatic (ecls, field)) ->
+				| TField (_, FStatic (ecls, field,_)) ->
 					self#write ((self#use_t (TInst (ecls, []))) ^ "::" ^ (field_name field))
 				| _ -> fail self#pos __LOC__
 		(**

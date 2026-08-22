@@ -145,7 +145,7 @@ let interpolate_code error code tl f_string f_expr p =
 module ExtClass = struct
 	let add_static_init c cf e p =
 		let ethis = Texpr.Builder.make_static_this c p in
-		let ef1 = mk (TField(ethis,FStatic(c,cf))) cf.cf_type p in
+		let ef1 = mk (TField(ethis,FStatic(c,cf,[]))) cf.cf_type p in
 		let e_assign = mk (TBinop(OpAssign,ef1,e)) e.etype p in
 		TClass.add_cl_init c e_assign
 end

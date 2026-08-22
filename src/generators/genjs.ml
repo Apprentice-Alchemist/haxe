@@ -268,7 +268,7 @@ let gen_constant ctx p = function
 let is_code_injection_function e =
 	match e.eexpr with
 	| TIdent "__js__"
-	| TField (_, FStatic ({ cl_path = ["js"],"Syntax" }, { cf_name = "code" | "plainCode" }))
+	| TField (_, FStatic ({ cl_path = ["js"],"Syntax" }, { cf_name = "code" | "plainCode" },_))
 		-> true
 	| _ ->
 		false
@@ -336,9 +336,9 @@ let rec gen_call ctx e el in_value =
 			concat ctx "," (gen_value ctx) el;
 			spr ctx ")";
 		end
-	| TField (_, FStatic ({ cl_path = ["js"],"Syntax" }, { cf_name = meth })), args ->
+	| TField (_, FStatic ({ cl_path = ["js"],"Syntax" }, { cf_name = meth },_)), args ->
 		gen_syntax ctx meth args e.epos
-	| TField (_, FStatic ({ cl_path = ["js"],"Lib" }, { cf_name = "rethrow" })), [] ->
+	| TField (_, FStatic ({ cl_path = ["js"],"Lib" }, { cf_name = "rethrow" },_)), [] ->
 		(match ctx.catch_vars with
 			| e :: _ ->
 				spr ctx "throw ";
@@ -346,7 +346,7 @@ let rec gen_call ctx e el in_value =
 			| _ ->
 				abort "js.Lib.rethrow can only be called inside a catch block" e.epos
 		)
-	| TField (_, FStatic ({ cl_path = ["js"],"Lib" }, { cf_name = "getOriginalException" })), [] ->
+	| TField (_, FStatic ({ cl_path = ["js"],"Lib" }, { cf_name = "getOriginalException" },_)), [] ->
 		(match ctx.catch_vars with
 			| e :: _ ->
 				gen_value ctx e
@@ -419,7 +419,7 @@ and gen_call_with_apply ctx target args =
 	| _ -> die ~p:target.epos "`args` for `gen_call_with_apply` must contain exactly one item" __LOC__
 	);
 	match target.eexpr with
-	| TField (this, (FInstance (_,_,{ cf_name = field }) | FAnon { cf_name = field } | FDynamic field | FClosure (_,{ cf_name = field }))) ->
+	| TField (this, (FInstance (_,_,{ cf_name = field },_) | FAnon ({ cf_name = field },_) | FDynamic field | FClosure (_,{ cf_name = field },_))) ->
 		add_feature ctx "thisForCallWithRestArgs";
 		spr ctx "($_=";
 		gen_value ctx this;
@@ -496,14 +496,14 @@ and gen_expr ctx e =
 				gen_value ctx x;
 				print ctx ".%s" (field_name f);
 				spr ctx (Ast.s_unop op))
-	| TField (x,FClosure (Some ({cl_path=[],"Array"},_), {cf_name="push"})) ->
+	| TField (x,FClosure (Some ({cl_path=[],"Array"},_), {cf_name="push"},_)) ->
 		(* see https://github.com/HaxeFoundation/haxe/issues/1997 *)
 		add_feature ctx "use.$arrayPush";
 		add_feature ctx "use.$bind";
 		print ctx "$bind(";
 		gen_value ctx x;
 		print ctx ",$arrayPush)"
-	| TField (x,FClosure (_,f)) ->
+	| TField (x,FClosure (_,f,_)) ->
 		add_feature ctx "use.$bind";
 		(match x.eexpr with
 		| TConst _ | TLocal _ ->
@@ -529,11 +529,11 @@ and gen_expr ctx e =
 			print ctx ".%s" (ident fname)
 		else
 			print ctx "[%i]" (i + 2)
-	| TField (_, FStatic ({cl_path = [],""},f)) ->
+	| TField (_, FStatic ({cl_path = [],""},f,_)) ->
 		spr ctx f.cf_name;
-	| TField (x, (FInstance(_,_,f) | FStatic(_,f) | FAnon(f))) when Meta.has Meta.SelfCall f.cf_meta ->
+	| TField (x, (FInstance(_,_,f,_) | FStatic(_,f,_) | FAnon(f,_))) when Meta.has Meta.SelfCall f.cf_meta ->
 		gen_value ctx x;
-	| TField (_,FStatic ({ cl_kind = KModuleFields m },f)) ->
+	| TField (_,FStatic ({ cl_kind = KModuleFields m },f,_)) ->
 		spr ctx (module_field m f)
 	| TField (x,f) ->
 		let rec skip e = match e.eexpr with
@@ -543,7 +543,7 @@ and gen_expr ctx e =
 		in
 		let x = skip x in
 		gen_value ctx x;
-		spr ctx (match f with FStatic(c,f) -> static_field ctx c f | FEnum _ | FInstance _ | FAnon _ | FDynamic _ | FClosure _ -> field (field_name f))
+		spr ctx (match f with FStatic(c,f,_) -> static_field ctx c f | FEnum _ | FInstance _ | FAnon _ | FDynamic _ | FClosure _ -> field (field_name f))
 	| TTypeExpr t ->
 		spr ctx (ctx.type_accessor t)
 	| TParenthesis e ->

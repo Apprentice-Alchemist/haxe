@@ -451,6 +451,7 @@ let run_safe_filters ectx com (scom : SafeCom.t) all_types_array new_types_array
 			| _ -> (fun scom e -> RenameVars.run scom.curclass.cl_path rename_locals_config e)
 		);
 		"mark_switch_break_loops",SafeFilters.mark_switch_break_loops;
+		"check_field_type_params",CheckFieldTypeParams.check_field_type_params;
 	] in
 
 	Parallel.run_with_pool pool_lazy (fun pool ->

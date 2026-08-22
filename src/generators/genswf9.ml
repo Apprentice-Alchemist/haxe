@@ -343,7 +343,7 @@ let property ctx fa t =
 	| Some n -> n, None, false
 	| None ->
 	match fa with
-	| FStatic (c, cf) when is_cf_protected cf ->
+	| FStatic (c, cf,_) when is_cf_protected cf ->
 		HMName (reserved cf.cf_name, HNStaticProtected (Some (make_class_ns c))), None, false
 	| _ ->
 	let p = field_name fa in
@@ -412,7 +412,7 @@ let property ctx fa t =
 
 let this_property fa =
 	match fa with
-	| FInstance (c,_,cf) | FClosure (Some (c,_),cf) ->
+	| FInstance (c,_,cf,_) | FClosure (Some (c,_),cf,_) ->
 		if is_cf_protected cf then
 			HMName (reserved cf.cf_name, HNProtected (make_class_ns c))
 		else begin
@@ -957,10 +957,10 @@ let gen_access ctx e (forset : 'a) : 'a access =
 		| TEnum _, _ -> VId id
 		| TInst (_,tl), et ->
 			let requires_cast = match fa with
-				| FInstance(c,_,{cf_kind = Var _}) when (has_class_flag c CInterface) ->
+				| FInstance(c,_,{cf_kind = Var _},_) when (has_class_flag c CInterface) ->
 					(* we have to cast var access on interfaces *)
 					true
-				| FInstance(_,_,cf) ->
+				| FInstance(_,_,cf,_) ->
 					(* if the return type is one of the type-parameters, then we need to cast it *)
 					(match follow cf.cf_type with TInst({cl_kind = KTypeParameter _},_) -> true | _ -> false)
 				| _ ->
@@ -1432,7 +1432,7 @@ and gen_call ctx retval e el r =
 		gen_expr ctx true e;
 		gen_expr ctx true t;
 		write ctx (HOp A3OIs)
-	| TField (_,FStatic ({ cl_path = [],"Std" },{ cf_name = ("is" | "isOfType") })),[e;{ eexpr = TTypeExpr (TClassDecl _) } as t] ->
+	| TField (_,FStatic ({ cl_path = [],"Std" },{ cf_name = ("is" | "isOfType") },_)),[e;{ eexpr = TTypeExpr (TClassDecl _) } as t] ->
 		(* fast inlining of Std.is with known values *)
 		gen_expr ctx true e;
 		gen_expr ctx true t;
@@ -1572,10 +1572,10 @@ and gen_call ctx retval e el r =
 	| TField (e1,f) , _ ->
 		begin
 			let default () = gen_field_call ctx retval e1 f el r in
-			let mk_prop_acccess prop_cl prop_tl prop_cf = mk (TField (e1, FInstance (prop_cl, prop_tl, prop_cf))) prop_cf.cf_type e.epos in
-			let mk_static_acccess cl prop_cf = mk (TField (e1, FStatic (cl, prop_cf))) prop_cf.cf_type e.epos in
+			let mk_prop_acccess prop_cl prop_tl prop_cf = mk (TField (e1, FInstance (prop_cl, prop_tl, prop_cf, []))) prop_cf.cf_type e.epos in
+			let mk_static_acccess cl prop_cf = mk (TField (e1, FStatic (cl, prop_cf, []))) prop_cf.cf_type e.epos in
 			match f, el with
-			| FInstance (cl, tl, cf), [] ->
+			| FInstance (cl, tl, cf,_), [] ->
 				(match is_extern_instance_accessor ~isget:true cl tl cf with
 				| Some (prop_cl, prop_tl, prop_cf) ->
 					let efield = mk_prop_acccess prop_cl prop_tl prop_cf in
@@ -1583,7 +1583,7 @@ and gen_call ctx retval e el r =
 				| None ->
 					default ())
 
-			| FInstance (cl, tl, cf), [evalue] ->
+			| FInstance (cl, tl, cf,_), [evalue] ->
 				(match is_extern_instance_accessor ~isget:false cl tl cf with
 				| Some (prop_cl, prop_tl, prop_cf) ->
 					let efield = mk_prop_acccess prop_cl prop_tl prop_cf in
@@ -1591,7 +1591,7 @@ and gen_call ctx retval e el r =
 				| None ->
 					default ())
 
-			| FStatic (cl, cf), [] ->
+			| FStatic (cl, cf,_), [] ->
 				(match is_extern_static_accessor ~isget:true cl cf with
 				| Some prop_cf ->
 					let efield = mk_static_acccess cl prop_cf in
@@ -1599,7 +1599,7 @@ and gen_call ctx retval e el r =
 				| None ->
 					default ())
 
-			| FStatic (cl, cf), [evalue] ->
+			| FStatic (cl, cf,_), [evalue] ->
 				(match is_extern_static_accessor ~isget:false cl cf with
 				| Some prop_cf ->
 					let efield = mk_static_acccess cl prop_cf in
@@ -1757,7 +1757,7 @@ and gen_binop ctx retval op e1 e2 t p =
 		| None ->
 			gen_op A3OEq
 		| Some c ->
-			let f = FStatic (c,try PMap.find "compare" c.cl_statics with Not_found -> die "" __LOC__) in
+			let f = FStatic (c,(try PMap.find "compare" c.cl_statics with Not_found -> die "" __LOC__), []) in
 			gen_expr ctx true (mk (TCall (mk (TField (mk (TTypeExpr (TClassDecl c)) t_dynamic p,f)) t_dynamic p,[e1;e2])) ctx.com.basic.tbool p);
 	in
 	match op with
@@ -2151,7 +2151,7 @@ let check_constructor ctx c f =
 		Type.iter loop e;
 		match e.eexpr with
 		| TCall ({ eexpr = TConst TSuper },_) -> raise Exit
-		| TBinop (OpAssign,{ eexpr = TField({ eexpr = TConst TThis },FInstance (cc,_,cf)) },_) when c != cc && (match classify ctx cf.cf_type with KFloat | KDynamic -> true | _ -> false) ->
+		| TBinop (OpAssign,{ eexpr = TField({ eexpr = TConst TThis },FInstance (cc,_,cf,_)) },_) when c != cc && (match classify ctx cf.cf_type with KFloat | KDynamic -> true | _ -> false) ->
 			abort "You cannot assign some super class vars before calling super() in flash, this will reset them to default value" e.epos
 		| _ -> ()
 	in
@@ -2226,7 +2226,7 @@ let mk_instance_getter_func c tl accessor_cl accessor_tl accessor_cf prop_cf =
 		tf_type = prop_cf.cf_type;
 		tf_expr = begin
 			let ethis = mk (TConst TThis) (TInst (c, tl)) null_pos in
-			let efield = mk (TField (ethis, FInstance (accessor_cl, accessor_tl, accessor_cf))) accessor_cf.cf_type null_pos in
+			let efield = mk (TField (ethis, FInstance (accessor_cl, accessor_tl, accessor_cf,[]))) accessor_cf.cf_type null_pos in
 			let ecall = mk (TCall (efield, [])) prop_cf.cf_type null_pos in
 			mk (TReturn (Some ecall)) t_dynamic null_pos;
 		end
@@ -2247,7 +2247,7 @@ let mk_instance_setter_func com c tl accessor_cl accessor_tl accessor_cf prop_cf
 		tf_type = com.basic.tvoid;
 		tf_expr = begin
 			let ethis = mk (TConst TThis) (TInst (c, tl)) null_pos in
-			let efield = mk (TField (ethis, FInstance (accessor_cl, accessor_tl, accessor_cf))) accessor_cf.cf_type null_pos in
+			let efield = mk (TField (ethis, FInstance (accessor_cl, accessor_tl, accessor_cf,[]))) accessor_cf.cf_type null_pos in
 			let earg = mk (TLocal varg) prop_cf.cf_type null_pos in
 			mk (TCall (efield, [earg])) prop_cf.cf_type null_pos
 		end
@@ -2285,7 +2285,7 @@ let maybe_gen_static_getter ctx c f acc alloc_slot =
 		tf_type = prop_cf.cf_type;
 		tf_expr = begin
 			let ethis = Texpr.Builder.make_static_this c null_pos in
-			let efield = mk (TField (ethis, FStatic (c, f))) f.cf_type null_pos in
+			let efield = mk (TField (ethis, FStatic (c, f, []))) f.cf_type null_pos in
 			let ecall = mk (TCall (efield, [])) prop_cf.cf_type null_pos in
 			mk (TReturn (Some ecall)) t_dynamic null_pos;
 		end
@@ -2299,7 +2299,7 @@ let maybe_gen_static_setter ctx c f acc alloc_slot =
 			tf_type = ctx.com.basic.tvoid;
 			tf_expr = begin
 				let ethis = Texpr.Builder.make_static_this c null_pos in
-				let efield = mk (TField (ethis, FStatic (c, f))) f.cf_type null_pos in
+				let efield = mk (TField (ethis, FStatic (c, f, []))) f.cf_type null_pos in
 				let earg = mk (TLocal varg) prop_cf.cf_type null_pos in
 				mk (TCall (efield, [earg])) prop_cf.cf_type null_pos
 			end
@@ -2368,7 +2368,7 @@ let realize_required_accessors ctx cl =
 			if (has_class_flag actual_cl CExtern) then begin
 				let mk_field_access () =
 					let ethis = mk (TConst TThis) (TInst (cl,tl)) null_pos in
-					mk (TField (ethis, FInstance (actual_cl, actual_tl, cf))) cf.cf_type null_pos
+					mk (TField (ethis, FInstance (actual_cl, actual_tl, cf, []))) cf.cf_type null_pos
 				in
 				if read then begin
 					let getter_name = "get_" ^ name in
@@ -2823,7 +2823,7 @@ let generate com boot_name =
 					let faccess =
 						try
 							let cf = PMap.find "length" c_array.cl_fields in
-							FInstance (c_array,[t_dynamic],cf)
+							FInstance (c_array,[t_dynamic],cf, [])
 						with Not_found ->
 							FDynamic "length"
 					in

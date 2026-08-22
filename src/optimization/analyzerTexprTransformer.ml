@@ -220,8 +220,8 @@ let rec func ctx bb tf t p =
 		bb,List.rev values
 	and bind_to_temp ?(v=None) bb e =
 		let is_probably_not_affected e e1 fa = match fa with
-			| FAnon cf | FInstance (_,_,cf) | FStatic (_,cf) | FClosure (_,cf) when cf.cf_kind = Method MethNormal -> true
-			| FStatic(_,{cf_kind = Method MethDynamic}) -> false
+			| FAnon (cf,_) | FInstance (_,_,cf,_) | FStatic (_,cf,_) | FClosure (_,cf,_) when cf.cf_kind = Method MethNormal -> true
+			| FStatic(_,{cf_kind = Method MethDynamic},_) -> false
 			| FEnum _ -> true
 			| FDynamic ("cca" | "__Index" | "__s") -> true (* This is quite retarded, but we have to deal with this somehow... *)
 			| _ -> match follow e.etype,follow e1.etype with
@@ -234,7 +234,7 @@ let rec func ctx bb tf t p =
 				loop ((fun e' -> {e with eexpr = TField(e',fa)}) :: fl) e1
 			| TField(e1,fa) ->
 				let fa = match fa with
-					| FInstance(c,tl,({cf_kind = Method _ } as cf)) -> FClosure(Some(c,tl),cf)
+					| FInstance(c,tl,({cf_kind = Method _ } as cf),cf_params) -> FClosure(Some(c,tl),cf,cf_params)
 					| _ -> fa
 				in
 				fl,{e with eexpr = TField(e1,fa)}
@@ -343,7 +343,7 @@ let rec func ctx bb tf t p =
 		bb,ea
 	and field_assign_op bb op e ef e1 fa e2 =
 		let bb,e1 = match fa with
-			| FInstance(c,_,_) | FClosure(Some(c,_),_) when is_stack_allocated c -> bb,e1
+			| FInstance(c,_,_,_) | FClosure(Some(c,_),_,_) when is_stack_allocated c -> bb,e1
 			| _ -> bind_to_temp bb e1
 		in
 		let ef = {ef with eexpr = TField(e1,fa)} in

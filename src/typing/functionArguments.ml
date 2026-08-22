@@ -57,7 +57,7 @@ let type_function_arg_value ctx t c do_display =
 				| TConst _ -> Some e
 				| TLocal _ -> Some e
 				| TField({eexpr = TTypeExpr _},FEnum _) -> Some e
-				| TField({eexpr = TTypeExpr _},FStatic({cl_kind = KAbstractImpl a},cf)) when a.a_enum && has_class_field_flag cf CfEnum -> Some e
+				| TField({eexpr = TTypeExpr _},FStatic({cl_kind = KAbstractImpl a},cf,_)) when a.a_enum && has_class_field_flag cf CfEnum -> Some e
 				| TCast(e,None) -> loop analyzered e
 				| _ when not analyzered && not (references_arg e) -> loop true (run_analyzer e)
 				| _ when ctx.com.platform = Flash && is_flash_native_basic t ->

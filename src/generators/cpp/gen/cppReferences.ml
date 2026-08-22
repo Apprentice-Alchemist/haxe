@@ -177,7 +177,7 @@ let find_referenced_types_flags ctx obj filter super_deps constructor_deps heade
           List.iter (fun (v, _) -> visit_type v.v_type) func_def.tf_args
       | TField (obj, field) -> (
           match field with
-          | FInstance (clazz, params, _) | FClosure (Some (clazz, params), _) ->
+          | FInstance (clazz, params, _,_) | FClosure (Some (clazz, params), _,_) ->
               visit_type (TInst (clazz, params))
           | _ -> ())
       | TConst TSuper -> (

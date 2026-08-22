@@ -238,7 +238,7 @@ type check_override_kind =
 
 let rec has_super_call name e =
 	match e.eexpr with
-	| TCall({eexpr = TField({eexpr = TConst TSuper}, FInstance(_, _, cf))}, _) when cf.cf_name = name ->
+	| TCall({eexpr = TField({eexpr = TConst TSuper}, FInstance(_, _, cf,_))}, _) when cf.cf_name = name ->
 		true
 	| _ ->
 		check_expr (has_super_call name) e

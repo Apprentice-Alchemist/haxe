@@ -18,8 +18,9 @@ let optimize_for_loop_iterator ctx v e1 e2 p =
 				match e.eexpr with
 				| TCast (e,None) ->
 					get_class_and_params e
-				| TCall ({ eexpr = TField (_, FInstance (c,pl,cf)) }, _) ->
+				| TCall ({ eexpr = TField (_, FInstance (c,pl,cf,cf_pl)) }, _) ->
 					let t = apply_params c.cl_params pl cf.cf_type in
+					let t = apply_params cf.cf_params cf_pl t in
 					(match follow t with
 					| TFun (_, t) ->
 						(match follow t with
@@ -32,20 +33,24 @@ let optimize_for_loop_iterator ctx v e1 e2 p =
 		in
 		get_class_and_params e1
 	in
-	let _, _, fhasnext = (try raw_class_field (fun cf -> apply_params c.cl_params tl cf.cf_type) c tl "hasNext" with Not_found -> raise Exit) in
+	(* TODO TP: clean up *)
+	let map t = apply_params c.cl_params tl t in
+	let _, _, fhasnext = (try raw_class_field (fun cf -> map cf.cf_type) c tl "hasNext" with Not_found -> raise Exit) in
 	if not ctx.allow_inline || fhasnext.cf_kind <> Method MethInline then raise Exit;
 	let it_type = TInst(c,tl) in
 	let tmp = gen_local ctx it_type e1.epos in
 	let eit = mk (TLocal tmp) it_type p in
-	let ehasnext = make_call ctx (mk (TField (eit,FInstance (c, tl, fhasnext))) (TFun([],ctx.t.tbool)) p) [] ctx.t.tbool p in
-	let fa_next =
+	let ehasnext = make_call ctx (mk (TField (eit,FInstance (c, tl, fhasnext, Monomorph.spawn_constrained_monos map fhasnext.cf_params))) (TFun([],ctx.t.tbool)) p) [] ctx.t.tbool p in
+	let fa_next, fa_next_type =
 		try
-			match raw_class_field (fun cf -> apply_params c.cl_params tl cf.cf_type) c tl "next" with
-			| _, _, fa -> FInstance (c, tl, fa)
+			match raw_class_field (fun cf -> map cf.cf_type) c tl "next" with
+			| _, t, fa -> let cf_tl = Monomorph.spawn_constrained_monos map fa.cf_params in 
+			FInstance (c, tl, fa, cf_tl), apply_params fa.cf_params cf_tl t
 		with Not_found ->
-			quick_field_dynamic eit.etype "next"
+			quick_field_dynamic eit.etype "next", (TFun ([],v.v_type))
 	in
-	let enext = mk (TVar (v,Some (make_call ctx (mk (TField (eit,fa_next)) (TFun ([],v.v_type)) p) [] v.v_type p))) ctx.t.tvoid p in
+	unify_raise fa_next_type (TFun ([],v.v_type)) p;
+	let enext = mk (TVar (v,Some (make_call ctx (mk (TField (eit,fa_next)) fa_next_type p) [] v.v_type p))) ctx.t.tvoid p in
 	let eblock = (match e2.eexpr with
 		| TBlock el -> { e2 with eexpr = TBlock (enext :: el) }
 		| _ -> mk (TBlock [enext;e2]) ctx.t.tvoid p

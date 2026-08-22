@@ -1556,48 +1556,55 @@ module HxbWriter = struct
 				write_enum_field_ref writer en ef;
 				Chunk.write_uleb128 writer.chunk i;
 				true;
-			| TField({eexpr = TConst TThis; epos = p1},FInstance(c,tl,cf)) when fctx.texpr_this <> None ->
+			| TField({eexpr = TConst TThis; epos = p1},FInstance(c,tl,cf,cf_tl)) when fctx.texpr_this <> None ->
 				Chunk.write_u8 writer.chunk 111;
 				PosWriter.write_pos fctx.pos_writer writer.chunk true 0 p1;
 				write_class_ref writer c;
 				write_types writer tl;
 				write_field_ref writer c CfrMember cf;
+				write_types writer cf_tl;
 				true;
-			| TField(e1,FInstance(c,tl,cf)) ->
+			| TField(e1,FInstance(c,tl,cf,cf_tl)) ->
 				Chunk.write_u8 writer.chunk 102;
 				loop e1;
 				write_class_ref writer c;
 				write_types writer tl;
 				write_field_ref writer c CfrMember cf;
+				write_types writer cf_tl;
 				true;
-			| TField({eexpr = TTypeExpr (TClassDecl c'); epos = p1},FStatic(c,cf)) when c == c' ->
+			| TField({eexpr = TTypeExpr (TClassDecl c'); epos = p1},FStatic(c,cf,cf_tl)) when c == c' ->
 				Chunk.write_u8 writer.chunk 110;
 				PosWriter.write_pos fctx.pos_writer writer.chunk true 0 p1;
 				write_class_ref writer c;
 				write_field_ref writer c CfrStatic cf;
+				write_types writer cf_tl;
 				true;
-			| TField(e1,FStatic(c,cf)) ->
+			| TField(e1,FStatic(c,cf,cf_tl)) ->
 				Chunk.write_u8 writer.chunk 103;
 				loop e1;
 				write_class_ref writer c;
 				write_field_ref writer c CfrStatic cf;
+				write_types writer cf_tl;
 				true;
-			| TField(e1,FAnon cf) ->
+			| TField(e1,FAnon (cf,cf_tl)) ->
 				Chunk.write_u8 writer.chunk 104;
 				loop e1;
 				write_anon_field_ref writer cf;
+				write_types writer cf_tl;
 				true;
-			| TField(e1,FClosure(Some(c,tl),cf)) ->
+			| TField(e1,FClosure(Some(c,tl),cf,cf_tl)) ->
 				Chunk.write_u8 writer.chunk 105;
 				loop e1;
 				write_class_ref writer c;
 				write_types writer tl;
 				write_field_ref writer c CfrMember cf;
+				write_types writer cf_tl;
 				true;
-			| TField(e1,FClosure(None,cf)) ->
+			| TField(e1,FClosure(None,cf,cf_tl)) ->
 				Chunk.write_u8 writer.chunk 106;
 				loop e1;
 				write_anon_field_ref writer cf;
+				write_types writer cf_tl;
 				true;
 			| TField(e1,FEnum(en,ef)) ->
 				Chunk.write_u8 writer.chunk 107;
