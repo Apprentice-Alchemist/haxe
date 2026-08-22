@@ -219,11 +219,15 @@ let s_const = function
 	| TThis -> "this"
 	| TSuper -> "super"
 
+let s_field_tparams fa s_type = (match field_tparams fa with Some tl ->
+		Printf.sprintf ".<%s>" (String.concat ", " (List.map s_type tl))
+		| None -> "")
+
 let s_field_access s_type fa = match fa with
-	| FStatic (c,f) -> "static(" ^ s_type_path c.cl_path ^ "." ^ f.cf_name ^ ")"
-	| FInstance (c,_,f) -> "inst(" ^ s_type_path c.cl_path ^ "." ^ f.cf_name ^ " : " ^ s_type f.cf_type ^ ")"
-	| FClosure (c,f) -> "closure(" ^ (match c with None -> f.cf_name | Some (c,_) -> s_type_path c.cl_path ^ "." ^ f.cf_name)  ^ ")"
-	| FAnon f -> "anon(" ^ f.cf_name ^ ")"
+	| FStatic (c,f,_) -> "static(" ^ s_type_path c.cl_path ^ "." ^ f.cf_name ^ ")"
+	| FInstance (c,_,f,_) -> "inst(" ^ s_type_path c.cl_path ^ "." ^ f.cf_name ^ " : " ^ s_type f.cf_type ^ ")"
+	| FClosure (c,f,_) -> "closure(" ^ (match c with None -> f.cf_name | Some (c,_) -> s_type_path c.cl_path ^ "." ^ f.cf_name)  ^ ")"
+	| FAnon (f,_) -> "anon(" ^ f.cf_name ^ ")"
 	| FEnum (en,f) -> "enum(" ^ s_type_path en.e_path ^ "." ^ f.ef_name ^ ")"
 	| FDynamic f -> "dynamic(" ^ f ^ ")"
 
@@ -240,7 +244,7 @@ let rec s_expr_pretty print_var_ids tabs top_level s_type e =
 	| TBinop (op,e1,e2) -> sprintf "%s %s %s" (loop e1) (s_binop op) (loop e2)
 	| TEnumParameter (e1,_,i) -> sprintf "%s[%i]" (loop e1) i
 	| TEnumIndex e1 -> sprintf "enumIndex %s" (loop e1)
-	| TField (e1,s) -> sprintf "%s.%s" (loop e1) (field_name s)
+	| TField (e1,s) -> sprintf "%s.%s%s" (loop e1) (field_name s) (s_field_tparams s s_type)
 	| TTypeExpr mt -> (s_type_path (t_path mt))
 	| TParenthesis e1 -> sprintf "(%s)" (loop e1)
 	| TObjectDecl fl -> sprintf "{%s}" (clist (fun ((f,_,qs),e) -> sprintf "%s : %s" (s_object_key_name f qs) (loop e)) fl)
@@ -340,10 +344,10 @@ let rec s_expr_ast print_var_ids tabs s_type e =
 	| TEnumIndex e1 -> tag "EnumIndex" [loop e1]
 	| TField (e1,fa) ->
 		let sfa = match fa with
-			| FInstance(c,tl,cf) -> tag "FInstance" ~extra_tabs:"\t" [s_type (TInst(c,tl)); Printf.sprintf "%s:%s" cf.cf_name (s_type cf.cf_type)]
-			| FStatic(c,cf) -> tag "FStatic" ~extra_tabs:"\t" [s_type_path c.cl_path; Printf.sprintf "%s:%s" cf.cf_name (s_type cf.cf_type)]
-			| FClosure(co,cf) -> tag "FClosure" ~extra_tabs:"\t" [(match co with None -> "None" | Some (c,tl) -> s_type (TInst(c,tl))); Printf.sprintf "%s:%s" cf.cf_name (s_type cf.cf_type)]
-			| FAnon cf -> tag "FAnon" ~extra_tabs:"\t" [Printf.sprintf "%s:%s" cf.cf_name (s_type cf.cf_type)]
+			| FInstance(c,tl,cf,_) as fa -> tag "FInstance" ~extra_tabs:"\t" [s_type (TInst(c,tl)); Printf.sprintf "%s%s:%s" cf.cf_name (s_field_tparams fa s_type) (s_type cf.cf_type)]
+			| FStatic(c,cf,_) as fa -> tag "FStatic" ~extra_tabs:"\t" [s_type_path c.cl_path; Printf.sprintf "%s%s:%s" cf.cf_name (s_field_tparams fa s_type) (s_type cf.cf_type)]
+			| FClosure(co,cf,_) as fa -> tag "FClosure" ~extra_tabs:"\t" [(match co with None -> "None" | Some (c,tl) -> s_type (TInst(c,tl))); Printf.sprintf "%s%s:%s" cf.cf_name (s_field_tparams fa s_type) (s_type cf.cf_type)]
+			| FAnon (cf,_) as fa -> tag "FAnon" ~extra_tabs:"\t" [Printf.sprintf "%s%s:%s" cf.cf_name (s_field_tparams fa s_type) (s_type cf.cf_type)]
 			| FDynamic s -> tag "FDynamic" ~extra_tabs:"\t" [s]
 			| FEnum(en,ef) -> tag "FEnum" ~extra_tabs:"\t" [s_type_path en.e_path; ef.ef_name]
 		in

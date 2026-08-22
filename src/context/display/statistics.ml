@@ -147,11 +147,11 @@ let collect_statistics com pos_filters with_expressions =
 				if e1.epos.pmin = e.epos.pmin && e1.epos.pmax <> e.epos.pmax then
 					loop e1;
 				begin match fa with
-					| FStatic(_,cf) | FClosure(None,cf) ->
+					| FStatic(_,cf,_) | FClosure(None,cf,_) ->
 						field_reference None cf e.epos
-					| FInstance(c,_,cf) | FClosure(Some(c,_),cf) ->
+					| FInstance(c,_,cf,_) | FClosure(Some(c,_),cf,_) ->
 						field_reference (Some c) cf e.epos
-					| FAnon cf ->
+					| FAnon (cf,_) ->
 						declare  (SKField (cf,None)) cf.cf_name_pos;
 						field_reference None cf e.epos
 					| FEnum(_,ef) ->

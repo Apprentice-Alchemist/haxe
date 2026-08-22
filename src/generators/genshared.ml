@@ -168,7 +168,7 @@ object(self)
 		in
 		let rec loop e =
 			begin match e.eexpr with
-			| TBinop(OpAssign,{eexpr = TField({eexpr = TConst TThis},FInstance(_,_,cf))},e2) when is_on_current_class cf->
+			| TBinop(OpAssign,{eexpr = TField({eexpr = TConst TThis},FInstance(_,_,cf,_))},e2) when is_on_current_class cf->
 				(* Assigning this.field = value is fine if field is declared on our current class *)
 				loop e2;
 			| TConst TThis ->

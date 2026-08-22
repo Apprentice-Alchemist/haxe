@@ -853,25 +853,25 @@ class texpr_to_jvm
 			cast();
 		in
 		match fa with
-		| FStatic({cl_path = (["java";"lang"],"Math")},({cf_name = "NaN" | "POSITIVE_INFINITY" | "NEGATIVE_INFINITY"} as cf)) ->
+		| FStatic({cl_path = (["java";"lang"],"Math")},({cf_name = "NaN" | "POSITIVE_INFINITY" | "NEGATIVE_INFINITY"} as cf),_) ->
 			jm#getstatic double_path cf.cf_name TDouble
-		| FStatic({cl_path = (["java";"lang"],"Math")},({cf_name = "isNaN" | "isFinite"} as cf)) ->
+		| FStatic({cl_path = (["java";"lang"],"Math")},({cf_name = "isNaN" | "isFinite"} as cf),_) ->
 			read_static_closure double_path cf;
-		| FStatic({cl_path = (["java";"lang"],"String")},({cf_name = "fromCharCode"} as cf)) ->
+		| FStatic({cl_path = (["java";"lang"],"String")},({cf_name = "fromCharCode"} as cf),_) ->
 			read_static_closure (["haxe";"jvm"],"StringExt") cf
-		| FStatic(c,({cf_kind = Method (MethNormal | MethInline)} as cf)) ->
+		| FStatic(c,({cf_kind = Method (MethNormal | MethInline)} as cf),_) ->
 			read_static_closure c.cl_path cf
-		| FStatic(c,cf) ->
+		| FStatic(c,cf,_) ->
 			jm#getstatic c.cl_path cf.cf_name (self#vtype cf.cf_type);
 			cast();
-		| FInstance({cl_path = (["java";"lang"],"String")},_,{cf_name = "length"}) ->
+		| FInstance({cl_path = (["java";"lang"],"String")},_,{cf_name = "length"},_) ->
 			self#texpr rvalue_any e1;
 			jm#invokevirtual string_path "length" (method_sig [] (Some TInt))
-		| FInstance({cl_path = (["jvm"],"NativeArray")},_,{cf_name = "length"}) ->
+		| FInstance({cl_path = (["jvm"],"NativeArray")},_,{cf_name = "length"},_) ->
 			self#texpr rvalue_any e1;
 			let vtobj = self#vtype e1.etype in
 			code#arraylength vtobj;
-		| FInstance(c,tl,cf) | FClosure(Some(c,tl),({cf_kind = Method MethDynamic} as cf)) when not (is_interface_var_access c cf) ->
+		| FInstance(c,tl,cf,_) | FClosure(Some(c,tl),({cf_kind = Method MethDynamic} as cf),_) when not (is_interface_var_access c cf) ->
 			self#texpr rvalue_any e1;
 			jm#getfield c.cl_path cf.cf_name (self#vtype cf.cf_type);
 			cast();
@@ -880,17 +880,17 @@ class texpr_to_jvm
 			let offset = pool#add_field en.e_path ef.ef_name jsig FKField in
 			code#getstatic offset jsig;
 			cast();
-		| FAnon cf ->
+		| FAnon (cf,_) ->
 			self#texpr rvalue_any e1;
 			self#read_anon_field cast e1.etype cf;
-		| FDynamic s | FInstance(_,_,{cf_name = s}) | FEnum(_,{ef_name = s}) | FClosure(None,{cf_name = s}) ->
+		| FDynamic s | FInstance(_,_,{cf_name = s},_) | FEnum(_,{ef_name = s}) | FClosure(None,{cf_name = s},_) ->
 			dynamic_read s
-		| FClosure((Some(c,_)),cf) when c.cl_path = string_path ->
+		| FClosure((Some(c,_)),cf,_) when c.cl_path = string_path ->
 			(* String instance methods need JVM-compatible wrappers (e.g. charAt returns char not
 			   String in Java). Redirect the closure creation through Jvm.readField which already
 			   handles all string methods correctly via StringExt. *)
 			dynamic_read cf.cf_name
-		| FClosure((Some(c,_)),cf) ->
+		| FClosure((Some(c,_)),cf,_) ->
 			if has_class_flag c CInterface then
 				dynamic_read cf.cf_name
 			else
@@ -923,13 +923,13 @@ class texpr_to_jvm
 			apply (fun () -> code#dup);
 			self#cast v.v_type;
 			store();
-		| TField(_,FStatic(c,cf)) ->
+		| TField(_,FStatic(c,cf,_)) ->
 			let jsig_cf = self#vtype cf.cf_type in
 			if ak <> AKNone then jm#getstatic c.cl_path cf.cf_name jsig_cf;
 			apply (fun () -> code#dup);
 			jm#cast jsig_cf;
 			jm#putstatic c.cl_path cf.cf_name jsig_cf;
-		| TField(e1,FInstance(c,tl,cf)) when not (is_interface_var_access c cf) ->
+		| TField(e1,FInstance(c,tl,cf,_)) when not (is_interface_var_access c cf) ->
 			self#texpr rvalue_any e1;
 			let jsig_cf = self#vtype cf.cf_type in
 			if ak <> AKNone then begin
@@ -939,7 +939,7 @@ class texpr_to_jvm
 			apply (fun () -> code#dup_x1);
 			self#cast cf.cf_type;
 			jm#putfield c.cl_path cf.cf_name jsig_cf
-		| TField(e1,FAnon cf) ->
+		| TField(e1,FAnon (cf,_)) ->
 			self#texpr rvalue_any e1;
 			begin match gctx.anon_identification#identify AnonIdMode.default true e1.etype with
 			| Some pfm when is_dex_safe_simple_name cf.cf_name ->
@@ -967,7 +967,7 @@ class texpr_to_jvm
 			| _ ->
 				default cf.cf_name cf.cf_type;
 			end
-		| TField(e1,(FDynamic s | FInstance(_,_,{cf_name = s}))) ->
+		| TField(e1,(FDynamic s | FInstance(_,_,{cf_name = s},_))) ->
 			self#texpr rvalue_any e1;
 			default s e.etype;
 		| TArray(e1,e2) ->
@@ -1698,14 +1698,14 @@ class texpr_to_jvm
 			tr
 		in
 		let tro = match (Texpr.skip e1).eexpr with
-		| TField(_,FStatic({cl_path = ["haxe";"jvm"],"Jvm"},({cf_name = "referenceEquals"} as cf))) ->
+		| TField(_,FStatic({cl_path = ["haxe";"jvm"],"Jvm"},({cf_name = "referenceEquals"} as cf),_)) ->
 			let tl,tr = self#call_arguments cf.cf_type el in
 			begin match tl with
 				| [t1;t2] -> self#boolop (CmpSpecial (code#if_acmp_ne t1 t2))
 				| _ -> die "" __LOC__
 			end;
 			tr
-		| TField(_,FStatic({cl_path = ["haxe";"jvm"],"Jvm"},({cf_name = "instanceof"}))) ->
+		| TField(_,FStatic({cl_path = ["haxe";"jvm"],"Jvm"},({cf_name = "instanceof"}),_)) ->
 			begin match el with
 				| [e1;{eexpr = TTypeExpr mt;epos = pe}] ->
 					self#texpr rvalue_any e1;
@@ -1718,7 +1718,7 @@ class texpr_to_jvm
 					Some TBool
 				| _ -> Error.raise_typing_error "Type expression expected" e1.epos
 			end;
-		| TField(_,FStatic({cl_path = (["java";"lang"],"Math")},{cf_name = ("isNaN" | "isFinite") as name})) ->
+		| TField(_,FStatic({cl_path = (["java";"lang"],"Math")},{cf_name = ("isNaN" | "isFinite") as name},_)) ->
 			begin match el with
 			| [e1] ->
 				self#texpr rvalue_any e1;
@@ -1728,7 +1728,7 @@ class texpr_to_jvm
 			| _ ->
 				die "" __LOC__
 			end;
-		| TField(_,FStatic({cl_path = (["java";"lang"],"Math")},{cf_name = ("floor" | "ceil" | "round") as name})) ->
+		| TField(_,FStatic({cl_path = (["java";"lang"],"Math")},{cf_name = ("floor" | "ceil" | "round") as name},_)) ->
 			begin match el with
 			| [e1] ->
 				self#texpr rvalue_any e1;
@@ -1740,11 +1740,11 @@ class texpr_to_jvm
 			| _ ->
 				die "" __LOC__
 			end;
-		| TField(_,FStatic({cl_path = (["java";"lang"],"Math")} as c,({cf_name = ("ffloor" | "fceil")} as cf))) ->
+		| TField(_,FStatic({cl_path = (["java";"lang"],"Math")} as c,({cf_name = ("ffloor" | "fceil")} as cf),_)) ->
 			let tl,tr = self#call_arguments cf.cf_type el in
 			jm#invokestatic c.cl_path (String.sub cf.cf_name 1 (String.length cf.cf_name - 1)) (method_sig tl tr);
 			tr
-		| TField(_,FStatic({cl_path = (["haxe"],"Int64$Int64_Impl_")},{cf_name = "make"})) ->
+		| TField(_,FStatic({cl_path = (["haxe"],"Int64$Int64_Impl_")},{cf_name = "make"},_)) ->
 			begin match el with
 			| [{eexpr = TConst (TInt i1)};{eexpr = TConst (TInt i2)}] ->
 				let high = Int64.of_int32 i1 in
@@ -1768,7 +1768,7 @@ class texpr_to_jvm
 			| _ ->
 				die "" __LOC__
 			end
-		| TIdent "__array__" | TField(_,FStatic({cl_path = (["jvm"],"NativeArray")},{cf_name = "make"})) ->
+		| TIdent "__array__" | TField(_,FStatic({cl_path = (["jvm"],"NativeArray")},{cf_name = "make"},_)) ->
 			begin match follow tr with
 			| TInst({cl_path = (["jvm"],"NativeArray")},[t]) ->
 				let jsig = self#vtype t in
@@ -1777,7 +1777,7 @@ class texpr_to_jvm
 			| _ ->
 				Error.raise_typing_error (Printf.sprintf "Bad __array__ type: %s" (s_type (print_context()) tr)) e1.epos;
 			end
-		| TField(_,FStatic({cl_path = (["haxe"],"EnumTools")}, {cf_name = "values"})) ->
+		| TField(_,FStatic({cl_path = (["haxe"],"EnumTools")}, {cf_name = "values"},_)) ->
 			begin match el with
 			| [e1] ->
 				let jsig_ret = array_sig (object_path_sig object_path) in
@@ -1789,12 +1789,12 @@ class texpr_to_jvm
 			| _ ->
 				die "" __LOC__
 			end
-		| TField(e1,FStatic(c,({cf_kind = Method (MethNormal | MethInline)} as cf))) ->
+		| TField(e1,FStatic(c,({cf_kind = Method (MethNormal | MethInline)} as cf),_)) ->
 			let tl,tr = self#call_arguments cf.cf_type el in
 			let kind = if has_class_flag c CInterface then FKInterfaceMethod else FKMethod in
 			jm#invokestatic c.cl_path cf.cf_name ~kind (method_sig tl tr);
 			tr
-		| TField(e1,FInstance({cl_path=(["haxe";"root"],"StringBuf");cl_descendants=[]} as c,_,({cf_name="add"} as cf))) ->
+		| TField(e1,FInstance({cl_path=(["haxe";"root"],"StringBuf");cl_descendants=[]} as c,_,({cf_name="add"} as cf),_)) ->
 			self#texpr rvalue_any e1;
 			let jsig = match el with
 			| [ea1] ->
@@ -1815,7 +1815,7 @@ class texpr_to_jvm
 			in
 			jm#invokevirtual c.cl_path "add" (method_sig [jsig] None);
 			None
-		| TField(e1,FInstance(c,tl,({cf_kind = Method (MethNormal | MethInline)} as cf))) ->
+		| TField(e1,FInstance(c,tl,({cf_kind = Method (MethNormal | MethInline)} as cf),_)) ->
 			let is_super = match e1.eexpr with
 			| TConst TSuper ->
 				code#aload jc#get_jsig 0;
@@ -1832,7 +1832,7 @@ class texpr_to_jvm
 			let tr = self#vtype tr in
 			jm#invokestatic en.e_path ef.ef_name (method_sig tl (Some tr));
 			Some tr
-		| TField(e11,FAnon cf) ->
+		| TField(e11,FAnon (cf,_)) ->
 			begin match gctx.anon_identification#identify AnonIdMode.default false e11.etype with
 			| Some {pfm_path=path_anon} ->
 				begin match gctx.typedef_interfaces#get_interface_class path_anon with
@@ -2778,7 +2778,7 @@ class tclass_to_jvm gctx c = object(self)
 			| Some e when mtype <> MStatic ->
 				let tl = extract_param_types c.cl_params in
 				let ethis = mk (TConst TThis) (TInst(c,tl)) null_pos in
-				let efield = mk (TField(ethis,FInstance(c,tl,cf))) cf.cf_type null_pos in
+				let efield = mk (TField(ethis,FInstance(c,tl,cf,[]))) cf.cf_type null_pos in
 				let eop = mk (TBinop(OpAssign,efield,e)) cf.cf_type null_pos in
 				begin match cf.cf_kind with
 					| Method MethDynamic ->

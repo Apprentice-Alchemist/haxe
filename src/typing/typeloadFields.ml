@@ -198,7 +198,7 @@ let ensure_struct_init_constructor ctx c ast_fields p =
 				let opt = has_default_expr || (Meta.has Meta.Optional cf.cf_meta) in
 				let t = if opt then ctx.t.tnull cf.cf_type else cf.cf_type in
 				let v = alloc_var VGenerated cf.cf_name t cf.cf_name_pos in
-				let ef = mk (TField(ethis,FInstance(c,params,cf))) cf.cf_type p in
+				let ef = mk (TField(ethis,FInstance(c,params,cf,[]))) cf.cf_type p in
 				let ev = mk (TLocal v) v.v_type p in
 				if opt && not (Meta.has Meta.Optional v.v_meta) then
 					v.v_meta <- (Meta.Optional,[],null_pos) :: v.v_meta;

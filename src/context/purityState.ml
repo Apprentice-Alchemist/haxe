@@ -48,16 +48,16 @@ let get_purity c cf = match get_purity_from_meta cf.cf_meta with
 let is_pure c cf = get_purity c cf = Pure
 
 let is_pure_field_access fa = match fa with
-	| FInstance(c,_,cf) | FClosure(Some(c,_),cf) | FStatic(c,cf) -> is_pure c cf
-	| FAnon cf | FClosure(None,cf) -> (get_purity_from_meta cf.cf_meta = Pure)
+	| FInstance(c,_,cf,_) | FClosure(Some(c,_),cf,_) | FStatic(c,cf,_) -> is_pure c cf
+	| FAnon (cf,_) | FClosure(None,cf,_) -> (get_purity_from_meta cf.cf_meta = Pure)
 	| FEnum _ -> true
 	| FDynamic _ -> false
 
 let is_explicitly_impure fa = match fa with
-	| FInstance(c,_,cf) | FClosure(Some(c,_),cf) | FStatic(c,cf) ->
+	| FInstance(c,_,cf,_) | FClosure(Some(c,_),cf,_) | FStatic(c,cf,_) ->
 		get_purity_from_meta cf.cf_meta = Impure
 		|| get_purity_from_meta c.cl_meta = Impure
-	| FAnon cf | FClosure(None,cf) ->
+	| FAnon (cf,_) | FClosure(None,cf,_) ->
 		get_purity_from_meta cf.cf_meta = Impure
 	| _ -> false
 

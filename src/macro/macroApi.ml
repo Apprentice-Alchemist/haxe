@@ -1421,11 +1421,11 @@ and encode_field_access fa =
 		]
 	in
 	let tag,pl = match fa with
-		| FInstance(c,tl,cf) -> 0,[encode_clref c;encode_tparams tl;encode_cfref cf]
-		| FStatic(c,cf) -> 1,[encode_clref c;encode_cfref cf]
-		| FAnon(cf) -> 2,[encode_cfref cf]
+		| FInstance(c,tl,cf,cf_tl) -> 0,[encode_clref c;encode_tparams tl;encode_cfref cf;encode_tparams cf_tl]
+		| FStatic(c,cf,cf_tl) -> 1,[encode_clref c;encode_cfref cf;encode_tparams cf_tl]
+		| FAnon(cf,cf_tl) -> 2,[encode_cfref cf;encode_tparams cf_tl]
 		| FDynamic(s) -> 3,[encode_string s]
-		| FClosure(co,cf) -> 4,[(match co with Some (c,tl) -> encode_instance c tl | None -> vnull);encode_cfref cf]
+		| FClosure(co,cf,cf_tl) -> 4,[(match co with Some (c,tl) -> encode_instance c tl | None -> vnull);encode_cfref cf;encode_tparams cf_tl]
 		| FEnum(en,ef) -> 5,[encode_enref en;encode_efield ef]
 	in
 	encode_enum IFieldAccess tag pl
@@ -1554,15 +1554,16 @@ let decode_efield v =
 
 let decode_field_access v =
 	match decode_enum v with
-	| 0, [c;tl;cf] ->
+	| 0, [c;tl;cf;cf_tl] ->
 		let c = decode_ref c in
-		FInstance(c,List.map decode_type (decode_array tl),decode_ref cf)
-	| 1, [c;cf] -> FStatic(decode_ref c,decode_ref cf)
-	| 2, [cf] -> FAnon(decode_ref cf)
+		FInstance(c,List.map decode_type (decode_array tl),decode_ref cf,
+		if cf_tl = vnull then [] else List.map decode_type (decode_array cf_tl))
+	| 1, [c;cf;cf_tl] -> FStatic(decode_ref c,decode_ref cf,if cf_tl = vnull then [] else List.map decode_type (decode_array cf_tl))
+	| 2, [cf;cf_tl] -> FAnon(decode_ref cf,if cf_tl = vnull then [] else List.map decode_type (decode_array cf_tl))
 	| 3, [s] -> FDynamic(decode_string s)
-	| 4, [co;cf] ->
+	| 4, [co;cf;cf_tl] ->
 		let co = if co = vnull then None else Some (decode_ref (field co "c"),List.map decode_type (decode_array (field co "params"))) in
-		FClosure(co,decode_ref cf)
+		FClosure(co,decode_ref cf,if cf_tl = vnull then [] else List.map decode_type (decode_array cf_tl))
 	| 5, [e;ef] -> FEnum(decode_ref e,decode_efield ef)
 	| _ -> raise Invalid_expr
 

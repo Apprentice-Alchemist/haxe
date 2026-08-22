@@ -230,11 +230,11 @@ and switch_case = {
 }
 
 and tfield_access =
-	| FInstance of tclass * tparams * tclass_field
-	| FStatic of tclass * tclass_field
-	| FAnon of tclass_field
+	| FInstance of tclass * tparams * tclass_field * tparams
+	| FStatic of tclass * tclass_field * tparams
+	| FAnon of tclass_field * tparams
 	| FDynamic of string
-	| FClosure of (tclass * tparams) option * tclass_field (* None class = TAnon *)
+	| FClosure of (tclass * tparams) option * tclass_field * tparams (* None class = TAnon *)
 	| FEnum of tenum * tenum_field
 
 and texpr = {

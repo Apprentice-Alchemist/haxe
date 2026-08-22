@@ -262,7 +262,7 @@ let this _ctx = "self"
 
 let is_dot_access e cf =
     match follow(e.etype), cf with
-    | TInst (c, _), FInstance(_, _, icf) -> (match icf.cf_kind with
+    | TInst (c, _), FInstance(_, _, icf,_) -> (match icf.cf_kind with
         | Var _ ->
             true
         | Method _ when Meta.has Meta.LuaDotMethod c.cl_meta ->
@@ -390,7 +390,7 @@ let rec is_function_type t =
 
 and gen_argument ?(reflect=false) ctx e = begin
     match e.eexpr with
-    | TField (x, ((FInstance (_, _, f) | FAnon(f) | FClosure(_,f)) as i)) when ((is_function_type e.etype) && (not(is_dot_access x i))) ->
+    | TField (x, ((FInstance (_, _, f,_) | FAnon(f,_) | FClosure(_,f,_)) as i)) when ((is_function_type e.etype) && (not(is_dot_access x i))) ->
             (
             if reflect then (
               add_feature ctx "use._hx_funcToField";
@@ -437,7 +437,7 @@ and gen_call ctx e el =
               List.iter (fun p -> print ctx ","; gen_argument ctx p) params;
               spr ctx ")";
          );
-     | TField (_, FStatic( { cl_path = ([],"Reflect") }, { cf_name = "callMethod" })), (obj :: fld :: args :: rest) ->
+     | TField (_, FStatic( { cl_path = ([],"Reflect") }, { cf_name = "callMethod" },_)), (obj :: fld :: args :: rest) ->
          gen_expr ctx e;
          spr ctx "(";
          gen_argument ctx obj;
@@ -446,13 +446,13 @@ and gen_call ctx e el =
          spr ctx ",";
          gen_argument ctx args;
          spr ctx ")";
-     | TField (_, FStatic( { cl_path = (["lua"],"Syntax") }, { cf_name = "code" })), code :: args ->
+     | TField (_, FStatic( { cl_path = (["lua"],"Syntax") }, { cf_name = "code" },_)), code :: args ->
          (match code.eexpr with
           | TConst (TString s) ->
               Codegen.interpolate_code ctx.com.error s args (spr ctx) (gen_expr ctx) code.epos
           | _ ->
               raise_typing_error "The code argument for lua.Syntax.code must be a string constant" code.epos)
-     | TField (_, FStatic( { cl_path = (["lua"],"Syntax") }, { cf_name = "plainCode" })), [code] ->
+     | TField (_, FStatic( { cl_path = (["lua"],"Syntax") }, { cf_name = "plainCode" },_)), [code] ->
          (match code.eexpr with
           | TConst (TString s) ->
               spr ctx (String.concat "\n" (ExtString.String.nsplit s "\r\n"))
@@ -476,7 +476,7 @@ and gen_call ctx e el =
          gen_paren_arguments ctx el;
      | TIdent "__lua_length__", [e]->
          spr ctx "#"; gen_value ctx e;
-     | TField (_, FStatic ({ cl_path = (["_G"],"table")}, { cf_name = "create" })), el
+     | TField (_, FStatic ({ cl_path = (["_G"],"table")}, { cf_name = "create" },_)), el
      | TIdent "__lua_table__", el ->
          let count = ref 0 in
          spr ctx "({";
@@ -546,7 +546,7 @@ and gen_call ctx e el =
          print ctx (":%s(") (field_name ef);
          concat ctx "," (gen_value ctx) el;
          spr ctx ")";
-     | TField (_, FStatic( { cl_path = ([],"Std") }, { cf_name = "string" })),[{eexpr = TCall({eexpr=TField (_, FStatic( { cl_path = ([],"Std") }, { cf_name = "string" }))}, _)} as el] ->
+     | TField (_, FStatic( { cl_path = ([],"Std") }, { cf_name = "string" },_)),[{eexpr = TCall({eexpr=TField (_, FStatic( { cl_path = ([],"Std") }, { cf_name = "string" },_))}, _)} as el] ->
          (* unwrap recursive Std.string(Std.string(...)) declarations to Std.string(...) *)
          gen_value ctx el;
      | TField ({eexpr = TLocal _} as e, ef), el when is_possible_string_field e (field_name ef)  ->
@@ -567,7 +567,7 @@ and gen_call ctx e el =
               gen_paren_arguments ctx el;
           | _ ->
               Globals.die "" __LOC__);
-     | TField (field_owner, (FInstance(_,_,f) | FAnon(f))), el when Meta.has Meta.SelfCall f.cf_meta ->
+     | TField (field_owner, (FInstance(_,_,f,_) | FAnon(f,_))), el when Meta.has Meta.SelfCall f.cf_meta ->
          (* @:selfCall methods - call the object directly *)
          gen_value ctx field_owner;
          gen_paren_arguments ctx el;
@@ -792,10 +792,10 @@ and gen_cast ctx gen_inner e1 t =
 
 and gen_field_access_name ctx fa =
     match fa with
-    | FInstance(_,_,fld)
-    | FStatic(_,fld)
-    | FAnon fld
-    | FClosure(_,fld) ->
+    | FInstance(_,_,fld,_)
+    | FStatic(_,fld,_)
+    | FAnon (fld,_)
+    | FClosure(_,fld,_) ->
         print ctx "'%s'" fld.cf_name
     | FDynamic name ->
         print ctx "'%s'" name
@@ -818,7 +818,7 @@ and gen_expr ?(local=true) ctx e = begin
         spr ctx "]";
     | TBinop (op,e1,e2) ->
         gen_tbinop ctx op e1 e2;
-    | TField (x,FClosure (_,f)) ->
+    | TField (x,FClosure (_,f,_)) ->
         add_feature ctx "use._hx_bind";
         let fname = if Meta.has Meta.SelfCall f.cf_meta then "" else (field f.cf_name) in
         if is_string_expr x then begin
@@ -866,7 +866,7 @@ and gen_expr ?(local=true) ctx e = begin
         spr ctx "_hx_wrap_if_string_field_closure(";
         gen_value ctx e;
         print ctx ",'%s')" (field_name ef)
-    | TField (x, (FInstance(_,_,f) | FStatic(_,f) | FAnon(f))) when Meta.has Meta.SelfCall f.cf_meta ->
+    | TField (x, (FInstance(_,_,f,_) | FStatic(_,f,_) | FAnon(f,_))) when Meta.has Meta.SelfCall f.cf_meta ->
         gen_value ctx x;
     | TField ({ eexpr = TConst(TInt _ | TFloat _| TString _| TBool _) } as e , ((FInstance _ | FAnon _) as ef)) ->
         gen_paren ctx [e];
@@ -887,7 +887,7 @@ and gen_expr ?(local=true) ctx e = begin
              spr ctx (id ^ "_" ^ (ident v.v_name) ^ "_" ^ (field_name f));
          | _ ->
              Globals.die "" __LOC__);
-    | TField (_, (FStatic ({cl_path = [],""},_) as f)) ->
+    | TField (_, (FStatic ({cl_path = [],""},_,_) as f)) ->
         spr ctx (ident (field_name f))
     | TField (x,f) ->
         gen_value ctx x;
@@ -1030,7 +1030,7 @@ and gen_expr ?(local=true) ctx e = begin
                         spr ctx "_hx_staticToInstance(";
                         gen_expr ctx e1;
                         spr ctx ")";
-                    | TField(_, FAnon f) when is_function_type f.cf_type ->
+                    | TField(_, FAnon (f,_)) when is_function_type f.cf_type ->
                         (* Unwrap function from anon object when storing in local variable.
                            Anon functions are wrapped with function(_,...) return f(...) end to work with colon syntax.
                            Local variables are called with dot syntax, so we need to add a dummy self argument. *)
@@ -1507,9 +1507,9 @@ and gen_tbinop ctx op e1 e2 =
               gen_assign_wrapped ctx op e1 e2 "_hx_funcToField";
           | TField(e3, (FInstance _ as ci)), TField(e4, (FClosure _ | FStatic _)) when is_function_type e2.etype && not (is_dot_access e3 ci) ->
               gen_assign_wrapped ctx op e1 e2 "_hx_funcToField";
-          | TField(e3, (FInstance(_, _, icf) as ci)), TField(e4, FAnon _) when is_function_type e2.etype && (match icf.cf_kind with Var _ -> true | _ -> false) && is_dot_access e3 ci ->
+          | TField(e3, (FInstance(_, _, icf,_) as ci)), TField(e4, FAnon _) when is_function_type e2.etype && (match icf.cf_kind with Var _ -> true | _ -> false) && is_dot_access e3 ci ->
               gen_assign_wrapped ctx op e1 e2 "_hx_anonToField";
-          | TField(e3, (FInstance(_, _, icf) as ci)), TField(e4, FDynamic _) when is_function_type icf.cf_type && (match icf.cf_kind with Var _ -> true | _ -> false) && is_dot_access e3 ci ->
+          | TField(e3, (FInstance(_, _, icf,_) as ci)), TField(e4, FDynamic _) when is_function_type icf.cf_type && (match icf.cf_kind with Var _ -> true | _ -> false) && is_dot_access e3 ci ->
               gen_assign_wrapped ctx op e1 e2 "_hx_anonToField";
           | TField(e3, (FInstance _ as ci)), TLocal t when ((is_function_type t.v_type) && (not (is_dot_access e3 ci))) ->
               gen_assign_wrapped ctx op e1 e2 "_hx_funcToField";
@@ -1645,7 +1645,7 @@ and gen_return ctx e eo wrap =
          else spr ctx "return"
      | Some e ->
          (match e.eexpr with
-          | TField (e2, ((FAnon tcf | FInstance (_,_,tcf)) as t)) when ((is_function_type tcf.cf_type) && (not(is_dot_access e2 t)))->
+          | TField (e2, ((FAnon (tcf,_) | FInstance (_,_,tcf,_)) as t)) when ((is_function_type tcf.cf_type) && (not(is_dot_access e2 t)))->
               (* See issue #6259 *)
               add_feature ctx "use._hx_bind";
               open_ret ();

@@ -62,7 +62,7 @@ let haxe_exception_static_call ctx method_name args p =
 *)
 let haxe_exception_instance_call ctx haxe_exception method_name args p =
 	match quick_field haxe_exception.etype method_name with
-	| FInstance (_,_,cf) as faccess ->
+	| FInstance (_,_,cf,_) as faccess ->
 		let efield = { eexpr = TField(haxe_exception,faccess); etype = cf.cf_type; epos = p } in
 		let rt =
 			match follow cf.cf_type with
@@ -396,7 +396,7 @@ let catches_as_value_exception ctx non_value_exception_catches value_exception_c
 				try PMap.find "value" (value_exception_class ctx).cl_fields
 				with Not_found -> die "haxe.ValueException is missing field \"value\"" __LOC__
 			in
-			mk (TField (catch_local, FInstance (value_exception_class ctx,[],cf))) cf.cf_type catch_local.epos
+			mk (TField (catch_local, FInstance (value_exception_class ctx,[],cf, []))) cf.cf_type catch_local.epos
 		in
 		let rec traverse catches final_else =
 			match catches with

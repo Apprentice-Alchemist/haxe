@@ -33,11 +33,11 @@ let create e cf fh inline ?field_pos ?(params = None) p = {
 }
 
 (* Creates the `tfield_access` corresponding to this field access, using the provided field. *)
-let apply_fa cf = function
-	| FHStatic c -> FStatic(c,cf)
-	| FHInstance(c,tl) -> FInstance(c,tl,cf)
-	| FHAbstract(a,tl,c) -> FStatic(c,cf)
-	| FHAnon -> FAnon cf
+let apply_fa cf tl = function
+	| FHStatic c -> FStatic(c,cf,tl)
+	| FHInstance(c,tl) -> FInstance(c,tl,cf,tl)
+	| FHAbstract(a,tl,c) -> FStatic(c,cf,tl)
+	| FHAnon -> FAnon (cf,tl)
 
 let get_host c cf =
 	if has_class_field_flag cf CfStatic then
@@ -61,32 +61,41 @@ let get_map_function fa = match fa.fa_host with
 	| FHAbstract(a,tl,_) -> apply_params a.a_params tl
 
 (* Converts the field access to a `TField` node, using the provided `mode`. *)
-let get_field_expr fa mode =
+let get_field_expr ctx fa mode =
 	let cf = fa.fa_field in
+	let params = match fa.fa_params with 
+		| Some tl ->
+			Typeload.load_params ctx {
+				build_host = TPBHMethod (fa.fa_host, cf);
+				build_kind = None;
+				build_extern = false;
+				build_params = cf.cf_params
+			} tl fa.fa_pos
+		| None -> Monomorph.spawn_constrained_monos (fun t -> t) cf.cf_params in
 	let t = match mode with
 		| FCall -> cf.cf_type
-		| FGet | FRead | FWrite -> Type.field_type cf
+		| FGet | FRead | FWrite -> apply_params cf.cf_params params cf.cf_type
 	in
 	let fa',t = match fa.fa_host with
 		| FHStatic c ->
-			FStatic(c,cf),t
+			FStatic(c,cf, params),t
 		| FHInstance(c,tl) ->
 			let fa = match cf.cf_kind with
 			| Method _ when mode = FRead ->
-				FClosure(Some(c,tl),cf)
+				FClosure(Some(c,tl),cf, params)
 			| _ ->
-				FInstance(c,tl,cf)
+				FInstance(c,tl,cf, params)
 			in
 			let t = TClass.get_map_function c tl t in
 			fa,t
 		| FHAbstract(a,tl,c) ->
-			FStatic(c,cf),apply_params a.a_params tl t
+			FStatic(c,cf, params),apply_params a.a_params tl t
 		| FHAnon ->
 			let fa = match cf.cf_kind with
 			| Method _ when mode = FRead ->
-				FClosure(None,cf)
+				FClosure(None,cf, params)
 			| _ ->
-				FAnon cf
+				FAnon (cf, params)
 			in
 			fa,t
 	in

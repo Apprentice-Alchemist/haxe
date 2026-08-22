@@ -144,21 +144,21 @@ let prepare_array_access_field ctx a pl cf p =
 		if has_class_field_flag cf CfImpl then ta
 		else TAbstract(a,pl)
 	in
-	map,check_constraints,get_ta
+	map,check_constraints,get_ta,monos
 
 let find_array_read_access_raise ctx a pl e1 p =
 	let rec loop cfl =
 		match cfl with
 		| [] -> raise Not_found
 		| cf :: cfl ->
-			let map,check_constraints,get_ta = prepare_array_access_field ctx a pl cf p in
+			let map,check_constraints,get_ta,monos = prepare_array_access_field ctx a pl cf p in
 			match follow (map cf.cf_type) with
 			| TFun((_,_,tab) :: (_,_,ta1) :: args,r) as tf when is_empty_or_pos_infos args ->
 				begin try
 					Type.unify tab (get_ta());
 					let e1 = cast_or_unify_raise ctx ta1 e1 p in
 					check_constraints();
-					cf,tf,r,e1
+					cf,tf,r,e1,monos
 				with Unify_error _ | Error { err_message = Unify _ } ->
 					loop cfl
 				end
@@ -171,7 +171,7 @@ let find_array_write_access_raise ctx a pl e1 e2  p =
 		match cfl with
 		| [] -> raise Not_found
 		| cf :: cfl ->
-			let map,check_constraints,get_ta = prepare_array_access_field ctx a pl cf p in
+			let map,check_constraints,get_ta,monos = prepare_array_access_field ctx a pl cf p in
 			match follow (map cf.cf_type) with
 			| TFun((_,_,tab) :: (_,_,ta1) :: (_,_,ta2) :: args,r) as tf when is_empty_or_pos_infos args ->
 				begin try
@@ -179,7 +179,7 @@ let find_array_write_access_raise ctx a pl e1 e2  p =
 					let e1 = cast_or_unify_raise ctx ta1 e1 p in
 					let e2 = cast_or_unify_raise ctx ta2 e2 p in
 					check_constraints();
-					cf,tf,r,e1,e2
+					cf,tf,r,e1,e2,monos
 				with Unify_error _ | Error { err_message = Unify _ } ->
 					loop cfl
 				end
@@ -273,11 +273,11 @@ let handle_abstract_casts (scom : SafeCom.t) e =
 				(* a TNew of an abstract implementation is only generated if it is a multi type abstract *)
 				let cf,field_monos,m,pl = find_multitype_specialization' scom.platform a pl e.epos in
 				let e_this = Texpr.Builder.make_static_this c e.epos in
-				let ef = mk (TField(e_this,FStatic(c,cf))) (apply_params cf.cf_params field_monos cf.cf_type) e.epos in
+				let ef = mk (TField(e_this,FStatic(c,cf,[]))) (apply_params cf.cf_params field_monos cf.cf_type) e.epos in
 				let e = ExceptionFunctions.make_call scom ef ((mk (TConst TNull) (TAbstract(a,pl)) e.epos) :: el) m e.epos in
 				{e with etype = m}
 			end
-		| TCall({eexpr = TField(_,FStatic({cl_path=[],"Std"},{cf_name = "string"}))},[e1]) when (match follow e1.etype with TAbstract({a_impl = Some _},_) -> true | _ -> false) ->
+		| TCall({eexpr = TField(_,FStatic({cl_path=[],"Std"},{cf_name = "string"},_))},[e1]) when (match follow e1.etype with TAbstract({a_impl = Some _},_) -> true | _ -> false) ->
 			begin match follow e1.etype with
 				| TAbstract({a_impl = Some c},tl) ->
 					begin try
@@ -325,9 +325,10 @@ let handle_abstract_casts (scom : SafeCom.t) e =
 								| _ -> raise Not_found
 							in
 							let tf,args,tr = match fa with
-								| FStatic(_,cf) -> get_fun_type cf.cf_type
-								| FInstance(c,tl,cf) -> get_fun_type (apply_params c.cl_params tl cf.cf_type)
-								| FAnon cf -> get_fun_type cf.cf_type
+								| FStatic(_,cf, cf_tl) -> get_fun_type (apply_params cf.cf_params cf_tl cf.cf_type)
+								| FInstance(c,tl,cf,cf_tl) ->
+									get_fun_type (cf.cf_type |> apply_params c.cl_params tl |> apply_params cf.cf_params cf_tl)
+								| FAnon (cf,cf_tl) -> get_fun_type (apply_params cf.cf_params cf_tl cf.cf_type)
 								| _ -> raise Not_found
 							in
 							let maybe_cast e t p =

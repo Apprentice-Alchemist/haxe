@@ -22,10 +22,10 @@ type map_suspension_result =
    Handles all field access variants and local variables. *)
 let get_outcome_from_callee e1 =
 	let meta = match (Texpr.skip e1).eexpr with
-		| TField(_, FStatic(_, cf))
-		| TField(_, FInstance(_, _, cf))
-		| TField(_, FClosure(_, cf))
-		| TField(_, FAnon cf) -> cf.cf_meta
+		| TField(_, FStatic(_, cf,_))
+		| TField(_, FInstance(_, _, cf,_))
+		| TField(_, FClosure(_, cf,_))
+		| TField(_, FAnon (cf,_)) -> cf.cf_meta
 		| TLocal v -> v.v_meta
 		| _ -> []
 	in
@@ -149,7 +149,7 @@ let expr_to_coro ctx etmp_result etmp_error_unwrapped cb_root scope deferred e =
 						| None -> false
 					in
 					begin match e1.eexpr with
-					| TField(_,FStatic({cl_kind = KAbstractImpl a}, cf)) when has_class_field_flag cf CfImpl ->
+					| TField(_,FStatic({cl_kind = KAbstractImpl a}, cf,_)) when has_class_field_flag cf CfImpl ->
 						is_restricted a.a_meta
 					| _ ->
 						begin try

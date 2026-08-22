@@ -833,12 +833,18 @@ let has_ctor_constraint c = match c.cl_kind with
 
 let field_name f =
 	match f with
-	| FAnon f | FInstance (_,_,f) | FStatic (_,f) | FClosure (_,f) -> f.cf_name
+	| FAnon (f,_) | FInstance (_,_,f,_) | FStatic (_,f,_) | FClosure (_,f,_) -> f.cf_name
 	| FEnum (_,f) -> f.ef_name
 	| FDynamic n -> n
 
+let field_tparams f =
+	match f with
+	| FAnon (_,tl) | FInstance (_,_,_,tl) | FStatic (_,_,tl) ->
+		(match tl with [] -> None | arr -> Some arr)
+	| FEnum _ | FDynamic _ | FClosure _ -> None
+
 let extract_field = function
-	| FAnon f | FInstance (_,_,f) | FStatic (_,f) | FClosure (_,f) -> Some f
+	| FAnon (f,_) | FInstance (_,_,f,_) | FStatic (_,f,_) | FClosure (_,f,_) -> Some f
 	| _ -> None
 
 let is_physical_var_field f =
@@ -916,28 +922,29 @@ let rec raw_class_field build_type c tl i =
 
 let class_field = raw_class_field field_type
 
-let quick_field t n =
+(* TODO TP: handle explicit field type params *)
+let quick_field ?(params=[]) t n =
 	match follow t with
 	| TInst (c,tl) ->
 		let c, _, f = raw_class_field (fun f -> f.cf_type) c tl n in
-		(match c with None -> FAnon f | Some (c,tl) -> FInstance (c,tl,f))
+		(match c with None -> FAnon (f, params) | Some (c,tl) -> FInstance (c,tl,f, params))
 	| TAnon a ->
 		(match !(a.a_status) with
 		| EnumStatics e ->
 			let ef = PMap.find n e.e_constrs in
 			FEnum(e,ef)
 		| ClassStatics c ->
-			FStatic (c,PMap.find n c.cl_statics)
+			FStatic (c,PMap.find n c.cl_statics, params)
 		| AbstractStatics a ->
 			begin match a.a_impl with
 				| Some c ->
 					let cf = PMap.find n c.cl_statics in
-					FStatic(c,cf) (* is that right? *)
+					FStatic(c,cf, params) (* is that right? *)
 				| _ ->
 					raise Not_found
 			end
 		| _ ->
-			FAnon (PMap.find n a.a_fields))
+			FAnon (PMap.find n a.a_fields, params))
 	| TDynamic _ ->
 		FDynamic n
 	| TEnum _  | TMono _ | TAbstract _ | TFun _ ->

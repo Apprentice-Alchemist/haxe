@@ -1258,28 +1258,33 @@ class hxb_reader
 						let c = AtomicLazy.force c in
 						let tl = self#read_types in
 						let cf = self#read_field_ref in
-						TField(e1,FInstance(c,tl,cf)),None
+						let cf_tl = self#read_types in
+						TField(e1,FInstance(c,tl,cf,cf_tl)),None
 					| 103 ->
 						let e1 = loop () in
 						let c = self#read_class_ref in
 						let c = AtomicLazy.force c in
 						let cf = self#read_field_ref in
-						TField(e1,FStatic(c,cf)),None
+						let cf_tl = self#read_types in
+						TField(e1,FStatic(c,cf,cf_tl)),None
 					| 104 ->
 						let e1 = loop () in
 						let cf = self#read_anon_field_ref in
-						TField(e1,FAnon(cf)),None
+						let cf_tl = self#read_types in
+						TField(e1,FAnon(cf,cf_tl)),None
 					| 105 ->
 						let e1 = loop () in
 						let c = self#read_class_ref in
 						let c = AtomicLazy.force c in
 						let tl = self#read_types in
 						let cf = self#read_field_ref in
-						TField(e1,FClosure(Some(c,tl),cf)),None
+						let cf_params = self#read_types in
+						TField(e1,FClosure(Some(c,tl),cf,cf_params)),None
 					| 106 ->
 						let e1 = loop () in
 						let cf = self#read_anon_field_ref in
-						TField(e1,FClosure(None,cf)),None
+						let cf_params = self#read_types in
+						TField(e1,FClosure(None,cf,cf_params)),None
 					| 107 ->
 						let e1 = loop () in
 						let en = self#read_enum_ref in
@@ -1296,16 +1301,18 @@ class hxb_reader
 						let c = self#read_class_ref in
 						let c = AtomicLazy.force c in
 						let cf = self#read_field_ref in
+						let cf_tl = self#read_types in
 						let e1 = Texpr.Builder.make_static_this c p in
-						TField(e1,FStatic(c,cf)),None
+						TField(e1,FStatic(c,cf,cf_tl)),None
 					| 111 ->
 						let p = read_relpos () in
 						let c = self#read_class_ref in
 						let c = AtomicLazy.force c in
 						let tl = self#read_types in
 						let cf = self#read_field_ref in
+						let cf_tl = self#read_types in
 						let ethis = mk (TConst TThis) (Option.get fctx.tthis) p in
-						TField(ethis,FInstance(c,tl,cf)),None
+						TField(ethis,FInstance(c,tl,cf,cf_tl)),None
 
 					(* module types 120-139 *)
 					| 120 ->

@@ -472,7 +472,7 @@ module ConstPropagationImpl = struct
 					| EnumValue(i,_) -> Const (TInt (Int32.of_int i),actx.com.basic.tint)
 					| _ -> raise Exit
 				end;
-			| TCall ({ eexpr = TField (_,FStatic({cl_path=[],"Type"} as c,({cf_name="enumIndex"} as cf)))},[e1]) when actx.com.platform = Eval ->
+			| TCall ({ eexpr = TField (_,FStatic({cl_path=[],"Type"} as c,({cf_name="enumIndex"} as cf),_))},[e1]) when actx.com.platform = Eval ->
 				begin match follow e1.etype,eval bb e1 with
 					| TEnum _,EnumValue(i,_) -> Const (TInt (Int32.of_int i),actx.com.basic.tint)
 					| _,e1 ->
@@ -481,7 +481,7 @@ module ConstPropagationImpl = struct
 							| Some e -> eval bb e
 						end
 				end
-			| TCall ({ eexpr = TField (_,FStatic(c,cf))},el) ->
+			| TCall ({ eexpr = TField (_,FStatic(c,cf,_))},el) ->
 				let el = List.map (eval bb) el in
 				let el = List.map wrap el in
 				begin match Inline.api_inline2 actx.com.basic actx.com.platform c cf.cf_name el e.epos with
@@ -676,7 +676,7 @@ module LocalDce = struct
 		let rec loop e =
 			match e.eexpr with
 			| TConst _ | TLocal _ | TTypeExpr _ | TFunction _ | TIdent _ -> ()
-			| TCall ({ eexpr = TField(_,FStatic({ cl_path = ([],"Std") },{ cf_name = "string" })) },args) -> Type.iter loop e
+			| TCall ({ eexpr = TField(_,FStatic({ cl_path = ([],"Std") },{ cf_name = "string" },_)) },args) -> Type.iter loop e
 			| TCall ({eexpr = TField(_,FEnum _)},_) -> Type.iter loop e
 			| TCall ({eexpr = TConst (TString ("phi" | "fun"))},_) -> ()
 			| TCall({eexpr = TField(e1,fa)},el) when PurityState.is_pure_field_access fa -> loop e1; List.iter loop el

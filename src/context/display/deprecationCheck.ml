@@ -58,12 +58,12 @@ let run_on_expr com e =
 		| TField(e1,fa) ->
 			expr e1;
 			begin match fa with
-				| FStatic(c,cf) | FInstance(c,_,cf) ->
+				| FStatic(c,cf,_) | FInstance(c,_,cf,_) ->
 					check_class com c e.epos;
 					check_cf com cf e.epos
-				| FAnon cf ->
+				| FAnon (cf,_) ->
 					check_cf com cf e.epos
-				| FClosure(co,cf) ->
+				| FClosure(co,cf,_) ->
 					(match co with None -> () | Some (c,_) -> check_class com c e.epos);
 					check_cf com cf e.epos
 				| FEnum(en,ef) ->

@@ -186,13 +186,13 @@ let rec get_subject mode expr =
 	match (Texpr.skip expr).eexpr with
 		| TLocal v ->
 			SLocalVar v.v_id
-		| TField ({ eexpr = TTypeExpr _ }, FStatic (cls, field)) when (mode <> SMStrictThreaded) || (has_class_field_flag field CfFinal) ->
+		| TField ({ eexpr = TTypeExpr _ }, FStatic (cls, field,_)) when (mode <> SMStrictThreaded) || (has_class_field_flag field CfFinal) ->
 			SFieldOfClass (cls.cl_path, [field.cf_name])
-		| TField ({ eexpr = TConst TThis }, (FInstance (_, _, field) | FAnon field)) when (mode <> SMStrictThreaded) || (has_class_field_flag field CfFinal) ->
+		| TField ({ eexpr = TConst TThis }, (FInstance (_, _, field,_) | FAnon (field,_))) when (mode <> SMStrictThreaded) || (has_class_field_flag field CfFinal) ->
 			SFieldOfThis [field.cf_name]
-		| TField ({ eexpr = TLocal v }, (FInstance (_, _, field) | FAnon field)) when (mode <> SMStrictThreaded) || (has_class_field_flag field CfFinal) ->
+		| TField ({ eexpr = TLocal v }, (FInstance (_, _, field,_) | FAnon (field,_))) when (mode <> SMStrictThreaded) || (has_class_field_flag field CfFinal) ->
 			SFieldOfLocalVar (v.v_id, [field.cf_name])
-		| TField (e, (FInstance (_, _, field) | FAnon field)) when (mode <> SMStrictThreaded) ->
+		| TField (e, (FInstance (_, _, field,_) | FAnon (field,_))) when (mode <> SMStrictThreaded) ->
 			(match get_subject mode e with
 				| SFieldOfClass (path, fields) -> SFieldOfClass (path, field.cf_name :: fields)
 				| SFieldOfThis fields -> SFieldOfThis (field.cf_name :: fields)
@@ -230,10 +230,10 @@ let get_arguments_meta callee expected_args_count =
 		else [] :: (empty_list (n - 1))
 	in
 	match callee.eexpr with
-		| TField (_, FAnon field)
-		| TField (_, FClosure (_,field))
-		| TField (_, FStatic (_, field))
-		| TField (_, FInstance (_, _, field)) ->
+		| TField (_, FAnon (field,_))
+		| TField (_, FClosure (_,field,_))
+		| TField (_, FStatic (_, field,_))
+		| TField (_, FInstance (_, _, field,_)) ->
 			(try
 				match get_meta Meta.HaxeArguments field.cf_meta with
 				| _,[EFunction(_,{ f_args = args }),_],_ when expected_args_count = List.length args ->
@@ -372,7 +372,7 @@ class unificator =
 let is_trace expr =
 	match expr.eexpr with
 	| TIdent "`trace" -> true
-	| TField (_, FStatic ({ cl_path = (["haxe"], "Log") }, { cf_name = "trace" })) -> true
+	| TField (_, FStatic ({ cl_path = (["haxe"], "Log") }, { cf_name = "trace" },_)) -> true
 	| _ -> false
 
 (**
@@ -389,11 +389,11 @@ let rec unfold_null t =
 
 let accessed_field_name access =
 	match access with
-		| FInstance (_, _, { cf_name = name }) -> name
-		| FStatic (_, { cf_name = name }) -> name
-		| FAnon { cf_name = name } -> name
+		| FInstance (_, _, { cf_name = name },_) -> name
+		| FStatic (_, { cf_name = name },_) -> name
+		| FAnon ({ cf_name = name },_) -> name
 		| FDynamic name -> name
-		| FClosure (_, { cf_name = name }) -> name
+		| FClosure (_, { cf_name = name },_) -> name
 		| FEnum (_, { ef_name = name }) -> name
 
 (**
@@ -565,9 +565,9 @@ class immediate_execution =
 		*)
 		method check callee arg_num =
 			match (reveal_expr callee).eexpr with
-				| TField (_, FClosure (Some (cls, _), ({ cf_kind = Method (MethNormal | MethInline) } as field)))
-				| TField (_, FStatic (cls, ({ cf_kind = Method (MethNormal | MethInline) } as field)))
-				| TField (_, FInstance (cls, _, ({ cf_kind = Method (MethNormal | MethInline) } as field))) ->
+				| TField (_, FClosure (Some (cls, _), ({ cf_kind = Method (MethNormal | MethInline) } as field),_))
+				| TField (_, FStatic (cls, ({ cf_kind = Method (MethNormal | MethInline) } as field),_))
+				| TField (_, FInstance (cls, _, ({ cf_kind = Method (MethNormal | MethInline) } as field),_)) ->
 					if PurityState.is_pure cls field then
 						true
 					else
@@ -1736,7 +1736,7 @@ class class_checker cls immediate_execution report (main_expr : texpr option) =
 			match main_expr with
 				| Some main_expr ->
 					begin match main_expr.eexpr with
-						| TCall ({ eexpr = TField (_, FStatic (cl, field))}, _) when cl == cls ->
+						| TCall ({ eexpr = TField (_, FStatic (cl, field,_))}, _) when cl == cls ->
 							begin match field.cf_expr with
 								| Some ({ eexpr = TFunction { tf_expr = e } }) ->
 									Some e
@@ -1847,15 +1847,15 @@ class class_checker cls immediate_execution report (main_expr : texpr option) =
 						checker#error message [p]
 				in
 				let rec loop current_mode e = match e.eexpr with
-					| TField ({ eexpr = TConst TThis }, FInstance (_, _, field)) when not is_static ->
+					| TField ({ eexpr = TConst TThis }, FInstance (_, _, field,_)) when not is_static ->
 						if Hashtbl.mem init_list field.cf_name then
 							maybe_error current_mode ("Cannot use field " ^ field.cf_name ^ " until initialization.") e.epos
-					| TField (_, FStatic (_, field)) when is_static ->
+					| TField (_, FStatic (_, field,_)) when is_static ->
 						if Hashtbl.mem init_list field.cf_name then
 							maybe_error current_mode ("Cannot use field " ^ field.cf_name ^ " until initialization.") e.epos
-					| TField ({ eexpr = TConst TThis }, FClosure (_, field)) ->
+					| TField ({ eexpr = TConst TThis }, FClosure (_, field,_)) ->
 						maybe_error current_mode ("Cannot use method " ^ field.cf_name ^ " until all instance fields are initialized.") e.epos;
-					| TCall ({ eexpr = TField ({ eexpr = TConst TThis }, FInstance (_, _, field)) }, args) ->
+					| TCall ({ eexpr = TField ({ eexpr = TConst TThis }, FInstance (_, _, field,_)) }, args) ->
 						maybe_error current_mode ("Cannot call method " ^ field.cf_name ^ " until all instance fields are initialized.") e.epos;
 						List.iter (loop current_mode) args
 					| TConst TThis ->
@@ -1895,11 +1895,11 @@ class class_checker cls immediate_execution report (main_expr : texpr option) =
 			in
 			let rec traverse init_list mode e =
 				(match e.eexpr with
-					| TBinop (OpAssign, { eexpr = TField ({ eexpr = TConst TThis }, FInstance (_, _, f)) }, right_expr) when not is_static ->
+					| TBinop (OpAssign, { eexpr = TField ({ eexpr = TConst TThis }, FInstance (_, _, f,_)) }, right_expr) when not is_static ->
 						(* Traverse right side to handle nested assignments *)
 						ignore (traverse init_list mode right_expr);
 						Hashtbl.remove init_list f.cf_name
-					| TBinop (OpAssign, { eexpr = TField(_, FStatic(_, f)) }, right_expr) when is_static ->
+					| TBinop (OpAssign, { eexpr = TField(_, FStatic(_, f,_)) }, right_expr) when is_static ->
 						(* Traverse right side to handle nested assignments *)
 						ignore (traverse init_list mode right_expr);
 						Hashtbl.remove init_list f.cf_name

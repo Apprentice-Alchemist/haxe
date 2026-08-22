@@ -523,7 +523,7 @@ object(self)
 				This case is a hack for https://github.com/HaxeFoundation/haxe/issues/9355
 				on top of a hack for https://github.com/HaxeFoundation/haxe/issues/2401
 			*)
-			| TCall({eexpr = TField(_,FStatic({cl_path=[],"Std"},{cf_name = "string"}))} as e1,[e2]) ->
+			| TCall({eexpr = TField(_,FStatic({cl_path=[],"Std"},{cf_name = "string"},_))} as e1,[e2]) ->
 				let e2' = inline_params true false e2 in
 				let e2' =
 					if fast_eq (follow e2.etype) (follow e2'.etype) then e2'
@@ -891,7 +891,7 @@ and type_inline_ctor ictx c cf tf ethis el po =
 		let el = List.fold_left (fun acc cf ->
 			match cf.cf_kind,cf.cf_expr with
 			| Var _,Some e ->
-				let lhs = mk (TField(ethis,FInstance (c,cparams,cf))) cf.cf_type e.epos in
+				let lhs = mk (TField(ethis,FInstance (c,cparams,cf, []))) cf.cf_type e.epos in
 				let eassign = mk (TBinop(OpAssign,lhs,e)) cf.cf_type e.epos in
 				eassign :: acc
 			| _ -> acc

@@ -25,8 +25,8 @@ let make_call ctx e params t ?(force_inline=false) p =
 		let ethis,cl,f = match e.eexpr with
 			| TField (ethis,fa) ->
 				let co,cf = match fa with
-					| FInstance(c,_,cf) | FStatic(c,cf) -> Some c,cf
-					| FAnon cf -> None,cf
+					| FInstance(c,_,cf,_) | FStatic(c,cf,_) -> Some c,cf
+					| FAnon (cf,_) -> None,cf
 					| _ -> raise Exit
 				in
 				ethis,co,cf
@@ -91,16 +91,16 @@ let make_call ctx e params t ?(force_inline=false) p =
 	with Exit ->
 		mk (TCall (e,params)) t p
 
-let mk_array_get_call ctx (cf,tf,r,e1) c ebase p = match cf.cf_expr with
+let mk_array_get_call ctx (cf,tf,r,e1,cf_params) c ebase p = match cf.cf_expr with
 	| None when not (has_class_field_flag cf CfExtern) ->
 		if not (Meta.has Meta.NoExpr cf.cf_meta) then display_error ctx.com "Recursive array get method" p;
 		mk (TArray(ebase,e1)) r p
 	| _ ->
 		let et = type_module_type ctx (TClassDecl c) p in
-		let ef = mk (TField(et,(FStatic(c,cf)))) tf p in
+		let ef = mk (TField(et,(FStatic(c,cf,cf_params)))) tf p in
 		make_call ctx ef [ebase;e1] r p
 
-let mk_array_set_call ctx (cf,tf,r,e1,evalue) c ebase p =
+let mk_array_set_call ctx (cf,tf,r,e1,evalue,cf_params) c ebase p =
 	match cf.cf_expr with
 		| None when not (has_class_field_flag cf CfExtern) ->
 			if not (Meta.has Meta.NoExpr cf.cf_meta) then display_error ctx.com "Recursive array set method" p;
@@ -108,7 +108,7 @@ let mk_array_set_call ctx (cf,tf,r,e1,evalue) c ebase p =
 			mk (TBinop(OpAssign,ea,evalue)) r p
 		| _ ->
 			let et = type_module_type ctx (TClassDecl c) p in
-			let ef = mk (TField(et,(FStatic(c,cf)))) tf p in
+			let ef = mk (TField(et,(FStatic(c,cf,cf_params)))) tf p in
 			make_call ctx ef [ebase;e1;evalue] r p
 
 let abstract_using_param_type sea = match follow sea.se_this.etype with
@@ -138,7 +138,7 @@ let rec acc_get ctx g =
 		ignore(follow cf.cf_type); (* force computing *)
 		begin match cf.cf_kind,cf.cf_expr with
 		| _ when not (ctx.com.display.dms_inline) ->
-			FieldAccess.get_field_expr fa FRead
+			FieldAccess.get_field_expr ctx fa FRead
 		| Method _,_->
 			let chk_class c = ((has_class_flag c CExtern) || has_class_field_flag cf CfExtern) && not (Meta.has Meta.Runtime cf.cf_meta) in
 			let wrap_extern c =
@@ -166,9 +166,9 @@ let rec acc_get ctx g =
 					cf
 				in
 				let e_t = type_module_type ctx (TClassDecl c2) p in
-				FieldAccess.get_field_expr (FieldAccess.create e_t cf (FHStatic c2) true p) FRead
+				FieldAccess.get_field_expr ctx (FieldAccess.create e_t cf (FHStatic c2) true p) FRead
 			in
-			let e_def = FieldAccess.get_field_expr fa FRead in
+			let e_def = FieldAccess.get_field_expr ctx fa FRead in
 			begin match follow fa.fa_on.etype with
 				| TInst (c,_) when chk_class c ->
 					display_error ctx.com "Can't create closure on an extern inline member method" p;
@@ -208,7 +208,7 @@ let rec acc_get ctx g =
 		(dispatcher sea.se_access.fa_pos)#resolve_call sea name
 	| AKUsingAccessor sea | AKUsingField sea when ctx.f.in_display ->
 		(* Generate a TField node so we can easily match it for position/usage completion (issue #1968) *)
-		let e_field = FieldAccess.get_field_expr sea.se_access FGet in
+		let e_field = FieldAccess.get_field_expr ctx sea.se_access FGet in
 		let id,_ = store_typed_expr ctx.com sea.se_this e_field.epos in
 		let e_field = {e_field with eexpr = (TMeta((Meta.StaticExtension,[make_stored_id_expr id e_field.epos],null_pos),e_field))} in
 		let t = match follow e_field.etype with
@@ -221,14 +221,14 @@ let rec acc_get ctx g =
 		| Method MethMacro ->
 			(* If we are in display mode, we're probably hovering a macro call subject. Just generate a normal field. *)
 			if ctx.f.in_display then
-				FieldAccess.get_field_expr fa FRead
+				FieldAccess.get_field_expr ctx fa FRead
 			else
 				raise_typing_error "Invalid macro access" fa.fa_pos
 		| _ ->
 			if fa.fa_inline then
 				inline_read fa
 			else
-				FieldAccess.get_field_expr fa FRead
+				FieldAccess.get_field_expr ctx fa FRead
 		end
 	| AKAccessor fa ->
 		(dispatcher fa.fa_pos)#field_call fa [] []
@@ -236,7 +236,7 @@ let rec acc_get ctx g =
 		(dispatcher sea.se_access.fa_pos)#field_call sea.se_access [sea.se_this] []
 	| AKUsingField sea ->
 		let e = sea.se_this in
-		let e_field = FieldAccess.get_field_expr sea.se_access FGet in
+		let e_field = FieldAccess.get_field_expr ctx sea.se_access FGet in
 		(* build a closure with first parameter applied *)
 		(match follow e_field.etype with
 		| TFun ((_,_,t0) :: args,ret) ->
@@ -393,9 +393,9 @@ let type_bind ctx (e : texpr) (args,ret) params safe p =
 		match e.eexpr with
 		| TFunction _ | TLocal { v_kind = VUser TVOLocalFunction } ->
 			e,var_decls
-		| TField(_,(FStatic(_,cf) | FInstance(_,_,cf))) when is_immutable_method cf ->
+		| TField(_,(FStatic(_,cf,_) | FInstance(_,_,cf,_))) when is_immutable_method cf ->
 			e,var_decls
-		| TField(eobj,FClosure(Some (cl,tp), cf)) when is_immutable_method cf ->
+		| TField(eobj,FClosure(Some (cl,tp), cf, cf_params)) when is_immutable_method cf ->
 			(*
 				if we're binding an instance method, we don't really need to create a closure for it,
 				since we'll create a closure for the binding anyway, instead store the instance and
@@ -404,7 +404,7 @@ let type_bind ctx (e : texpr) (args,ret) params safe p =
 			let vobj = alloc_var VGenerated gen_local_prefix eobj.etype eobj.epos in
 			let var_decl = mk (TVar(vobj, Some eobj)) ctx.t.tvoid eobj.epos in
 			let eobj = { eobj with eexpr = TLocal vobj } in
-			{ e with eexpr = TField(eobj, FInstance (cl, tp, cf)) }, var_decl :: var_decls
+			{ e with eexpr = TField(eobj, FInstance (cl, tp, cf, cf_params)) }, var_decl :: var_decls
 		| _ ->
 			let e_var = alloc_var VGenerated gen_local_prefix e.etype e.epos in
 			(mk (TLocal e_var) e.etype e.epos), (mk (TVar(e_var,Some e)) ctx.t.tvoid e.epos) :: var_decls
@@ -456,7 +456,7 @@ let array_access ctx e1 e2 mode p =
 				has_abstract_array_access := true;
 				let f = AbstractCast.find_array_read_access ctx a pl e2 p in
 				if not ctx.allow_transform then
-					let _,_,r,_ = f in
+					let _,_,r,_,_ = f in
 					AKExpr { eexpr = TArray(e1,e2); epos = p; etype = r }
 				else begin
 					let e = mk_array_get_call ctx f c e1 p in

@@ -527,7 +527,7 @@ and cfield_type ctx cf =
 
 and field_type ctx f p =
 	match f with
-	| FInstance (c,pl,f) | FClosure (Some (c,pl),f) ->
+	| FInstance (c,pl,f,_) | FClosure (Some (c,pl),f,_) ->
 		let creal = resolve_class ctx c pl false in
 		let rec loop c =
 			try
@@ -538,7 +538,7 @@ and field_type ctx f p =
 				| None -> abort (s_type_path creal.cl_path ^ " is missing field " ^ f.cf_name) p
 		in
 		(loop creal).cf_type
-	| FStatic (_,f) | FAnon f | FClosure (_,f) -> f.cf_type
+	| FStatic (_,f,_) | FAnon (f,_) | FClosure (_,f,_) -> f.cf_type
 	| FDynamic _ -> t_dynamic
 	| FEnum (_,f) -> f.ef_type
 
@@ -561,7 +561,7 @@ and real_type ctx e =
 						If we have a number, it is more accurate to cast it to the type parameter before wrapping it as dynamic
 						Ignore dynamic method (#7166)
 					*)
-					| TInst ({cl_kind=KTypeParameter _},_), t when is_number (to_type ctx t) && (match f with FInstance (_,_,{ cf_kind = Var _ | Method MethDynamic }) -> false | _ -> true) ->
+					| TInst ({cl_kind=KTypeParameter _},_), t when is_number (to_type ctx t) && (match f with FInstance (_,_,{ cf_kind = Var _ | Method MethDynamic },_) -> false | _ -> true) ->
 						(name, opt, TAbstract (fake_tnull,[t]))
 					| _ ->
 						a
@@ -1446,20 +1446,20 @@ and get_access ctx e =
 	match e.eexpr with
 	| TField (ethis, a) ->
 		(match a, follow ethis.etype with
-		| FStatic (c,({ cf_kind = Var _ | Method MethDynamic } as f)), _ ->
+		| FStatic (c,({ cf_kind = Var _ | Method MethDynamic } as f),_), _ ->
 			let g, t = class_global ctx c in
 			AStaticVar (g, t, (match t with HObj o -> (try fst (get_index f.cf_name o) with Not_found -> die ~p:e.epos "" __LOC__) | _ -> die ~p:e.epos "" __LOC__))
-		| FStatic (c,({ cf_kind = Method _ } as f)), _ ->
+		| FStatic (c,({ cf_kind = Method _ } as f),_), _ ->
 			AStaticFun (alloc_fid ctx c f)
-		| FClosure (Some (cdef,pl), f), TInst (c,_)
-		| FInstance (cdef,pl,f), TInst (c,_) when direct_method_call ctx c f ethis ->
+		| FClosure (Some (cdef,pl), f,_), TInst (c,_)
+		| FInstance (cdef,pl,f,_), TInst (c,_) when direct_method_call ctx c f ethis ->
 			(* cdef is the original definition, we want the last redefinition *)
 			let rec loop c =
 				if PMap.mem f.cf_name c.cl_fields then c else (match c.cl_super with None -> cdef | Some (c,_) -> loop c)
 			in
 			let last_def = loop c in
 			AInstanceFun (ethis, alloc_fid ctx (resolve_class ctx last_def pl false) f)
-		| (FInstance (cdef,pl,f) | FClosure (Some (cdef,pl), f)), _ ->
+		| (FInstance (cdef,pl,f,_) | FClosure (Some (cdef,pl), f,_)), _ ->
 			let rec loop t =
 				match follow t with
 				| TInst (c,pl) -> c, pl
@@ -1468,7 +1468,7 @@ and get_access ctx e =
 			in
 			let cdef, pl = if (has_class_flag cdef CInterface) then loop ethis.etype else cdef,pl in
 			object_access ctx ethis (class_type ctx cdef pl false) f
-		| (FAnon f | FClosure(None,f)), _ ->
+		| (FAnon (f,_) | FClosure(None,f,_)), _ ->
 			object_access ctx ethis (to_type ctx ethis.etype) f
 		| FDynamic name, _ ->
 			ADynamic (ethis, alloc_string ctx name)
@@ -2245,14 +2245,14 @@ and eval_expr ctx e =
 			abort ("Unknown native call " ^ s) e.epos)
 	| TEnumIndex v ->
 		get_enum_index ctx v
-	| TCall ({ eexpr = TField (_,FStatic ({ cl_path = [],"Type" },{ cf_name = "enumIndex" })) },[{ eexpr = TCast(v,_) }]) when (match follow v.etype with TEnum _ -> true | _ -> false) ->
+	| TCall ({ eexpr = TField (_,FStatic ({ cl_path = [],"Type" },{ cf_name = "enumIndex" },_)) },[{ eexpr = TCast(v,_) }]) when (match follow v.etype with TEnum _ -> true | _ -> false) ->
 		get_enum_index ctx v
-	| TCall ({ eexpr = TField (_,FStatic ({ cl_path = [],"Type" },{ cf_name = "enumIndex" })) },[v]) when (match follow v.etype with TEnum _ -> true | _ -> false) ->
+	| TCall ({ eexpr = TField (_,FStatic ({ cl_path = [],"Type" },{ cf_name = "enumIndex" },_)) },[v]) when (match follow v.etype with TEnum _ -> true | _ -> false) ->
 		get_enum_index ctx v
-	| TCall ({ eexpr = TField (ef,FStatic ({ cl_path = [],"Reflect" } as c,{ cf_name = "makeVarArgs" })) } as e1,[v]) ->
-		eval_expr ctx {e with eexpr = TCall({e1 with eexpr = TField(ef,FStatic(c, PMap.find "_makeVarArgs" c.cl_statics))},[v])}
-	| TCall ({ eexpr = TField (_,FStatic ({ cl_path = [],"Std" },{ cf_name = "instance" })) },[v;vt])
-	| TCall ({ eexpr = TField (_,FStatic ({ cl_path = [],"Std" },{ cf_name = "downcast" })) },[v;vt]) ->
+	| TCall ({ eexpr = TField (ef,FStatic ({ cl_path = [],"Reflect" } as c,{ cf_name = "makeVarArgs" },_)) } as e1,[v]) ->
+		eval_expr ctx {e with eexpr = TCall({e1 with eexpr = TField(ef,FStatic(c, PMap.find "_makeVarArgs" c.cl_statics,[]))},[v])}
+	| TCall ({ eexpr = TField (_,FStatic ({ cl_path = [],"Std" },{ cf_name = "instance" },_)) },[v;vt])
+	| TCall ({ eexpr = TField (_,FStatic ({ cl_path = [],"Std" },{ cf_name = "downcast" },_)) },[v;vt]) ->
 		let r = eval_expr ctx v in
 		hold ctx r;
 		let c = eval_to ctx vt (class_type ctx ctx.base_type [] false) in
@@ -2334,14 +2334,14 @@ and eval_expr ctx e =
 			in
 			let rt = to_type ctx e.etype in
 			(match ec.eexpr with
-			| TField (_, FInstance(_,_,{ cf_kind = Method (MethNormal|MethInline); cf_type = t })) when is_map_get_method t ->
+			| TField (_, FInstance(_,_,{ cf_kind = Method (MethNormal|MethInline); cf_type = t },_)) when is_map_get_method t ->
 				(* let's trust the compiler on map.get type *)
 				unsafe_cast_to ctx ret rt e.epos
 			| _ ->
 				cast_to ~force:true ctx ret rt e.epos)
 		| Some r -> r
 		)
-	| TField (ec,FInstance({ cl_path = [],"Array" },[t],{ cf_name = "length" })) when to_type ctx t = HDyn ->
+	| TField (ec,FInstance({ cl_path = [],"Array" },[t],{ cf_name = "length" },_)) when to_type ctx t = HDyn ->
 		let r = alloc_tmp ctx HI32 in
 		let a = eval_to ctx ec (class_type ctx ctx.array_impl.adyn [] false) in
 		op ctx (ONullCheck a);
@@ -3602,11 +3602,11 @@ let generate_member ctx c f =
 			let p = {f.cf_pos with pmax = f.cf_pos.pmin} in
 			(* function __string() { var str = this.toString(); return if (str == null) null else str.bytes; } *)
 			let ethis = mk (TConst TThis) (TInst (c,extract_param_types c.cl_params)) p in
-			let tstr = mk (TCall (mk (TField (ethis,FInstance(c,extract_param_types c.cl_params,f))) f.cf_type p,[])) ctx.com.basic.tstring p in
+			let tstr = mk (TCall (mk (TField (ethis,FInstance(c,extract_param_types c.cl_params,f, []))) f.cf_type p,[])) ctx.com.basic.tstring p in
 			let vtmp = Type.alloc_var VGenerated "str" ctx.com.basic.tstring p in
 			let vstr = mk (TLocal vtmp) ctx.com.basic.tstring p in
 			let cstr, cf_bytes = (try (match ctx.com.basic.tstring with TInst(c,_) -> c, PMap.find "bytes" c.cl_fields | _ -> die "" __LOC__) with Not_found -> die "" __LOC__) in
-			let ebytes = mk (TField (vstr,FInstance (cstr,[],cf_bytes))) cf_bytes.cf_type p in
+			let ebytes = mk (TField (vstr,FInstance (cstr,[],cf_bytes, []))) cf_bytes.cf_type p in
 			let econd = mk (TBinop (OpEq, vstr, mk (TConst TNull) ctx.com.basic.tstring p)) ctx.com.basic.tbool p in
 			let efun = mk (TBlock [
 				mk (TVar (vtmp,Some tstr)) ctx.com.basic.tvoid p;
@@ -3850,7 +3850,7 @@ let generate_static_init ctx types main =
 				match f.cf_kind, f.cf_expr with
 				| Var _, Some e ->
 					let p = e.epos in
-					let e = mk (TBinop (OpAssign,(mk (TField (mk (TTypeExpr t) t_dynamic p,FStatic (c,f))) f.cf_type p), e)) f.cf_type p in
+					let e = mk (TBinop (OpAssign,(mk (TField (mk (TTypeExpr t) t_dynamic p,FStatic (c,f,[]))) f.cf_type p), e)) f.cf_type p in
 					exprs := e :: !exprs;
 				| _ ->
 					()
