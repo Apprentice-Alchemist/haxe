@@ -39,7 +39,10 @@ object(self)
 		mk (TIf(eif,ethen,Some eelse)) t (punion eif.epos eelse.epos)
 
 	method instance_field (e : texpr) (c : tclass) (params : Type.t list) (cf : tclass_field) (t : Type.t) =
-		mk (TField(e,FInstance(c,params,cf))) t e.epos
+		if cf.cf_params <> [] then
+			Error.abort "TODO: texpr_builder#instance_field on a method with type params" e.epos
+		else
+			mk (TField(e,FInstance(c,params,cf, []))) t e.epos
 
 	method int (i : int) (p : pos) =
 		mk (TConst (TInt (Int32.of_int i))) basic.tint p
@@ -63,7 +66,7 @@ object(self)
 		mk (TReturn (Some e)) t_dynamic e.epos
 
 	method static_field (e : texpr) (c : tclass) (cf : tclass_field) (t : Type.t) =
-		mk (TField(e,FStatic(c,cf))) t e.epos
+		mk (TField(e,FStatic(c,cf, [] (*TODO*)))) t e.epos
 
 	method string (s : string) (p : pos) =
 		mk (TConst (TString s)) basic.tstring p

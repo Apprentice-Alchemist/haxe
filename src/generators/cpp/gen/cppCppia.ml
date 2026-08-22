@@ -429,17 +429,17 @@ let rec is_dynamic_in_cpp ctx expr =
           let is_IaCall =
             match (remove_parens_cast func).eexpr with
             | TField ({ eexpr = TIdent "__global__" }, field) -> false
-            | TField (obj, FStatic (class_def, field))
+            | TField (obj, FStatic (class_def, field,_))
               when is_real_function field ->
                 false
-            | TField (obj, FInstance (_, _, field))
+            | TField (obj, FInstance (_, _, field,_))
               when is_this obj && is_real_function field ->
                 false
-            | TField (obj, FInstance (_, _, field)) when is_super obj -> false
-            | TField (obj, FInstance (_, _, field))
+            | TField (obj, FInstance (_, _, field,_)) when is_super obj -> false
+            | TField (obj, FInstance (_, _, field,_))
               when field.cf_name = "_hx_getIndex" ->
                 false
-            | TField (obj, FInstance (_, _, field))
+            | TField (obj, FInstance (_, _, field,_))
               when field.cf_name = "__Index"
                    || (not (is_dynamic_in_cppia ctx obj))
                       && is_real_function field ->
@@ -1033,7 +1033,7 @@ class script_writer ctx filename asciiOut basic =
                   ^ argN
                   ^ this#commentOf (field_name field)
                   ^ "\n")
-            | TField (obj, FStatic (class_def, field))
+            | TField (obj, FStatic (class_def, field, _))
               when is_real_function field ->
                 this#write
                   (this#op IaCallStatic ^ this#instText class_def ^ " "
@@ -1043,7 +1043,7 @@ class script_writer ctx filename asciiOut basic =
                       (join_class_path class_def.cl_path "."
                       ^ "." ^ field.cf_name)
                   ^ "\n")
-            | TField (obj, FInstance (_, _, field))
+            | TField (obj, FInstance (_, _, field,_))
               when is_this obj && is_real_function field ->
                 this#write
                   (this#op IaCallThis ^ this#typeText obj.etype ^ " "
@@ -1051,7 +1051,7 @@ class script_writer ctx filename asciiOut basic =
                   ^ argN
                   ^ this#commentOf field.cf_name
                   ^ "\n")
-            | TField (obj, FInstance (_, _, field)) when is_super obj ->
+            | TField (obj, FInstance (_, _, field,_)) when is_super obj ->
                 this#write
                   (this#op IaCallSuper ^ this#typeText obj.etype ^ " "
                   ^ this#stringText field.cf_name
@@ -1059,7 +1059,7 @@ class script_writer ctx filename asciiOut basic =
                   ^ this#commentOf field.cf_name
                   ^ "\n")
             (* Cppia does not have a "GetEnumIndex" op code - must use IaCallMember ::hx::EnumBase.__Index *)
-            | TField (obj, FInstance (_, _, field))
+            | TField (obj, FInstance (_, _, field,_))
               when field.cf_name = "_hx_getIndex"
                    && script_type_string obj.etype = "::hx::EnumBase" ->
                 this#write
@@ -1069,7 +1069,7 @@ class script_writer ctx filename asciiOut basic =
                   ^ this#commentOf "Enum index"
                   ^ "\n");
                 this#gen_expression obj
-            | TField (obj, FInstance (_, _, field))
+            | TField (obj, FInstance (_, _, field,_))
               when field.cf_name = "__Index"
                    || (not (is_dynamic_in_cppia ctx obj))
                       && is_real_function field ->
@@ -1154,35 +1154,35 @@ class script_writer ctx filename asciiOut basic =
                 (this#op IaFName ^ typeText ^ " " ^ this#stringText name
                ^ this#commentOf name ^ "\n");
               this#gen_expression obj
-          | FStatic (class_def, field) ->
+          | FStatic (class_def, field,_) ->
               this#write
                 (this#op IaFStatic ^ this#instText class_def ^ " "
                 ^ this#stringText field.cf_name
                 ^ this#commentOf field.cf_name)
-          | FInstance (_, _, field) when is_this obj ->
+          | FInstance (_, _, field,_) when is_this obj ->
               this#write
                 (this#op IaFThisInst ^ typeText ^ " "
                 ^ this#stringText field.cf_name
                 ^ this#commentOf field.cf_name)
-          | FInstance (_, _, field) ->
+          | FInstance (_, _, field,_) ->
               this#write
                 (this#op IaFLink ^ typeText ^ " "
                 ^ this#stringText field.cf_name
                 ^ this#commentOf (objType ^ "." ^ field.cf_name)
                 ^ "\n");
               this#gen_expression obj
-          | FClosure (_, field) when is_this obj ->
+          | FClosure (_, field,_) when is_this obj ->
               this#write
                 (this#op IaFThisName ^ typeText ^ " "
                 ^ this#stringText field.cf_name
                 ^ "\n")
-          | FAnon field when is_this obj ->
+          | FAnon (field, _) when is_this obj ->
               this#write
                 (this#op IaFThisName ^ typeText ^ " "
                 ^ this#stringText field.cf_name
                 ^ this#commentOf field.cf_name
                 ^ "\n")
-          | FClosure (_, field) | FAnon field ->
+          | FClosure (_, field,_) | FAnon (field, _) ->
               this#write
                 (this#op IaFName ^ typeText ^ " "
                 ^ this#stringText field.cf_name

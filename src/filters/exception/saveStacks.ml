@@ -84,7 +84,7 @@ let patch_constructors ectx =
 						with Not_found -> raise_typing_error "haxe.Exception has no field __shiftStack" p
 					in
 					match faccess with
-					| FInstance (_,_,cf) ->
+					| FInstance (_,_,cf,_) ->
 						let efield = { eexpr = TField(this,faccess); etype = cf.cf_type; epos = p } in
 						let rt =
 							match follow cf.cf_type with

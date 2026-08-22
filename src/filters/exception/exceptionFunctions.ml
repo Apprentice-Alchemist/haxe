@@ -31,7 +31,7 @@ let make_call scom eon el tret p =
 		mk (TCall(eon,el)) tret p
 	in
 	match eon.eexpr with
-	| TField(ef,(FStatic(cl,cf) | FInstance(cl,_,cf))) when SafeCom.needs_inline scom (Some cl) cf ->
+	| TField(ef,(FStatic(cl,cf,_) | FInstance(cl,_,cf,_))) when SafeCom.needs_inline scom (Some cl) cf ->
 		begin match cf.cf_expr with
 		| Some {eexpr = TFunction tf} ->
 			let config = Inline.inline_config (Some cl) cf el tret in

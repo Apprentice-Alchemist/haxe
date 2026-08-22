@@ -39,7 +39,7 @@ let rec extract_constant_value e = match e.eexpr with
 		Some e
 	| TConst (TThis | TSuper) ->
 		None
-	| TField(_,FStatic(c,({cf_kind = Var {v_write = AccNever}} as cf))) ->
+	| TField(_,FStatic(c,({cf_kind = Var {v_write = AccNever}} as cf), _)) ->
 		begin match cf.cf_expr with
 		| Some e ->
 			(* Don't care about inline, if we know the value it makes no difference. *)
@@ -111,8 +111,8 @@ let reduce_control_flow scom e = match e.eexpr with
 		optimize_binop scom e op e1 e2
 	| TUnop (op,flag,esub) ->
 		optimize_unop e op flag esub
-	| TCall ({ eexpr = TField (o,FClosure (c,cf)) } as f,el) ->
-		let fmode = (match c with None -> FAnon cf | Some (c,tl) -> FInstance (c,tl,cf)) in
+	| TCall ({ eexpr = TField (o,FClosure (c,cf,cf_tl)) } as f,el) ->
+		let fmode = (match c with None -> FAnon (cf,cf_tl) | Some (c,tl) -> FInstance (c,tl,cf,cf_tl)) in
 		{ e with eexpr = TCall ({ f with eexpr = TField (o,fmode) },el) }
 	| TEnumParameter({eexpr = TCall({eexpr = TField(_,FEnum(_,ef1))},el)},ef2,i)
 	| TEnumParameter({eexpr = TParenthesis {eexpr = TCall({eexpr = TField(_,FEnum(_,ef1))},el)}},ef2,i)
@@ -145,7 +145,7 @@ let rec reduce_loop (scom : SafeCom.t) stack e =
 				with Error { err_message = Custom _ } ->
 					reduce_expr scom e
 				end;
-			| {eexpr = TField(ef,(FStatic(cl,cf) | FInstance(cl,_,cf)))} when SafeCom.needs_inline scom (Some cl) cf && not (rec_stack_memq cf stack) ->
+			| {eexpr = TField(ef,(FStatic(cl,cf,_) | FInstance(cl,_,cf,_)))} when SafeCom.needs_inline scom (Some cl) cf && not (rec_stack_memq cf stack) ->
 				begin match cf.cf_expr with
 				| Some {eexpr = TFunction tf} ->
 					let config = inline_config (Some cl) cf el e.etype in

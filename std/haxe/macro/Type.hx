@@ -796,17 +796,17 @@ enum FieldAccess {
 		Access of field `cf` on a class instance `c` with type parameters
 		`params`.
 	**/
-	FInstance(c:Ref<ClassType>, params:Array<Type>, cf:Ref<ClassField>);
+	FInstance(c:Ref<ClassType>, params:Array<Type>, cf:Ref<ClassField>, ?cfParams: Array<Type>);
 
 	/**
 		Static access of a field `cf` on a class `c`.
 	**/
-	FStatic(c:Ref<ClassType>, cf:Ref<ClassField>);
+	FStatic(c:Ref<ClassType>, cf:Ref<ClassField>, ?cfParams: Array<Type>);
 
 	/**
 		Access of field `cf` on an anonymous structure.
 	**/
-	FAnon(cf:Ref<ClassField>);
+	FAnon(cf:Ref<ClassField>, ?cfParams: Array<Type>);
 
 	/**
 		Dynamic field access of a field named `s`.
@@ -817,7 +817,7 @@ enum FieldAccess {
 		Closure field access of field `cf` on a class instance `c` with type
 		parameters `params`.
 	**/
-	FClosure(c:Null<{c:Ref<ClassType>, params:Array<Type>}>, cf:Ref<ClassField>);
+	FClosure(c:Null<{c:Ref<ClassType>, params:Array<Type>}>, cf:Ref<ClassField>, ?cfParams: Array<Type>);
 
 	/**
 		Field access to an enum constructor `ef` of enum `e`.

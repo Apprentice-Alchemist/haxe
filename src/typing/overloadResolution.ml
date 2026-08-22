@@ -24,8 +24,11 @@ let try_functional_interface_match t_param t_arg =
 		end
 	| _ -> false
 
-let unify_cf map_type c cf el =
-	let monos = List.map (fun _ -> mk_mono()) cf.cf_params in
+let unify_cf map_type c cf ?params el =
+	let monos = match params with
+		| Some params -> params
+		| None -> List.map (fun _ -> mk_mono()) cf.cf_params
+	in
 	match follow (apply_params cf.cf_params monos (map_type cf.cf_type)) with
 		| TFun(tl'',ret) as tf ->
 			let rec loop2 acc el tl = match el,tl with
@@ -60,8 +63,8 @@ let unify_cf map_type c cf el =
 		| t ->
 			None
 
-let find_overload map_type c cf el =
-	ExtList.List.filter_map (fun cf -> unify_cf map_type c cf el) (cf :: cf.cf_overloads)
+let find_overload map_type c cf ?params el =
+	ExtList.List.filter_map (fun cf -> unify_cf map_type c cf ?params el) (cf :: cf.cf_overloads)
 
 let filter_overloads candidates =
 	match Overloads.Resolution.reduce_compatible candidates with
@@ -75,7 +78,7 @@ let filter_overloads candidates =
 		) resolved; *)
 		Some(fcc.fc_data)
 
-let resolve_instance_overload is_ctor map_type c name el =
+let resolve_instance_overload is_ctor map_type c name ?params el =
 	let candidates = ref [] in
 	let has_function t1 fcc2 =
 		begin match follow t1,fcc2.fc_type with
@@ -90,7 +93,7 @@ let resolve_instance_overload is_ctor map_type c name el =
 			else
 				PMap.find name c.cl_fields
 			in
-			begin match find_overload map_type c cf el with
+			begin match find_overload map_type c cf ?params el with
 			| [] -> raise Not_found
 			| l ->
 				List.iter (fun fcc ->
@@ -135,24 +138,25 @@ let maybe_resolve_constructor_overload c tl el =
 let maybe_reapply_overload_call e =
 	match e.eexpr with
 		| TCall({eexpr = TField(e1,fa)} as ef,el) ->
-			let rebuild cf' =
+			let rebuild cf' cf_tl =
 				let fa = match fa with
-					| FInstance(c,tl,_) -> FInstance(c,tl,cf')
-					| FStatic(c,_) -> FStatic(c,cf')
+					(* TODO TP: is cf_tl handling correct? *)
+					| FInstance(c,tl,_,_) -> FInstance(c,tl,cf',cf_tl)
+					| FStatic(c,_,_) -> FStatic(c,cf',cf_tl)
 					| _ -> fa
 				in
 				{e with eexpr = TCall({ef with eexpr = TField(e1,fa)},el)}
 			in
 			begin match fa with
-			| FStatic(c,cf) when has_class_field_flag cf CfOverload ->
-				begin match filter_overloads (find_overload (fun t -> t) c cf el) with
-				| Some(_,cf',_) -> rebuild cf'
+			| FStatic(c,cf,cf_tl) when has_class_field_flag cf CfOverload ->
+				begin match filter_overloads (find_overload (fun t -> t) c cf ~params:cf_tl el) with
+				| Some(_,cf',cf_params) -> rebuild cf' cf_params
 				| None -> e
 				end
-			| FInstance(c,tl,cf) when has_class_field_flag cf CfOverload ->
+			| FInstance(c,tl,cf,cf_tl) when has_class_field_flag cf CfOverload ->
 				let map_type = apply_params c.cl_params tl in
-				begin match resolve_instance_overload false map_type c cf.cf_name el with
-				| Some(_,cf',_) -> rebuild cf'
+				begin match resolve_instance_overload false map_type c cf.cf_name ~params:cf_tl el with
+				| Some(_,cf',cf_params) -> rebuild cf' cf_params
 				| None -> e
 				end
 			| _ ->

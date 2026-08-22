@@ -408,10 +408,6 @@ let monomorph_transaction ctx =
 		ctx.e.monomorphs <- current
 	)
 
-let make_static_field_access c cf t p =
-	let ethis = Texpr.Builder.make_static_this c p in
-	mk (TField (ethis,(FStatic (c,cf)))) t p
-
 let enter_call_args ctx ~in_overload =
 	let old_in_call_args = ctx.f.in_call_args in
 	let old_context = ctx.g.call_arg_context in

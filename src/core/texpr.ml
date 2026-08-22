@@ -6,6 +6,54 @@ open TUnification
 open TPrinting
 open Error
 
+let quick_field ?(params=None) ?p ?orig t n =
+	let get_params f = match params, f.cf_params with
+	| (None | Some []), _ :: _ -> Monomorph.spawn_constrained_monos (fun t -> t) f.cf_params
+	| Some params, _ :: _ -> params
+	| Some( (_ :: _) as params), [] ->
+		(Globals.die ?p (Printf.sprintf "quick_field params = %s but f has no params" (TPrinting.s_type_params (ref []) params)) __LOC__)
+	| (Some [] | None), [] -> []
+in
+	match follow t with
+	| TInst (c,tl) ->
+		let c, _, f = raw_class_field (fun f -> f.cf_type) c tl n in
+		let params = get_params f in
+		if List.length f.cf_params <> List.length params then
+			Globals.die ?p (Printf.sprintf "mismatch: %s and %s\n" (TPrinting.Printer.s_type_params " " f.cf_params) (TPrinting.s_type_params (ref []) params)) __LOC__;
+		(match c with None -> FAnon (f, params) | Some (c,tl) -> FInstance (c,tl,f, params))
+	| TAnon a ->
+		(match !(a.a_status) with
+		| EnumStatics e ->
+			let ef = PMap.find n e.e_constrs in
+			FEnum(e,ef)
+		| ClassStatics c ->
+			let f = PMap.find n c.cl_statics in
+			let params = get_params f in
+			FStatic (c,f, params)
+		| AbstractStatics a ->
+			begin match a.a_impl with
+				| Some c ->
+					let cf = PMap.find n c.cl_statics in
+					let params = get_params cf in
+					FStatic(c,cf, params) (* is that right? *)
+				| _ ->
+					raise Not_found
+			end
+		| _ ->
+			let f = PMap.find n a.a_fields in
+			let params = get_params f in
+			FAnon (f, params))
+	| TDynamic _ ->
+		FDynamic n
+	| TEnum _  | TMono _ | TAbstract _ | TFun _ ->
+		raise Not_found
+	| TLazy _ | TType _ ->
+		die "" __LOC__
+
+let quick_field_dynamic ?p t s =
+	try quick_field ?p t s
+	with Not_found -> FDynamic s
+
 let iter f e =
 	match e.eexpr with
 	| TConst _
@@ -186,12 +234,12 @@ let map_expr_type f ft fv e =
 		{ e with eexpr = TEnumParameter (f e1,ef,i); etype = ft e.etype }
 	| TEnumIndex e1 ->
 		{ e with eexpr = TEnumIndex (f e1); etype = ft e.etype }
-	| TField (e1,(FClosure(None,cf) as fa)) ->
+	| TField (e1,(FClosure(None,cf,tp) as fa)) ->
 		let e1 = f e1 in
 		let fa = try
-			begin match quick_field e1.etype cf.cf_name with
-				| FInstance(c,tl,cf) ->
-					FClosure(Some(c,tl),cf)
+			begin match quick_field ~p: e.epos e1.etype cf.cf_name with
+				| FInstance(c,tl,cf,_) ->
+					FClosure(Some(c,tl),cf,tp)
 				| _ ->
 					raise Not_found
 			end
@@ -202,13 +250,13 @@ let map_expr_type f ft fv e =
 	| TField (e1,v) ->
 		let e1 = f e1 in
 		let v = try
-			let n = match v with
+			let orig, n, params = match v with
 				| FClosure _ -> raise Not_found
-				| FAnon f | FInstance (_,_,f) | FStatic (_,f) -> f.cf_name
-				| FEnum (_,f) -> f.ef_name
-				| FDynamic n -> n
+				| FAnon (f,cf_params) | FInstance (_,_,f,cf_params) | FStatic (_,f,cf_params) -> Some f, f.cf_name, Some (List.map ft cf_params)
+				| FEnum (_,f) -> None, f.ef_name, None
+				| FDynamic n -> None, n, None
 			in
-			quick_field e1.etype n
+			quick_field ~params ~p: e.epos ?orig e1.etype n
 		with Not_found ->
 			v
 		in
@@ -269,12 +317,16 @@ let map_expr_type f ft fv e =
 		{e with eexpr = TMeta(m, f e1); etype = ft e.etype }
 
 let equal_fa fa1 fa2 = match fa1,fa2 with
-	| FStatic(c1,cf1),FStatic(c2,cf2) -> c1 == c2 && cf1.cf_name == cf2.cf_name
-	| FInstance(c1,tl1,cf1),FInstance(c2,tl2,cf2) -> c1 == c2 && safe_for_all2 type_iseq tl1 tl2 && cf1.cf_name == cf2.cf_name
-	| FAnon cf1,FAnon cf2 -> cf1.cf_name = cf2.cf_name
+	| FStatic(c1,cf1,tl1),FStatic(c2,cf2,tl2) -> c1 == c2 && cf1.cf_name == cf2.cf_name && safe_for_all2 type_iseq tl1 tl2
+	| FInstance(c1,tl1,cf1,cf_tl1),FInstance(c2,tl2,cf2,cf_tl2) ->
+		c1 == c2 && safe_for_all2 type_iseq tl1 tl2 && cf1.cf_name == cf2.cf_name && safe_for_all2 type_iseq cf_tl1 cf_tl2
+	| FAnon (cf1,tl1),FAnon (cf2, tl2) -> cf1.cf_name = cf2.cf_name && safe_for_all2 type_iseq tl1 tl2
 	| FDynamic s1,FDynamic s2 -> s1 = s2
-	| FClosure(None,cf1),FClosure(None,cf2) -> cf1.cf_name == cf2.cf_name
-	| FClosure(Some(c1,tl1),cf1),FClosure(Some(c2,tl2),cf2) -> c1 == c2 && safe_for_all2 type_iseq tl1 tl2 && cf1.cf_name == cf2.cf_name
+	| FClosure(None,cf1,cf1_tl),FClosure(None,cf2,cf2_tl) ->
+		cf1.cf_name == cf2.cf_name && safe_for_all2 type_iseq cf1_tl cf2_tl
+	| FClosure(Some(c1,tl1),cf1,cf1_tl),FClosure(Some(c2,tl2),cf2,cf2_tl) ->
+		c1 == c2 && safe_for_all2 type_iseq tl1 tl2
+		&& cf1.cf_name == cf2.cf_name && safe_for_all2 type_iseq cf1_tl cf2_tl
 	| FEnum(en1,ef1),FEnum(en2,ef2) -> en1 == en2 && ef1.ef_name == ef2.ef_name
 	| _ -> false
 
@@ -499,7 +551,7 @@ module Builder = struct
 
 	let make_static_field c cf p =
 		let e_this = make_static_this c p in
-		mk (TField(e_this,FStatic(c,cf))) cf.cf_type p
+		mk (TField(e_this,FStatic(c,cf, [] (*TODO TP*)))) cf.cf_type p
 
 	let make_throw e p =
 		mk (TThrow e) t_dynamic p

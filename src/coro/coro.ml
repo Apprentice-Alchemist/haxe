@@ -403,10 +403,10 @@ let rewrite_super_field ctx egthis e =
 		end
 	in
 	match e.eexpr with
-	| TField({eexpr = TConst TSuper} as esuper_this, (FInstance(super_cl, _, super_cf) as fa)) ->
+	| TField({eexpr = TConst TSuper} as esuper_this, (FInstance(super_cl, _, super_cf, _super_cf_tl) as fa)) ->
 		let super_field_expr = { eexpr = TField(esuper_this, fa); etype = super_cf.cf_type; epos = e.epos } in
 		let helper_cf = make_super_helper super_field_expr super_cl super_cf e.epos in
-		{ e with eexpr = TField(egthis, FInstance(curclass, curclass_params, helper_cf)) }
+		{ e with eexpr = TField(egthis, FInstance(curclass, curclass_params, helper_cf, [])) }
 	| _ ->
 		e
 

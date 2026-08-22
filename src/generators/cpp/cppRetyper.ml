@@ -58,9 +58,9 @@ let is_lvalue_expr expr =
     match expr.eexpr with
     | TLocal _ ->
       true
-    | TField (_, FInstance (_, _, field)) when is_var_field field ->
+    | TField (_, FInstance (_, _, field,_)) when is_var_field field ->
       true
-    | TField (_, FStatic (_, field)) when is_var_field field ->
+    | TField (_, FStatic (_, field,_)) when is_var_field field ->
       true
     | TCast (e, _) ->
       checker e
@@ -657,14 +657,14 @@ let expression ctx request_type function_args function_type expression_tree forI
           let retyper_ctx, cppType = retype retyper_ctx return_type e in
           (retyper_ctx, cppType.cppexpr, cppType.cpptype)
 
-      | TField (obj, FStatic ({ cl_path = (["cpp";"marshal"],"Intrinsics") }, { cf_kind = Method _ })) ->
+      | TField (obj, FStatic ({ cl_path = (["cpp";"marshal"],"Intrinsics") }, { cf_kind = Method _ },_)) ->
         cpp_abort InvalidIntrinsicUse expr.epos
 
       (* Marshal type functions, need to be able to resolve type parameters to a concrete type, hance the special handling *)
         
-      | TField (_, FClosure (Some (cls, _), _)) when is_marshalling_native_value_class cls || is_marshalling_native_pointer cls ->
+      | TField (_, FClosure (Some (cls, _), _,_)) when is_marshalling_native_value_class cls || is_marshalling_native_pointer cls ->
         cpp_abort NativeMarshallingFunctionClosures expr.epos
-      | TField (obj, FInstance (cls, params, ({ cf_type = (TFun _) } as member))) when is_marshalling_native_value_class cls || is_marshalling_native_pointer cls ->
+      | TField (obj, FInstance (cls, params, ({ cf_type = (TFun _) } as member),_)) when is_marshalling_native_value_class cls || is_marshalling_native_pointer cls ->
         (match apply_params cls.cl_params params expr.etype with
         | TFun (args, ret) as t ->
           let template_types =
@@ -695,7 +695,7 @@ let expression ctx request_type function_args function_type expression_tree forI
           ( retyper_ctx, CppFunction (FuncInstance (retypedObj, access, member, template_types), func_return), exprType )
         | _ ->
           cpp_abort InternalError expr.epos)
-      | TField (_, FStatic (cls, ({ cf_type = (TFun _) } as member))) when is_marshalling_native_value_class cls || is_marshalling_native_pointer cls ->
+      | TField (_, FStatic (cls, ({ cf_type = (TFun _) } as member), _)) when is_marshalling_native_value_class cls || is_marshalling_native_pointer cls ->
         (match expr.etype with
         | TFun (args, ret) as t ->
           let template_types =
@@ -727,8 +727,8 @@ let expression ctx request_type function_args function_type expression_tree forI
           cpp_abort InternalError expr.epos)
       | TField (obj, field) -> (
           match field with
-          | FInstance (clazz, params, member)
-          | FClosure (Some (clazz, params), member) -> (
+          | FInstance (clazz, params, member, _)
+          | FClosure (Some (clazz, params), member,_) -> (
             let funcReturn = cpp_member_return_type ctx member in
             let clazzType = cpp_instance_type clazz params with_reference_value_type in
             let retyper_ctx, retypedObj = retype retyper_ctx clazzType obj in
@@ -856,16 +856,16 @@ let expression ctx request_type function_args function_type expression_tree forI
                         [] ),
                       funcReturn ),
                   exprType ))
-          | FStatic (_, ({ cf_name = "nativeFromStaticFunction" } as member)) ->
+          | FStatic (_, ({ cf_name = "nativeFromStaticFunction" } as member),_) ->
             let funcReturn = cpp_member_return_type ctx member in
             let exprType   = cpp_type_of member.cf_type in
             (retyper_ctx, CppFunction (FuncFromStaticFunction, funcReturn), exprType)
-          | FStatic (({ cl_kind = KAbstractImpl abs }), member) when is_marshalling_native_enum abs ->
+          | FStatic (({ cl_kind = KAbstractImpl abs }), member,_) when is_marshalling_native_enum abs ->
             let exprType   = cpp_type_of_with with_promoted_value_type member.cf_type in
             let enum_name  = Printf.sprintf "%s::%s" (get_native_marshalled_type (ValueEnum abs)) (member.cf_name) in
 
             (retyper_ctx, CppCall ((FuncNew exprType), [ mk_cppexpr (CppExtern (enum_name, false)) exprType ]), exprType)
-          | FStatic (clazz, member) ->
+          | FStatic (clazz, member,_) ->
             let exprType   = cpp_type_of_with with_promoted_value_type member.cf_type in
             let objC       = is_objc_class clazz in
             if is_var_field member then
@@ -874,8 +874,8 @@ let expression ctx request_type function_args function_type expression_tree forI
               ( retyper_ctx,
                 CppFunction (FuncStatic (clazz, objC, member, []), cpp_member_return_type ctx member),
                 exprType )
-          | FClosure (None, field)
-          | FAnon field ->
+          | FClosure (None, field,_)
+          | FAnon (field,_) ->
             let retyper_ctx, obj = retype retyper_ctx TCppDynamic obj in
             let fieldName = field.cf_name in
             if obj.cpptype = TCppGlobal then
@@ -934,7 +934,7 @@ let expression ctx request_type function_args function_type expression_tree forI
             
       (* magic intrinsic functions *)
 
-      | TCall ({ epos; etype = TFun ([ (_, _, TAbstract (_, [ t ])) ], r); eexpr = TField (obj, FStatic ({ cl_path = (["cpp";"marshal"],"Intrinsics") }, { cf_name = ("sizeof" | "alignof") as name })) }, _) ->
+      | TCall ({ epos; etype = TFun ([ (_, _, TAbstract (_, [ t ])) ], r); eexpr = TField (obj, FStatic ({ cl_path = (["cpp";"marshal"],"Intrinsics") }, { cf_name = ("sizeof" | "alignof") as name },_)) }, _) ->
         let return = cpp_type_of r in
         let arg    = cpp_type_of t |> marshal_type_parameter_to_string expr.epos in
         let str    = Printf.sprintf "%s(%s)" name arg in

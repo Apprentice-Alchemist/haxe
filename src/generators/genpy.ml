@@ -40,8 +40,10 @@ module Utils = struct
 
 	let mk_static_field c cf p =
 			let ethis = Texpr.Builder.make_static_this c p in
-			let t = monomorphs cf.cf_params cf.cf_type in
-			mk (TField (ethis,(FStatic (c,cf)))) t p
+			let eparams = cf.cf_params in
+			let monos = (List.map (fun _ -> mk_mono()) eparams) in
+			let t = apply_params eparams monos cf.cf_type in
+			mk (TField (ethis,(FStatic (c,cf,monos)))) t p
 
 	let mk_static_call c cf el p =
 		let ef = mk_static_field c cf p in
@@ -372,7 +374,7 @@ module Transformer = struct
 					   of Array.push even if the value is not used *)
 					let is_removable_statement e = (not is_value || i < size-1) &&
 						match e.eexpr with
-						| TField(_, FInstance({cl_path = [],"list"},_,{ cf_name = "length" })) -> true
+						| TField(_, FInstance({cl_path = [],"list"},_,{ cf_name = "length" }, _)) -> true
 						| _ -> false
 					in
 					if not (is_removable_statement e) then
@@ -468,7 +470,7 @@ module Transformer = struct
 			) length_map [] in
 			let c_string = match !t_string with TInst(c,_) -> c | _ -> die "" __LOC__ in
 			let cf_length = PMap.find "length" c_string.cl_fields in
-			let ef = mk (TField(e1,FInstance(c_string,[],cf_length))) !t_int e1.epos in
+			let ef = mk (TField(e1,FInstance(c_string,[],cf_length, []))) !t_int e1.epos in
 			let res_var = alloc_var (ae.a_next_id()) ef.etype ef.epos in
 			let res_local = {ef with eexpr = TLocal res_var} in
 			let var_expr = {ef with eexpr = TVar(res_var,Some ef)} in
@@ -628,7 +630,7 @@ module Transformer = struct
 		in
 		match e, params with
 		(* the foreach block should not be handled as a value *)
-		| ({ eexpr = TField(_, FStatic({cl_path = ["python";],"Syntax"},{ cf_name = "_foreach" }))} as e, [e1;e2;e3]) ->
+		| ({ eexpr = TField(_, FStatic({cl_path = ["python";],"Syntax"},{ cf_name = "_foreach" },_))} as e, [e1;e2;e3]) ->
 			trans1 e [trans true [] e1; trans true [] e2; trans false [] e3]
 		| (e, params) ->
 			trans1 e (List.map (trans true []) params)
@@ -811,17 +813,17 @@ module Transformer = struct
 					transform_switch ae is_value e cases edef
 			end
 		(* anon field access on optional params *)
-		| (is_value, TField(e,FAnon cf)) when Meta.has Meta.Optional cf.cf_meta ->
+		| (is_value, TField(e,FAnon (cf,_))) when Meta.has Meta.Optional cf.cf_meta ->
 			let e = dynamic_field_read e cf.cf_name ae.a_expr.etype in
 			transform_expr ae.a_next_id ~is_value:is_value e
-		| (is_value, TBinop(OpAssign,{eexpr = TField(e1,FAnon cf)},e2)) when Meta.has Meta.Optional cf.cf_meta ->
+		| (is_value, TBinop(OpAssign,{eexpr = TField(e1,FAnon (cf,_))},e2)) when Meta.has Meta.Optional cf.cf_meta ->
 			let e = dynamic_field_write e1 cf.cf_name e2 in
 			transform_expr ae.a_next_id ~is_value:is_value e
-		| (is_value, TBinop(OpAssignOp op,{eexpr = TField(e1,FAnon cf); etype = t},e2)) when Meta.has Meta.Optional cf.cf_meta ->
+		| (is_value, TBinop(OpAssignOp op,{eexpr = TField(e1,FAnon (cf,_)); etype = t},e2)) when Meta.has Meta.Optional cf.cf_meta ->
 			let e = dynamic_field_read_write ae.a_next_id e1 cf.cf_name op e2 t in
 			transform_expr ae.a_next_id ~is_value:is_value e
 
-		| (is_value, TUnop( (Increment | Decrement) as unop, unop_flag,{eexpr = TField(e1, FAnon cf); etype = t; epos = p})) when Meta.has Meta.Optional cf.cf_meta  ->
+		| (is_value, TUnop( (Increment | Decrement) as unop, unop_flag,{eexpr = TField(e1, FAnon (cf,_)); etype = t; epos = p})) when Meta.has Meta.Optional cf.cf_meta  ->
 			let e = dynamic_field_inc_dec ae.a_next_id e1 cf.cf_name unop unop_flag t p in
 			transform_expr ae.a_next_id ~is_value:is_value e
 		| (is_value, TUnop( (Increment | Decrement) as unop, unop_flag,{eexpr = TField(e1, FDynamic field_name); etype = t; epos = p})) ->
@@ -1397,8 +1399,8 @@ module Printer = struct
 		in
 		let name = field_name fa in
 		let is_extern = (match fa with
-		| FInstance(c,_,_) -> (has_class_flag c CExtern)
-		| FStatic(c,_) -> (has_class_flag c CExtern)
+		| FInstance(c,_,_,_) -> (has_class_flag c CExtern)
+		| FStatic(c,_,_) -> (has_class_flag c CExtern)
 		| _ -> false)
 		in
 		let do_default () =
@@ -1411,29 +1413,29 @@ module Printer = struct
 		in
 		match fa with
 			(* we need to get rid of these cases in the transformer, how is this handled in js *)
-			| FInstance(c,_,{cf_name = "length"}) when (is_type "" "list")(TClassDecl c) ->
+			| FInstance(c,_,{cf_name = "length"},_) when (is_type "" "list")(TClassDecl c) ->
 				Printf.sprintf "len(%s)" (print_expr pctx e1)
-			| FInstance(c,_,{cf_name = "length"}) when (is_type "" "str")(TClassDecl c) ->
+			| FInstance(c,_,{cf_name = "length"},_) when (is_type "" "str")(TClassDecl c) ->
 				Printf.sprintf "len(%s)" (print_expr pctx e1)
-			| FAnon({cf_name = "length"}) | FDynamic ("length") when not is_assign ->
+			| FAnon({cf_name = "length"},_) | FDynamic ("length") when not is_assign ->
 				Printf.sprintf "HxOverrides.length(%s)" (print_expr pctx e1)
-			| FStatic(c,{cf_name = "fromCharCode"}) when (is_type "" "str")(TClassDecl c) ->
+			| FStatic(c,{cf_name = "fromCharCode"},_) when (is_type "" "str")(TClassDecl c) ->
 				Printf.sprintf "HxString.fromCharCode"
-			| FStatic({cl_path = ["python";"internal"],"UBuiltins"},{cf_name = s}) ->
+			| FStatic({cl_path = ["python";"internal"],"UBuiltins"},{cf_name = s},_) ->
 				s
-			| FClosure (Some(c,cf),_) when ((is_type "" "list")(TClassDecl c)) ->
+			| FClosure (Some(c,cf),_,_) when ((is_type "" "list")(TClassDecl c)) ->
 				Printf.sprintf "python_Boot.createClosure(%s, python_internal_ArrayImpl.%s)" obj name
-			| FClosure (Some(c,cf),_) when ((is_type "" "str")(TClassDecl c)) ->
+			| FClosure (Some(c,cf),_,_) when ((is_type "" "str")(TClassDecl c)) ->
 				Printf.sprintf "python_Boot.createClosure(%s, HxString.%s)" obj name
-			| FInstance (c,_,cf) when ((is_type "" "list")(TClassDecl c)) ->
+			| FInstance (c,_,cf,_) when ((is_type "" "list")(TClassDecl c)) ->
 				Printf.sprintf "python_Boot.createClosure(%s, python_internal_ArrayImpl.%s)" obj name
-			| FInstance (c,_,cf) when ((is_type "" "str")(TClassDecl c)) ->
+			| FInstance (c,_,cf,_) when ((is_type "" "str")(TClassDecl c)) ->
 				Printf.sprintf "python_Boot.createClosure(%s, HxString.%s)" obj name
-			| FStatic (c,cf) when (has_class_flag c CExtern) && c.cl_path = ([],"") ->
+			| FStatic (c,cf,_) when (has_class_flag c CExtern) && c.cl_path = ([],"") ->
 				Printf.sprintf "%s" name
 			| FInstance _ | FStatic _ ->
 				do_default ()
-			| FAnon cf when is_assign && call_override(name) ->
+			| FAnon (cf,_) when is_assign && call_override(name) ->
 				begin match follow cf.cf_type with
 					| TFun([],_) ->
 						Printf.sprintf "_hx_partial(HxOverrides.%s, %s)" name obj
@@ -1570,11 +1572,11 @@ module Printer = struct
 					"print(" ^ (print_expr pctx e) ^ ")"
 				else
 					"print(str(" ^ (print_expr pctx e) ^ "))"
-			| TField(e1,((FAnon {cf_name = (("split" | "join" | "push" | "map" | "filter") as s)}) | FDynamic (("split" | "join" | "push" | "map" | "filter") as s))), [x] ->
+			| TField(e1,((FAnon ({cf_name = (("split" | "join" | "push" | "map" | "filter") as s)},_)) | FDynamic (("split" | "join" | "push" | "map" | "filter") as s))), [x] ->
 				Printf.sprintf "HxOverrides.%s(%s, %s)" s (print_expr pctx e1) (print_expr pctx x)
-			| TField(e1,((FAnon {cf_name = (("iterator" | "keyValueIterator" | "toUpperCase" | "toLowerCase" | "pop" | "shift") as s)}) | FDynamic (("iterator" | "keyValueIterator" | "toUpperCase" | "toLowerCase" | "pop" | "shift") as s))), [] ->
+			| TField(e1,((FAnon ({cf_name = (("iterator" | "keyValueIterator" | "toUpperCase" | "toLowerCase" | "pop" | "shift") as s)},_)) | FDynamic (("iterator" | "keyValueIterator" | "toUpperCase" | "toLowerCase" | "pop" | "shift") as s))), [] ->
 				Printf.sprintf "HxOverrides.%s(%s)" s (print_expr pctx e1)
-			| TField(_, (FStatic({cl_path = ["python"; "_KwArgs"], "KwArgs_Impl_"},{ cf_name="fromT" }))), [e2]  ->
+			| TField(_, (FStatic({cl_path = ["python"; "_KwArgs"], "KwArgs_Impl_"},{ cf_name="fromT" },_))), [e2]  ->
 				let t = match follow call_expr.etype with
 				| TAbstract(_, [t]) -> t
 				| _ -> die "" __LOC__
@@ -1585,7 +1587,7 @@ module Printer = struct
 				else
 					let s1 = native_fields_str native_fields in
 					Printf.sprintf "python__KwArgs_KwArgs_Impl_.fromT(HxOverrides.mapKwArgs(%s, {%s}))" (print_expr pctx e2) s1
-			| TField(_, (FStatic({cl_path = ["python"; "_KwArgs"], "KwArgs_Impl_"},{ cf_name="toDictHelper" }))), [e2; et]  ->
+			| TField(_, (FStatic({cl_path = ["python"; "_KwArgs"], "KwArgs_Impl_"},{ cf_name="toDictHelper" },_))), [e2; et]  ->
 				let native_fields = get_native_fields et.etype in
 				if PMap.is_empty native_fields then
 					print_call2 pctx e1 el
@@ -1604,8 +1606,8 @@ module Printer = struct
 			in
 			let prefix = match e1.eexpr, follow x.etype with
 				(* the should not apply for the instance methods of the abstract itself *)
-				| TField(_, FStatic({cl_path = ["python"; "_KwArgs"],"KwArgs_Impl_"},f)), _ when i == 0 && has_class_field_flag f CfImpl -> ""
-				| TField(_, FStatic({cl_path = ["python"; "_VarArgs"],"VarArgs_Impl_"},f)), _ when i == 0 && has_class_field_flag f CfImpl -> ""
+				| TField(_, FStatic({cl_path = ["python"; "_KwArgs"],"KwArgs_Impl_"},f,_)), _ when i == 0 && has_class_field_flag f CfImpl -> ""
+				| TField(_, FStatic({cl_path = ["python"; "_VarArgs"],"VarArgs_Impl_"},f,_)), _ when i == 0 && has_class_field_flag f CfImpl -> ""
 				| _, TAbstract({a_path = ["python"],"KwArgs"},_) -> "**"
 				| _, TAbstract({a_path = ["python"],"VarArgs"},_) -> "*"
 				| _, _ -> ""
@@ -1866,7 +1868,7 @@ module Generator = struct
 				   `super`, `return` or `throw` appears (regardless of control flow). *)
 				let collect_assignments e =
 					let rec loop e = match e.eexpr with
-						| TBinop(OpAssign,{eexpr = TField({eexpr = TConst TThis}, FInstance(_,_,cf))},e2) ->
+						| TBinop(OpAssign,{eexpr = TField({eexpr = TConst TThis}, FInstance(_,_,cf,_))},e2) ->
 							loop e2;
 							assigned_fields := cf :: !assigned_fields
 						| TConst (TSuper | TThis) | TThrow _ | TReturn _ ->
@@ -1882,7 +1884,7 @@ module Generator = struct
 				collect_assignments f.tf_expr;
 				let member_data = List.fold_left (fun acc cf ->
 					if not (List.memq cf !assigned_fields) then begin
-						let ef = mk (TField(ethis,FInstance(c,[],cf))) cf.cf_type cf.cf_pos in (* TODO *)
+						let ef = mk (TField(ethis,FInstance(c,[],cf,[]))) cf.cf_type cf.cf_pos in (* TODO *)
 						let e = mk (TBinop(OpAssign,ef,null ef.etype ef.epos)) ef.etype ef.epos in
 						e :: acc
 					end else

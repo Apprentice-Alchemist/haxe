@@ -517,7 +517,7 @@ and expr_field dce e fa is_call_expr =
 	let do_default = fun () ->
 		let n = field_name fa in
 			(match fa with
-			| FAnon cf ->
+			| FAnon (cf,_) ->
 				if Meta.has Meta.Optional cf.cf_meta then begin
 					check_and_add_feature dce "anon_optional_read";
 					check_and_add_feature dce ("anon_optional_read." ^ n);
@@ -534,7 +534,7 @@ and expr_field dce e fa is_call_expr =
 			| _ -> ());
 			begin match follow e.etype, fa with
 				| TInst(c,_), _
-				| _, FClosure (Some (c, _), _) ->
+				| _, FClosure (Some (c, _), _,_) ->
 					mark_class dce c;
 					field dce c n CfrMember;
 				| TAnon a, _ ->
@@ -563,14 +563,14 @@ and expr_field dce e fa is_call_expr =
 		end;
 	in
 	begin match fa with
-		| FStatic(c,cf) ->
+		| FStatic(c,cf,_) ->
 			mark_class dce c;
 			mark_field dce c cf CfrStatic;
-		| FInstance(c,_,cf) ->
+		| FInstance(c,_,cf,_) ->
 			(*mark_instance_field_access c cf;*)
 			mark_class dce c;
 			mark_field dce c cf CfrMember
-		| FClosure (Some(c, _), cf) ->
+		| FClosure (Some(c, _), cf,_) ->
 		 	mark_instance_field_access c cf;
 			do_default()
 		| FClosure _ ->
@@ -633,14 +633,14 @@ and expr dce e =
 		expr dce e;
 
 	(* keep toString method of T when array<T>.join() or array<T>.toString() is called *)
-	| TCall ({eexpr = TField(_, FInstance({cl_path = ([],"Array")}, pl, {cf_name="join" | "toString"}))} as ef, args) ->
+	| TCall ({eexpr = TField(_, FInstance({cl_path = ([],"Array")}, pl, {cf_name="join" | "toString"},_))} as ef, args) ->
 		List.iter (fun e -> to_string dce [] e) pl;
 		expr dce ef;
 		List.iter (expr dce) args;
 
 	(* keep toString method when the class is argument to Std.string or haxe.Log.trace *)
-	| TCall ({eexpr = TField({eexpr = TTypeExpr (TClassDecl ({cl_path = (["haxe"],"Log")} as c))},FStatic (_,{cf_name="trace"}))} as ef, ((e2 :: el) as args))
-	| TCall ({eexpr = TField({eexpr = TTypeExpr (TClassDecl ({cl_path = ([],"Std")} as c))},FStatic (_,{cf_name="string"}))} as ef, ((e2 :: el) as args)) ->
+	| TCall ({eexpr = TField({eexpr = TTypeExpr (TClassDecl ({cl_path = (["haxe"],"Log")} as c))},FStatic (_,{cf_name="trace"},_))} as ef, ((e2 :: el) as args))
+	| TCall ({eexpr = TField({eexpr = TTypeExpr (TClassDecl ({cl_path = ([],"Std")} as c))},FStatic (_,{cf_name="string"},_))} as ef, ((e2 :: el) as args)) ->
 		mark_class dce c;
 		to_string dce [] e2.etype;
 		begin match el with
@@ -704,7 +704,7 @@ and expr dce e =
 		check_dynamic_write dce fa;
 		expr dce e1;
 		expr dce e2;
-	| TBinop(OpAssign,({eexpr = TField(_,(FAnon cf as fa) )} as e1),e2) ->
+	| TBinop(OpAssign,({eexpr = TField(_,(FAnon (cf, _) as fa) )} as e1),e2) ->
 		if Meta.has Meta.Optional cf.cf_meta then
 			check_anon_optional_write dce fa
 		else
@@ -716,7 +716,7 @@ and expr dce e =
 		check_dynamic_write dce fa;
 		expr dce e1;
 		expr dce e2;
-	| TBinop(OpAssignOp op,({eexpr = TField(_,(FAnon cf as fa) )} as e1),e2) ->
+	| TBinop(OpAssignOp op,({eexpr = TField(_,(FAnon (cf,_) as fa) )} as e1),e2) ->
 		check_op dce op;
 		if Meta.has Meta.Optional cf.cf_meta then
 			check_anon_optional_write dce fa

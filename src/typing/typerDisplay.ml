@@ -61,7 +61,7 @@ let completion_item_of_expr ctx e =
 				the displayed type is not wrong. *)
 			make_ci_literal "abstract" (tpair e.etype)
 		| TLocal v | TVar(v,_) -> make_ci_local v (tpair ~values:(get_value_meta v.v_meta) v.v_type)
-		| TField(e1,FStatic(c,cf)) ->
+		| TField(e1,FStatic(c,cf,_)) ->
 			let te,cf = DisplayToplevel.maybe_resolve_macro_field ctx e.etype c cf in
 			Display.merge_core_doc ctx (TClassDecl c);
 			let decl = decl_of_class c in
@@ -75,7 +75,7 @@ let completion_item_of_expr ctx e =
 				| _ -> make_ci_class_field
 			in
 			of_field {e with etype = te} origin cf CFSStatic make_ci
-		| TField(e1,(FInstance(c,_,cf) | FClosure(Some(c,_),cf))) ->
+		| TField(e1,(FInstance(c,_,cf,_) | FClosure(Some(c,_),cf,_))) ->
 			let te,cf = DisplayToplevel.maybe_resolve_macro_field ctx e.etype c cf in
 			Display.merge_core_doc ctx (TClassDecl c);
 			let origin = match follow e1.etype with
@@ -86,7 +86,7 @@ let completion_item_of_expr ctx e =
 			in
 			of_field {e with etype = te} origin cf CFSMember make_ci_class_field
 		| TField(_,FEnum(en,ef)) -> of_enum_field e (Self (TEnumDecl en)) ef
-		| TField(e1,(FAnon cf | FClosure(None,cf))) ->
+		| TField(e1,(FAnon (cf,_) | FClosure(None,cf,_))) ->
 			begin match follow e1.etype with
 				| TAnon an ->
 					let origin = match e1.etype with
@@ -291,13 +291,13 @@ let rec handle_signature_display ctx e_ast with_type =
 			let tl = match e1.eexpr with
 				| TField(_,fa) ->
 					begin match fa with
-						| FStatic(c,cf) ->
+						| FStatic(c,cf,_) ->
 							let t,cf = DisplayToplevel.maybe_resolve_macro_field ctx e1.etype c cf in
 							process_overloads true (Some c) ((fun t -> t),cf,t)
-						| FInstance(c,tl,cf) | FClosure(Some(c,tl),cf) ->
+						| FInstance(c,tl,cf,_) | FClosure(Some(c,tl),cf,_) ->
 							let t,cf = DisplayToplevel.maybe_resolve_macro_field ctx e1.etype c cf in
 							process_overloads false (Some c) (TClass.get_map_function c tl,cf,t)
-						| FAnon cf | FClosure(None,cf) ->
+						| FAnon (cf,_) | FClosure(None,cf,_) ->
 							process_overloads false None ((fun t -> t),cf,e1.etype)
 						| _ ->
 							[e1.etype,None,PMap.empty]
@@ -350,7 +350,7 @@ and display_expr ctx e_ast e dk mode with_type p =
 		| MCall el when cf.cf_overloads <> [] ->
 			let fa = FieldAccess.create e_on cf host false p in
 			let fcc = unify_field_call ctx fa el_typed el p false in
-			FieldAccess.get_field_expr {fa with fa_field = fcc.fc_field} FCall
+			FieldAccess.get_field_expr ctx {fa with fa_field = fcc.fc_field} FCall
 		| _ ->
 			e
 	in
@@ -377,9 +377,9 @@ and display_expr ctx e_ast e dk mode with_type p =
 	(* If we display on a TField node that points to an overloaded field, let's try to unify the field call
 	   in order to resolve the correct overload (issue #7753). *)
 	let e = match e.eexpr with
-		| TField(e1,FStatic(c,cf)) -> maybe_expand_overload el_typed e e1 (FHStatic c) cf
-		| TField(e1,(FInstance(c,tl,cf) | FClosure(Some(c,tl),cf))) -> maybe_expand_overload el_typed e e1 (FHInstance(c,tl)) cf
-		| TField(e1,(FAnon cf | FClosure(None,cf))) -> maybe_expand_overload el_typed e e1 FHAnon cf
+		| TField(e1,FStatic(c,cf,_)) -> maybe_expand_overload el_typed e e1 (FHStatic c) cf
+		| TField(e1,(FInstance(c,tl,cf,_) | FClosure(Some(c,tl),cf,_))) -> maybe_expand_overload el_typed e e1 (FHInstance(c,tl)) cf
+		| TField(e1,(FAnon (cf,_) | FClosure(None,cf,_))) -> maybe_expand_overload el_typed e e1 FHAnon cf
 		| _ -> e
 	in
 	match ctx.com.display.dms_kind with
@@ -394,9 +394,9 @@ and display_expr ctx e_ast e dk mode with_type p =
 		let rec loop e = match e.eexpr with
 		| TField(_,FEnum(_,ef)) ->
 			Display.ReferencePosition.set (ef.ef_name,ef.ef_name_pos,SKEnumField ef);
-		| TField(_,(FAnon cf | FClosure (None,cf))) ->
+		| TField(_,(FAnon (cf,_) | FClosure (None,cf,_))) ->
 			Display.ReferencePosition.set (cf.cf_name,cf.cf_name_pos,SKField (cf,None));
-		| TField(_,(FInstance (c,_,cf) | FStatic (c,cf) | FClosure (Some (c,_),cf))) ->
+		| TField(_,(FInstance (c,_,cf,_) | FStatic (c,cf,_) | FClosure (Some (c,_),cf,_))) ->
 			Display.ReferencePosition.set (cf.cf_name,cf.cf_name_pos,SKField (cf,Some c));
 		| TLocal v | TVar(v,_) ->
 			Display.ReferencePosition.set (v.v_name,v.v_pos,SKVariable v);
@@ -435,10 +435,10 @@ and display_expr ctx e_ast e dk mode with_type p =
 	| DMDefinition ->
 		let rec loop e = match e.eexpr with
 		| TField(_,FEnum(_,ef)) -> [ef.ef_name_pos]
-		| TField(_,(FStatic (c,cf))) when Meta.has Meta.CoreApi c.cl_meta ->
+		| TField(_,(FStatic (c,cf,_))) when Meta.has Meta.CoreApi c.cl_meta ->
 			let c' = ctx.g.do_load_core_class ctx c in
 			cf.cf_name_pos :: (try [(PMap.find cf.cf_name c'.cl_statics).cf_name_pos] with Not_found -> [])
-		| TField(_,(FInstance (c,tl,cf) | FClosure (Some(c,tl),cf))) when Meta.has Meta.CoreApi c.cl_meta ->
+		| TField(_,(FInstance (c,tl,cf,_) | FClosure (Some(c,tl),cf,_))) when Meta.has Meta.CoreApi c.cl_meta ->
 			let c' = ctx.g.do_load_core_class ctx c in
 			let l = try
 				let _,_,cf = Type.class_field c' tl cf.cf_name in
@@ -447,7 +447,7 @@ and display_expr ctx e_ast e dk mode with_type p =
 				[]
 			in
 			cf.cf_name_pos :: l
-		| TField(_,(FAnon cf | FInstance (_,_,cf) | FStatic (_,cf) | FClosure (_,cf))) -> [cf.cf_name_pos]
+		| TField(_,(FAnon (cf,_) | FInstance (_,_,cf,_) | FStatic (_,cf,_) | FClosure (_,cf,_))) -> [cf.cf_name_pos]
 		| TLocal v | TVar(v,_) -> [v.v_pos]
 		| TTypeExpr (TClassDecl c) when Meta.has Meta.CoreApi c.cl_meta ->
 			let c' = ctx.g.do_load_core_class ctx c in

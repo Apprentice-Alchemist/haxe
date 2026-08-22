@@ -368,7 +368,7 @@ let unify_field_call ctx fa el_typed el p inline =
 			let args = (args_typed @ args) in
 			let tf = if coro then (AtomicLazy.force ctx.t.tcoro.tcoro) args ret else TFun(args,ret) in
 			let mk_call () =
-				let ef = mk (TField(fa.fa_on,FieldAccess.apply_fa cf fa.fa_host)) t fa.fa_pos in
+				let ef = mk (TField(fa.fa_on,FieldAccess.apply_fa cf monos fa.fa_host)) t fa.fa_pos in
 				!make_call_ref ctx ef el ret ~force_inline:inline p
 			in
 			make_field_call_candidate el ret monos tf cf (mk_call,extract_delayed_display())
@@ -471,7 +471,7 @@ let unify_field_call ctx fa el_typed el p inline =
 			check_display_args();
 			let tf = TFun(List.map (fun _ -> ("",false,t_dynamic)) el,t_dynamic) in
 			let call () =
-				let ef = mk (TField(fa.fa_on,FieldAccess.apply_fa fa.fa_field fa.fa_host)) tf fa.fa_pos in
+				let ef = mk (TField(fa.fa_on,FieldAccess.apply_fa fa.fa_field (List.map (fun _ -> mk_mono()) cf.cf_params) fa.fa_host)) tf fa.fa_pos in
 				mk (TCall(ef,[])) t_dynamic p
 			in
 			make_field_call_candidate [] t_dynamic [] tf fa.fa_field call
@@ -627,7 +627,7 @@ object(self)
 				mk_mono()
 			else (
 				let pos = match e.eexpr with
-					| TField(_,(FAnon cf | FInstance (_,_,cf) | FStatic (_,cf) | FClosure (_,cf))) ->
+					| TField(_,(FAnon (cf,_) | FInstance (_,_,cf,_) | FStatic (_,cf,_) | FClosure (_,cf,_))) ->
 						patch_string_pos e.epos cf.cf_name
 					| _ -> e.epos
 				in
@@ -733,7 +733,7 @@ object(self)
 			| AccCall | AccPrivateCall ->
 				self#accessor_call fa el_typed el
 			| _ ->
-				self#expr_call (FieldAccess.get_field_expr fa FCall) el_typed el
+				self#expr_call (FieldAccess.get_field_expr ctx fa FCall) el_typed el
 			end
 end
 

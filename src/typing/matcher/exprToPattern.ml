@@ -108,7 +108,7 @@ let rec make pctx toplevel t e =
 				(* Let the unification afterwards fail so we don't recover. *)
 				(* (match follow ef.ef_type with TFun _ -> raise Exit | _ -> ()); *)
 				PatConstructor(con_enum en ef e.epos,[])
-			| TField(_,FStatic(c,({cf_kind = Var {v_write = AccNever}} as cf))) ->
+			| TField(_,FStatic(c,({cf_kind = Var {v_write = AccNever}} as cf),_)) ->
 				PatConstructor(con_static c cf e.epos,[])
 			| TConst ct ->
 				PatConstructor(con_const ct e.epos,[])

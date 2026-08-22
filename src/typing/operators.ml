@@ -576,7 +576,7 @@ let type_assign ctx e1 e2 with_type p =
 		check_assign ctx e1;
 		(match e1.eexpr , e2.eexpr with
 		| TLocal i1 , TLocal i2 when i1 == i2 -> raise_typing_error "Assigning a value to itself" p
-		| TField ({ eexpr = TConst TThis },FInstance (_,_,f1)) , TField ({ eexpr = TConst TThis },FInstance (_,_,f2)) when f1 == f2 ->
+		| TField ({ eexpr = TConst TThis },FInstance (_,_,f1,_)) , TField ({ eexpr = TConst TThis },FInstance (_,_,f2,_)) when f1 == f2 ->
 			raise_typing_error "Assigning a value to itself" p
 		| _ , _ -> ());
 		mk (TBinop (OpAssign,e1,e2)) e1.etype p
@@ -593,7 +593,7 @@ let type_assign ctx e1 e2 with_type p =
 		| AKExpr { eexpr = TLocal { v_kind = VUser TVOLocalFunction; v_name = name } } ->
 			raise_typing_error ("Cannot access function " ^ name ^ " for writing") p
 		| AKField fa ->
-			let ef = FieldAccess.get_field_expr fa FWrite in
+			let ef = FieldAccess.get_field_expr ctx fa FWrite in
 			assign_to ef
 		| AKExpr e1  ->
 			assign_to e1
@@ -715,7 +715,7 @@ let handle_assign_op ctx api e1 e2 with_type p =
 			let vr = new value_reference ctx in
 			let ef = vr#get_expr_part "fh" fa.fa_on in
 			let _,e_rhs = field_rhs fa.fa_field ef in
-			let e_lhs = FieldAccess.get_field_expr {fa with fa_on = ef} FWrite in
+			let e_lhs = FieldAccess.get_field_expr ctx {fa with fa_on = ef} FWrite in
 			api.assign vr e_lhs e_rhs
 		| AKAccessor fa ->
 			let vr = new value_reference ctx in
@@ -728,7 +728,7 @@ let handle_assign_op ctx api e1 e2 with_type p =
 			let t_lhs,e_rhs = field_rhs fa.fa_field ef in
 			set vr sea.se_access t_lhs e_rhs [ef]
 		| AKAccess(a,tl,c,ebase,ekey) ->
-			let cf_get,tf_get,r_get,ekey = AbstractCast.find_array_read_access ctx a tl ekey p in
+			let cf_get,tf_get,r_get,ekey,cf_get_params = AbstractCast.find_array_read_access ctx a tl ekey p in
 			(* bind complex keys to a variable so they do not make it into the output twice *)
 			let save = save_locals ctx in
 			let vr = new value_reference ctx in
@@ -738,18 +738,18 @@ let handle_assign_op ctx api e1 e2 with_type p =
 			in
 			let ebase = maybe_bind_to_temp "base" ebase in
 			let ekey = maybe_bind_to_temp "key" ekey in
-			let eread = mk_array_get_call ctx (cf_get,tf_get,r_get,ekey) c ebase p in
+			let eread = mk_array_get_call ctx (cf_get,tf_get,r_get,ekey,cf_get_params) c ebase p in
 			let eget = api.type_rhs eread e2 in
 			let eget = api.to_texpr vr eget (fun e -> e) in
 			unify ctx eget.etype r_get p;
-			let cf_set,tf_set,r_set,ekey,eget = AbstractCast.find_array_write_access ctx a tl ekey eget p in
+			let cf_set,tf_set,r_set,ekey,eget,cf_set_params = AbstractCast.find_array_write_access ctx a tl ekey eget p in
 			let et = type_module_type ctx (TClassDecl c) p in
 			let e = match cf_set.cf_expr,cf_get.cf_expr with
 				(* | None,None ->
 					let ea = mk (TArray(ebase,ekey)) r_get p in
 					mk (TBinop(OpAssignOp op,ea,type_expr ctx e2 (WithType.with_type r_get))) r_set p *)
 				| Some _,Some _ ->
-					let ef_set = mk (TField(et,(FStatic(c,cf_set)))) tf_set p in
+					let ef_set = mk (TField(et,(FStatic(c,cf_set, cf_set_params)))) tf_set p in
 					let el = [make_call ctx ef_set [ebase;ekey;eget] r_set p] in
 					begin match el with
 						| [e] -> e
@@ -976,10 +976,10 @@ let type_unop ctx op flag e with_type p =
 				let access_get = type_field_default_cfg ctx ef fa.fa_field.cf_name field_pos MGet WithType.value in
 				let e,e_out = match access_get with
 				| AKField _ ->
-					let e = FieldAccess.get_field_expr {fa with fa_on = ef} FGet in
+					let e = FieldAccess.get_field_expr ctx {fa with fa_on = ef} FGet in
 					find_overload_or_make e,None
 				| _ ->
-					let e_set = FieldAccess.get_field_expr {fa with fa_on = ef} FWrite in
+					let e_set = FieldAccess.get_field_expr ctx {fa with fa_on = ef} FWrite in
 					let e_lhs = acc_get ctx access_get in
 					let e_lhs,e_out = maybe_tempvar_postfix vr e_lhs in
 					let e_op = make_op vr binop e_lhs e_one p in

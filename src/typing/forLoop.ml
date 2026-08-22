@@ -18,7 +18,8 @@ let optimize_for_loop_iterator ctx v e1 e2 p =
 				match e.eexpr with
 				| TCast (e,None) ->
 					get_class_and_params e
-				| TCall ({ eexpr = TField (_, FInstance (c,pl,cf)) }, _) ->
+				| TCall ({ eexpr = TField (_, FInstance (c,pl,cf,cf_pl)) }, _) ->
+					(* TODO TP: apply cf type params too? *)
 					let t = apply_params c.cl_params pl cf.cf_type in
 					(match follow t with
 					| TFun (_, t) ->
@@ -37,11 +38,11 @@ let optimize_for_loop_iterator ctx v e1 e2 p =
 	let it_type = TInst(c,tl) in
 	let tmp = gen_local ctx it_type e1.epos in
 	let eit = mk (TLocal tmp) it_type p in
-	let ehasnext = make_call ctx (mk (TField (eit,FInstance (c, tl, fhasnext))) (TFun([],ctx.t.tbool)) p) [] ctx.t.tbool p in
+	let ehasnext = make_call ctx (mk (TField (eit,FInstance (c, tl, fhasnext, []))) (TFun([],ctx.t.tbool)) p) [] ctx.t.tbool p in
 	let fa_next =
 		try
 			match raw_class_field (fun cf -> apply_params c.cl_params tl cf.cf_type) c tl "next" with
-			| _, _, fa -> FInstance (c, tl, fa)
+			| _, _, fa -> FInstance (c, tl, fa, [] (* TODO TP*))
 		with Not_found ->
 			quick_field_dynamic eit.etype "next"
 	in
@@ -203,7 +204,7 @@ module IterationKind = struct
 			(try
 				(* first try: do we have an @:arrayAccess getter field? *)
 				let todo = mk (TConst TNull) ctx.t.tint p in
-				let cf,_,r,_ = AbstractCast.find_array_read_access_raise ctx a tl todo p in
+				let cf,_,r,_,_ (* TODO TP*) = AbstractCast.find_array_read_access_raise ctx a tl todo p in
 				let get_next e_base e_index t p =
 					CallUnification.make_static_call_better ctx c cf tl [e_base;e_index] r p
 				in
